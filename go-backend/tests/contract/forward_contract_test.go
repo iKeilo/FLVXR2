@@ -1085,6 +1085,70 @@ func jsonNumber(v int64) string {
 	return strconv.FormatInt(v, 10)
 }
 
+func TestForwardIPSpeedLimitPermission(t *testing.T) {
+	secret := "contract-jwt-secret"
+	router, repo := setupContractRouter(t, secret)
+	now := time.Now().UnixMilli()
+
+	if err := repo.DB().Exec(`
+		INSERT INTO user(id, user, pwd, role_id, exp_time, flow, in_flow, out_flow, flow_reset_time, num, created_time, updated_time, status)
+		VALUES(2, 'normal_user', 'pwd', 1, ?, 99999, 0, 0, 1, 10, ?, ?, 1)
+	`, now+86400000, now, now).Error; err != nil {
+		t.Fatalf("insert user: %v", err)
+	}
+	if err := repo.DB().Exec(`
+		INSERT INTO tunnel(id, name, traffic_ratio, type, protocol, flow, created_time, updated_time, status, in_ip, inx)
+		VALUES(12, 'ip-speed-permission-tunnel', 1.0, 1, 'tls', 99999, ?, ?, 1, NULL, 0)
+	`, now, now).Error; err != nil {
+		t.Fatalf("insert tunnel: %v", err)
+	}
+	if err := repo.DB().Exec(`
+		INSERT INTO node(id, name, secret, server_ip, server_ip_v4, server_ip_v6, port, interface_name, version, http, tls, socks, created_time, updated_time, status, tcp_listen_addr, udp_listen_addr, inx)
+		VALUES(20, 'ip-speed-permission-node', 'ip-speed-permission-secret', '10.22.0.1', '10.22.0.1', '', '32200-32210', '', 'v1', 1, 1, 1, ?, ?, 1, '[::]', '[::]', 0)
+	`, now, now).Error; err != nil {
+		t.Fatalf("insert node: %v", err)
+	}
+	if err := repo.DB().Exec(`
+		INSERT INTO chain_tunnel(tunnel_id, chain_type, node_id, port, strategy, inx, protocol)
+		VALUES(12, 1, 20, 32201, 'round', 1, 'tls')
+	`).Error; err != nil {
+		t.Fatalf("insert chain_tunnel: %v", err)
+	}
+	if err := repo.DB().Exec(`
+		INSERT INTO speed_limit(id, name, speed, created_time, status)
+		VALUES(9, 'per-ip-10m', 10, ?, 1)
+	`, now).Error; err != nil {
+		t.Fatalf("insert speed limit: %v", err)
+	}
+	if err := repo.DB().Exec(`
+		INSERT INTO user_tunnel(user_id, tunnel_id, num, flow, in_flow, out_flow, flow_reset_time, exp_time, status)
+		VALUES(2, 12, 10, 99999, 0, 0, 1, ?, 1)
+	`, now+86400000).Error; err != nil {
+		t.Fatalf("insert user tunnel: %v", err)
+	}
+
+	userToken, err := auth.GenerateToken(2, "normal_user", 1, secret)
+	if err != nil {
+		t.Fatalf("generate user token: %v", err)
+	}
+	body, err := json.Marshal(map[string]interface{}{
+		"name":       "blocked-ip-speed",
+		"tunnelId":   12,
+		"remoteAddr": "1.1.1.1:443",
+		"strategy":   "fifo",
+		"ipSpeedId":  9,
+	})
+	if err != nil {
+		t.Fatalf("marshal create payload: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/forward/create", bytes.NewReader(body))
+	req.Header.Set("Authorization", userToken)
+	req.Header.Set("Content-Type", "application/json")
+	res := httptest.NewRecorder()
+	router.ServeHTTP(res, req)
+	assertCodeMsg(t, res, -1, "普通用户无法设置每 IP 限速规则")
+}
+
 func TestNonAdminCannotSetSpeedIdOrPort(t *testing.T) {
 	secret := "contract-jwt-secret-perm"
 	router, repo := setupContractRouter(t, secret)
