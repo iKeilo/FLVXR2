@@ -234,6 +234,13 @@ func (p *program) reloadConfig() error {
 	if err := loader.Load(cfg); err != nil {
 		return err
 	}
+	activeServices := make(map[string]struct{}, len(cfg.Services))
+	for _, svc := range cfg.Services {
+		if svc != nil {
+			activeServices[svc.Name] = struct{}{}
+		}
+	}
+	xservice.GetGlobalTrafficManager().RetainServices(activeServices)
 
 	if err := p.run(cfg); err != nil {
 		return err

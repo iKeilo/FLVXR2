@@ -5,15 +5,17 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/go-gost/x/registry"
 )
 
 // GlobalTrafficManager 全局流量管理器（所有服务共享）
 type GlobalTrafficManager struct {
-	mu            sync.RWMutex
+	mu             sync.RWMutex
 	serviceTraffic map[string]*ServiceTraffic // key: 服务名, value: 流量数据
-	ctx           context.Context
-	cancel        context.CancelFunc
-	reportTicker  *time.Ticker
+	ctx            context.Context
+	cancel         context.CancelFunc
+	reportTicker   *time.Ticker
 }
 
 // ServiceTraffic 单个服务的流量累积
@@ -50,6 +52,9 @@ func (m *GlobalTrafficManager) AddTraffic(serviceName string, upBytes, downBytes
 	if upBytes == 0 && downBytes == 0 {
 		return
 	}
+	if !registry.ServiceRegistry().IsRegistered(serviceName) {
+		return
+	}
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -68,6 +73,51 @@ func (m *GlobalTrafficManager) AddTraffic(serviceName string, upBytes, downBytes
 	traffic.UpBytes += upBytes
 	traffic.DownBytes += downBytes
 	traffic.mu.Unlock()
+}
+
+// RemoveServices drops cached traffic counters for services that no longer exist.
+func (m *GlobalTrafficManager) RemoveServices(serviceNames ...string) {
+	if m == nil || len(serviceNames) == 0 {
+		return
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for _, name := range serviceNames {
+		if m.isTrafficEmptyLocked(name) {
+			delete(m.serviceTraffic, name)
+		}
+	}
+}
+
+// RetainServices removes traffic counters for every service not in activeNames.
+func (m *GlobalTrafficManager) RetainServices(activeNames map[string]struct{}) {
+	if m == nil {
+		return
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for name := range m.serviceTraffic {
+		if _, ok := activeNames[name]; !ok {
+			if m.isTrafficEmptyLocked(name) {
+				delete(m.serviceTraffic, name)
+			}
+		}
+	}
+}
+
+func (m *GlobalTrafficManager) isTrafficEmptyLocked(name string) bool {
+	traffic, ok := m.serviceTraffic[name]
+	if !ok {
+		return true
+	}
+
+	traffic.mu.Lock()
+	defer traffic.mu.Unlock()
+	return traffic.UpBytes == 0 && traffic.DownBytes == 0
 }
 
 // startReporting 启动定时上报协程（每5秒执行一次）
@@ -105,6 +155,7 @@ func (m *GlobalTrafficManager) collectAndReport() {
 			traffic.DownBytes = 0
 		}
 		traffic.mu.Unlock()
+		isStale := !registry.ServiceRegistry().IsRegistered(name)
 
 		if up > 0 || down > 0 {
 			reportItems = append(reportItems, TrafficReportItem{
@@ -112,6 +163,9 @@ func (m *GlobalTrafficManager) collectAndReport() {
 				U: up,
 				D: down,
 			})
+		}
+		if isStale {
+			delete(m.serviceTraffic, name)
 		}
 	}
 
@@ -162,4 +216,3 @@ func (m *GlobalTrafficManager) GetServiceTraffic(serviceName string) (upBytes, d
 	}
 	return
 }
-

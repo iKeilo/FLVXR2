@@ -11,6 +11,7 @@ import (
 	parser "github.com/go-gost/x/config/parsing/service"
 	kill "github.com/go-gost/x/internal/util/port"
 	"github.com/go-gost/x/registry"
+	xservice "github.com/go-gost/x/service"
 )
 
 func createServices(req createServicesRequest) error {
@@ -209,6 +210,7 @@ func deleteServices(req deleteServicesRequest) error {
 		}
 		return nil
 	})
+	xservice.GetGlobalTrafficManager().RemoveServices(namesToRemove...)
 
 	return nil
 }

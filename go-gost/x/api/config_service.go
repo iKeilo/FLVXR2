@@ -14,6 +14,7 @@ import (
 	parser "github.com/go-gost/x/config/parsing/service"
 	kill "github.com/go-gost/x/internal/util/port"
 	"github.com/go-gost/x/registry"
+	xservice "github.com/go-gost/x/service"
 )
 
 // swagger:parameters createServiceRequest
@@ -409,6 +410,7 @@ func deleteService(ctx *gin.Context) {
 		}
 		return nil
 	})
+	xservice.GetGlobalTrafficManager().RemoveServices(name)
 
 	ctx.JSON(http.StatusOK, Response{
 		Msg: "OK",
@@ -483,6 +485,12 @@ func deleteServices(ctx *gin.Context) {
 		}
 		return nil
 	})
+
+	names := make([]string, 0, len(servicesToDelete))
+	for _, std := range servicesToDelete {
+		names = append(names, std.name)
+	}
+	xservice.GetGlobalTrafficManager().RemoveServices(names...)
 
 	ctx.JSON(http.StatusOK, Response{
 		Msg: "OK",
