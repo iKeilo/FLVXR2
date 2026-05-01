@@ -3,6 +3,7 @@ package repo
 import (
 	"database/sql"
 	"errors"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -55,6 +56,64 @@ func TestPrepareSQLiteLegacyColumnsAddsNodeMetadataColumns(t *testing.T) {
 		if !m.HasColumn(&model.Node{}, field) {
 			t.Fatalf("expected node.%s column to exist", field)
 		}
+	}
+}
+
+func TestOpenBackfillsSQLiteLegacyTunnelProbeTargetColumns(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "legacy.db")
+	db, err := gorm.Open(gsqlite.Open(dbPath), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
+	if err != nil {
+		t.Fatalf("open legacy sqlite: %v", err)
+	}
+
+	if err := db.Exec(`
+		CREATE TABLE tunnel (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name VARCHAR(100) NOT NULL,
+			traffic_ratio REAL NOT NULL DEFAULT 1.0,
+			type INTEGER NOT NULL,
+			protocol VARCHAR(10) NOT NULL DEFAULT 'tls',
+			flow INTEGER NOT NULL,
+			created_time INTEGER NOT NULL,
+			updated_time INTEGER NOT NULL,
+			status INTEGER NOT NULL,
+			in_ip TEXT
+		)
+	`).Error; err != nil {
+		t.Fatalf("create legacy tunnel table: %v", err)
+	}
+	if err := db.Exec(`
+		INSERT INTO tunnel(id, name, traffic_ratio, type, protocol, flow, created_time, updated_time, status, in_ip)
+		VALUES(1, 'legacy-tunnel', 1, 1, 'tls', 1, 1, 1, 1, '')
+	`).Error; err != nil {
+		t.Fatalf("insert legacy tunnel: %v", err)
+	}
+	if sqlDB, _ := db.DB(); sqlDB != nil {
+		_ = sqlDB.Close()
+	}
+
+	r, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("open migrated sqlite: %v", err)
+	}
+	t.Cleanup(func() { _ = r.Close() })
+
+	m := r.DB().Migrator()
+	for _, field := range []string{"ProbeTargetHost", "ProbeTargetPort"} {
+		if !m.HasColumn(&model.Tunnel{}, field) {
+			t.Fatalf("expected tunnel.%s column to exist", field)
+		}
+	}
+
+	var host string
+	var port int
+	if err := r.DB().Raw(`SELECT probe_target_host, probe_target_port FROM tunnel WHERE id = 1`).Row().Scan(&host, &port); err != nil {
+		t.Fatalf("query probe target defaults: %v", err)
+	}
+	if host != "" || port != 0 {
+		t.Fatalf("expected default probe target empty/0, got %q/%d", host, port)
 	}
 }
 

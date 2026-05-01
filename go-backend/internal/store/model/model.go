@@ -119,18 +119,20 @@ type StatisticsFlow struct {
 func (StatisticsFlow) TableName() string { return "statistics_flow" }
 
 type Tunnel struct {
-	ID           int64          `gorm:"primaryKey;autoIncrement"`
-	Name         string         `gorm:"type:varchar(100);not null"`
-	TrafficRatio float64        `gorm:"column:traffic_ratio;not null;default:1.0"`
-	Type         int            `gorm:"not null"`
-	Protocol     string         `gorm:"type:varchar(10);not null;default:'tls'"`
-	Flow         int64          `gorm:"not null"`
-	CreatedTime  int64          `gorm:"column:created_time;not null"`
-	UpdatedTime  int64          `gorm:"column:updated_time;not null"`
-	Status       int            `gorm:"not null"`
-	InIP         sql.NullString `gorm:"column:in_ip;type:text"`
-	Inx          int            `gorm:"not null;default:0"`
-	IPPreference string         `gorm:"column:ip_preference;type:varchar(10);not null;default:''"`
+	ID              int64          `gorm:"primaryKey;autoIncrement"`
+	Name            string         `gorm:"type:varchar(100);not null"`
+	TrafficRatio    float64        `gorm:"column:traffic_ratio;not null;default:1.0"`
+	Type            int            `gorm:"not null"`
+	Protocol        string         `gorm:"type:varchar(10);not null;default:'tls'"`
+	Flow            int64          `gorm:"not null"`
+	CreatedTime     int64          `gorm:"column:created_time;not null"`
+	UpdatedTime     int64          `gorm:"column:updated_time;not null"`
+	Status          int            `gorm:"not null"`
+	InIP            sql.NullString `gorm:"column:in_ip;type:text"`
+	Inx             int            `gorm:"not null;default:0"`
+	IPPreference    string         `gorm:"column:ip_preference;type:varchar(10);not null;default:''"`
+	ProbeTargetHost string         `gorm:"column:probe_target_host;type:text;not null;default:''"`
+	ProbeTargetPort int            `gorm:"column:probe_target_port;not null;default:0"`
 }
 
 func (Tunnel) TableName() string { return "tunnel" }
@@ -403,19 +405,21 @@ type NodeBackup struct {
 }
 
 type TunnelBackup struct {
-	ID           int64               `json:"id"`
-	Name         string              `json:"name"`
-	TrafficRatio float64             `json:"trafficRatio"`
-	Type         int                 `json:"type"`
-	Protocol     string              `json:"protocol"`
-	Flow         int64               `json:"flow"`
-	CreatedTime  int64               `json:"createdTime"`
-	UpdatedTime  int64               `json:"updatedTime"`
-	Status       int                 `json:"status"`
-	InIP         string              `json:"inIp,omitempty"`
-	Inx          int                 `json:"inx"`
-	IPPreference string              `json:"ipPreference,omitempty"`
-	ChainTunnels []ChainTunnelBackup `json:"chainTunnels,omitempty"`
+	ID              int64               `json:"id"`
+	Name            string              `json:"name"`
+	TrafficRatio    float64             `json:"trafficRatio"`
+	Type            int                 `json:"type"`
+	Protocol        string              `json:"protocol"`
+	Flow            int64               `json:"flow"`
+	CreatedTime     int64               `json:"createdTime"`
+	UpdatedTime     int64               `json:"updatedTime"`
+	Status          int                 `json:"status"`
+	InIP            string              `json:"inIp,omitempty"`
+	Inx             int                 `json:"inx"`
+	IPPreference    string              `json:"ipPreference,omitempty"`
+	ProbeTargetHost string              `json:"probeTargetHost,omitempty"`
+	ProbeTargetPort int                 `json:"probeTargetPort,omitempty"`
+	ChainTunnels    []ChainTunnelBackup `json:"chainTunnels,omitempty"`
 }
 
 type ChainTunnelBackup struct {
@@ -553,12 +557,14 @@ type ForwardRecord struct {
 
 // TunnelRecord is a minimal tunnel view used by control plane.
 type TunnelRecord struct {
-	ID           int64
-	Type         int
-	Status       int
-	Flow         int64
-	TrafficRatio float64
-	Protocol     string
+	ID              int64
+	Type            int
+	Status          int
+	Flow            int64
+	TrafficRatio    float64
+	Protocol        string
+	ProbeTargetHost string
+	ProbeTargetPort int
 }
 
 type UserQuotaView struct {

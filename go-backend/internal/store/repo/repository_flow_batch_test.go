@@ -111,6 +111,33 @@ func TestGetFlowUploadForwardMetasKeepsForwardsWhenTunnelRowMissing(t *testing.T
 	}
 }
 
+func TestGetTunnelRecordIncludesProbeTarget(t *testing.T) {
+	r, err := Open(filepath.Join(t.TempDir(), "tunnel-record-probe-target.db"))
+	if err != nil {
+		t.Fatalf("open repo: %v", err)
+	}
+	defer r.Close()
+
+	now := time.Now().UnixMilli()
+	if err := r.DB().Exec(`
+		INSERT INTO tunnel(id, name, traffic_ratio, type, protocol, flow, created_time, updated_time, status, in_ip, inx, probe_target_host, probe_target_port)
+		VALUES(1, 't1', 1, 2, 'tls', 1, ?, ?, 1, NULL, 0, 'speed.example.com', 8443)
+	`, now, now).Error; err != nil {
+		t.Fatalf("insert tunnel: %v", err)
+	}
+
+	record, err := r.GetTunnelRecord(1)
+	if err != nil {
+		t.Fatalf("get tunnel record: %v", err)
+	}
+	if record == nil {
+		t.Fatalf("expected tunnel record")
+	}
+	if record.ProbeTargetHost != "speed.example.com" || record.ProbeTargetPort != 8443 {
+		t.Fatalf("unexpected probe target on record: %#v", record)
+	}
+}
+
 func TestAddUserQuotaUsageBatchReturnsNormalizedViews(t *testing.T) {
 	r, err := Open(filepath.Join(t.TempDir(), "quota-batch.db"))
 	if err != nil {

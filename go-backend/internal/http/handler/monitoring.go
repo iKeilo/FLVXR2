@@ -234,8 +234,22 @@ func (h *Handler) monitorTunnelQualityHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	targetsByTunnelID := map[int64]tunnelProbeTarget{}
+	if tunnels, listErr := h.repo.ListTunnels(); listErr == nil {
+		for _, item := range tunnels {
+			id := asInt64(item["id"], 0)
+			if id > 0 {
+				targetsByTunnelID[id] = effectiveTunnelProbeTargetValues(asString(item["probeTargetHost"]), asInt(item["probeTargetPort"], 0))
+			}
+		}
+	}
+
 	snapshots := make([]tunnelQualitySnapshot, 0, len(qualities))
 	for _, q := range qualities {
+		target := targetsByTunnelID[q.TunnelID]
+		if target.Host == "" {
+			target = defaultTunnelProbeTarget()
+		}
 		snapshots = append(snapshots, tunnelQualitySnapshot{
 			TunnelID:           q.TunnelID,
 			EntryToExitLatency: q.EntryToExitLatency,
@@ -246,6 +260,8 @@ func (h *Handler) monitorTunnelQualityHandler(w http.ResponseWriter, r *http.Req
 			ErrorMessage:       q.ErrorMessage,
 			Timestamp:          q.Timestamp,
 			ChainDetails:       q.ChainDetails,
+			ProbeTargetHost:    target.Host,
+			ProbeTargetPort:    target.Port,
 		})
 	}
 	response.WriteJSON(w, response.OK(snapshots))

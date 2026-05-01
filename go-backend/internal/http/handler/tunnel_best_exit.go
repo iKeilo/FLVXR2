@@ -57,6 +57,12 @@ type bestExitProbeResult struct {
 	err     error
 }
 
+type bestExitProbeCacheKey struct {
+	NodeID int64
+	Host   string
+	Port   int
+}
+
 type bestExitDecision struct {
 	AppliedExitNodeID          int64
 	PendingExitNodeID          int64
@@ -138,7 +144,7 @@ func sortBestExitScores(scores []bestExitCandidateScore) {
 	})
 }
 
-func evaluateBestExitOwner(owner chainNodeRecord, exits []chainNodeRecord, nodes map[int64]*nodeRecord, ipPreference string, options diagnosisExecOptions, ping bestExitProbeFunc) []bestExitCandidateScore {
+func evaluateBestExitOwner(owner chainNodeRecord, exits []chainNodeRecord, nodes map[int64]*nodeRecord, ipPreference string, options diagnosisExecOptions, target tunnelProbeTarget, ping bestExitProbeFunc) []bestExitCandidateScore {
 	scores := make([]bestExitCandidateScore, 0, len(exits))
 	if owner.NodeID <= 0 || len(exits) == 0 || ping == nil {
 		return scores
@@ -160,7 +166,7 @@ func evaluateBestExitOwner(owner chainNodeRecord, exits []chainNodeRecord, nodes
 			scores = append(scores, failedBestExitCandidate(owner.NodeID, exit, ownerErr.Error()))
 			continue
 		}
-		publicLatency, publicLoss, publicErr := ping(exit.NodeID, bestExitPublicTargetHost, bestExitPublicTargetPort, options)
+		publicLatency, publicLoss, publicErr := ping(exit.NodeID, target.Host, target.Port, options)
 		if publicErr != nil {
 			scores = append(scores, failedBestExitCandidate(owner.NodeID, exit, publicErr.Error()))
 			continue
@@ -193,17 +199,15 @@ func resolveBestExitProbeTarget(fromNode, targetNode *nodeRecord, preferredPort 
 }
 
 func newBestExitRoundPinger(base bestExitProbeFunc) bestExitProbeFunc {
-	cache := make(map[int64]bestExitProbeResult)
+	cache := make(map[bestExitProbeCacheKey]bestExitProbeResult)
 	return func(nodeID int64, ip string, port int, options diagnosisExecOptions) (float64, float64, error) {
-		if ip == bestExitPublicTargetHost && port == bestExitPublicTargetPort {
-			if cached, ok := cache[nodeID]; ok {
-				return cached.latency, cached.loss, cached.err
-			}
-			lat, loss, err := base(nodeID, ip, port, options)
-			cache[nodeID] = bestExitProbeResult{latency: lat, loss: loss, err: err}
-			return lat, loss, err
+		key := bestExitProbeCacheKey{NodeID: nodeID, Host: ip, Port: port}
+		if cached, ok := cache[key]; ok {
+			return cached.latency, cached.loss, cached.err
 		}
-		return base(nodeID, ip, port, options)
+		lat, loss, err := base(nodeID, ip, port, options)
+		cache[key] = bestExitProbeResult{latency: lat, loss: loss, err: err}
+		return lat, loss, err
 	}
 }
 

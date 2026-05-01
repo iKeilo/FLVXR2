@@ -48,6 +48,8 @@ export interface TunnelApiItem {
   trafficRatio?: number;
   inIp?: string;
   ipPreference?: string;
+  probeTargetHost?: string;
+  probeTargetPort?: number;
   inNodeId?: TunnelChainNodePayload[];
   outNodeId?: TunnelChainNodePayload[];
   chainNodes?: TunnelChainNodePayload[][];
@@ -328,6 +330,8 @@ export interface TunnelMutationPayload {
   trafficRatio?: number;
   inIp?: string;
   ipPreference?: string;
+  probeTargetHost?: string;
+  probeTargetPort?: number;
   inNodeId?: TunnelChainNodePayload[];
   outNodeId?: TunnelChainNodePayload[];
   chainNodes?: TunnelChainNodePayload[][];
@@ -525,6 +529,8 @@ export interface TunnelQualityApiItem {
   exitToBingLatency: number;
   entryToExitLoss: number;
   exitToBingLoss: number;
+  probeTargetHost?: string;
+  probeTargetPort?: number;
   success: boolean;
   errorMessage?: string;
   timestamp: number;

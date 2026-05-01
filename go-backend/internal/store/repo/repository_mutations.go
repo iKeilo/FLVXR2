@@ -397,22 +397,24 @@ func (r *Repository) UpdateTunnelOrder(tunnelID int64, inx int, now int64) {
 		Updates(map[string]interface{}{"inx": inx, "updated_time": now}).Error
 }
 
-func (r *Repository) UpdateTunnelTx(tx *gorm.DB, tunnelID int64, name string, typeVal int, flow int64, trafficRatio float64, status int, inIP, ipPreference string, protocol string, now int64) error {
+func (r *Repository) UpdateTunnelTx(tx *gorm.DB, tunnelID int64, name string, typeVal int, flow int64, trafficRatio float64, status int, inIP, ipPreference string, protocol string, probeTargetHost string, probeTargetPort int, now int64) error {
 	if tx == nil {
 		return errors.New("database unavailable")
 	}
 	return tx.Model(&model.Tunnel{}).
 		Where("id = ?", tunnelID).
 		Updates(map[string]interface{}{
-			"name":          name,
-			"type":          typeVal,
-			"flow":          flow,
-			"traffic_ratio": trafficRatio,
-			"status":        status,
-			"in_ip":         nullStringFromInterface(inIP),
-			"ip_preference": ipPreference,
-			"protocol":      protocol,
-			"updated_time":  now,
+			"name":              name,
+			"type":              typeVal,
+			"flow":              flow,
+			"traffic_ratio":     trafficRatio,
+			"status":            status,
+			"in_ip":             nullStringFromInterface(inIP),
+			"ip_preference":     ipPreference,
+			"protocol":          protocol,
+			"probe_target_host": probeTargetHost,
+			"probe_target_port": probeTargetPort,
+			"updated_time":      now,
 		}).Error
 }
 
@@ -1326,20 +1328,22 @@ func (r *Repository) BatchUpdateForwardStatus(ids []int64, status int) (int, int
 	return s, f
 }
 
-func (r *Repository) CreateTunnelTx(tx *gorm.DB, name string, trafficRatio float64, typeVal int, flow int64, now int64, status int, inIP interface{}, inx int, ipPreference string) (int64, error) {
+func (r *Repository) CreateTunnelTx(tx *gorm.DB, name string, trafficRatio float64, typeVal int, flow int64, now int64, status int, inIP interface{}, inx int, ipPreference string, probeTargetHost string, probeTargetPort int) (int64, error) {
 	inIPVal := nullStringFromInterface(inIP)
 	tunnel := model.Tunnel{
-		Name:         name,
-		TrafficRatio: trafficRatio,
-		Type:         typeVal,
-		Protocol:     "tls",
-		Flow:         flow,
-		CreatedTime:  now,
-		UpdatedTime:  now,
-		Status:       status,
-		InIP:         inIPVal,
-		Inx:          inx,
-		IPPreference: ipPreference,
+		Name:            name,
+		TrafficRatio:    trafficRatio,
+		Type:            typeVal,
+		Protocol:        "tls",
+		Flow:            flow,
+		CreatedTime:     now,
+		UpdatedTime:     now,
+		Status:          status,
+		InIP:            inIPVal,
+		Inx:             inx,
+		IPPreference:    ipPreference,
+		ProbeTargetHost: probeTargetHost,
+		ProbeTargetPort: probeTargetPort,
 	}
 	if err := tx.Create(&tunnel).Error; err != nil {
 		return 0, err

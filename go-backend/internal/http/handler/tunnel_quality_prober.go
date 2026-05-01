@@ -42,6 +42,8 @@ type tunnelQualitySnapshot struct {
 	ErrorMessage       string  `json:"errorMessage,omitempty"`
 	Timestamp          int64   `json:"timestamp"`
 	ChainDetails       string  `json:"chainDetails,omitempty"`
+	ProbeTargetHost    string  `json:"probeTargetHost,omitempty"`
+	ProbeTargetPort    int     `json:"probeTargetPort,omitempty"`
 
 	// internal fields for db reporting
 	lastDBWrite int64 `json:"-"`
@@ -57,6 +59,7 @@ type tunnelQualityProber struct {
 	interval  time.Duration
 	lastPrune int64
 	probing   int32 // atomic flag: 1 = probeAll running, 0 = idle
+	probeNode bestExitProbeFunc
 }
 
 // newTunnelQualityProber creates a new prober (not yet running).
@@ -226,6 +229,9 @@ func (p *tunnelQualityProber) probeTunnel(tunnelID int64) {
 		p.storeResult(snap)
 		return
 	}
+	probeTarget := effectiveTunnelProbeTargetValues(tunnel.ProbeTargetHost, tunnel.ProbeTargetPort)
+	snap.ProbeTargetHost = probeTarget.Host
+	snap.ProbeTargetPort = probeTarget.Port
 
 	chainRows, err := h.listChainNodesForTunnel(tunnelID)
 	if err != nil || len(chainRows) == 0 {
@@ -242,13 +248,13 @@ func (p *tunnelQualityProber) probeTunnel(tunnelID int64) {
 		pingTimeoutMS:  tunnelQualityPingTimeoutMs,
 		timeoutMessage: "探测超时",
 	}
-	p.probeBestExitOwners(tunnelID, inNodes, midNodesGrouped, outNodes, ipPreference, options)
+	p.probeBestExitOwners(tunnelID, inNodes, midNodesGrouped, outNodes, ipPreference, options, probeTarget)
 
 	switch tunnel.Type {
 	case 1:
-		// Port forwarding: entry → Bing only
+		// Port forwarding: entry → public probe target only.
 		if len(inNodes) > 0 {
-			lat, loss, err := p.tcpPingNode(inNodes[0].NodeID, "www.bing.com", 443, options)
+			lat, loss, err := p.pingNode(inNodes[0].NodeID, probeTarget.Host, probeTarget.Port, options)
 			if err == nil {
 				snap.ExitToBingLatency = lat
 				snap.ExitToBingLoss = loss
@@ -310,7 +316,7 @@ func (p *tunnelQualityProber) probeTunnel(tunnelID int64) {
 				hop.TargetIP = targetIP
 				hop.TargetPort = targetPort
 
-				lat, loss, err := p.tcpPingNode(source.NodeID, targetIP, targetPort, options)
+				lat, loss, err := p.pingNode(source.NodeID, targetIP, targetPort, options)
 				if err == nil {
 					hop.Latency = lat
 					hop.Loss = loss
@@ -346,7 +352,7 @@ func (p *tunnelQualityProber) probeTunnel(tunnelID int64) {
 
 		// Exit → Bing
 		if len(outNodes) > 0 {
-			lat, loss, err := p.tcpPingNode(outNodes[0].NodeID, "www.bing.com", 443, options)
+			lat, loss, err := p.pingNode(outNodes[0].NodeID, probeTarget.Host, probeTarget.Port, options)
 			if err == nil {
 				snap.ExitToBingLatency = lat
 				snap.ExitToBingLoss = loss
@@ -360,9 +366,9 @@ func (p *tunnelQualityProber) probeTunnel(tunnelID int64) {
 
 		snap.Success = probeOK
 	default:
-		// Unknown type: entry → Bing
+		// Unknown type: entry → public probe target.
 		if len(inNodes) > 0 {
-			lat, loss, err := p.tcpPingNode(inNodes[0].NodeID, "www.bing.com", 443, options)
+			lat, loss, err := p.pingNode(inNodes[0].NodeID, probeTarget.Host, probeTarget.Port, options)
 			if err == nil {
 				snap.ExitToBingLatency = lat
 				snap.ExitToBingLoss = loss
@@ -376,7 +382,7 @@ func (p *tunnelQualityProber) probeTunnel(tunnelID int64) {
 	p.storeResult(snap)
 }
 
-func (p *tunnelQualityProber) probeBestExitOwners(tunnelID int64, inNodes []chainNodeRecord, chainHops [][]chainNodeRecord, outNodes []chainNodeRecord, ipPreference string, options diagnosisExecOptions) {
+func (p *tunnelQualityProber) probeBestExitOwners(tunnelID int64, inNodes []chainNodeRecord, chainHops [][]chainNodeRecord, outNodes []chainNodeRecord, ipPreference string, options diagnosisExecOptions, probeTarget tunnelProbeTarget) {
 	if p == nil || p.handler == nil || p.handler.bestExit == nil || len(outNodes) <= 1 {
 		return
 	}
@@ -400,14 +406,14 @@ func (p *tunnelQualityProber) probeBestExitOwners(tunnelID int64, inNodes []chai
 	}
 	// This best-exit decision cache is per decision round; the display-oriented
 	// tunnel quality snapshot may still collect its own first-exit public probe.
-	roundPinger := newBestExitRoundPinger(p.tcpPingNode)
+	roundPinger := newBestExitRoundPinger(p.pingNode)
 	for _, owner := range owners {
 		if nodeMap[owner.NodeID] == nil {
 			continue
 		}
 		key := bestExitOwnerKey{TunnelID: tunnelID, OwnerNodeID: owner.NodeID}
 		p.handler.bestExit.ensureApplied(key, outNodes[0].NodeID, time.Now())
-		scores := evaluateBestExitOwner(owner, outNodes, nodeMap, ipPreference, options, roundPinger)
+		scores := evaluateBestExitOwner(owner, outNodes, nodeMap, ipPreference, options, probeTarget, roundPinger)
 		decision := p.handler.bestExit.observeScores(key, scores, time.Now())
 		if decision.Switch {
 			now := time.Now()
@@ -419,6 +425,13 @@ func (p *tunnelQualityProber) probeBestExitOwners(tunnelID int64, inNodes []chai
 			p.handler.bestExit.setApplied(key, decision.ExitNodeID, time.Now())
 		}
 	}
+}
+
+func (p *tunnelQualityProber) pingNode(nodeID int64, ip string, port int, options diagnosisExecOptions) (float64, float64, error) {
+	if p != nil && p.probeNode != nil {
+		return p.probeNode(nodeID, ip, port, options)
+	}
+	return p.tcpPingNode(nodeID, ip, port, options)
 }
 
 func (p *tunnelQualityProber) tcpPingNode(nodeID int64, ip string, port int, options diagnosisExecOptions) (latency float64, loss float64, err error) {

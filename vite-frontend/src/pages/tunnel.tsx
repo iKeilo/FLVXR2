@@ -130,6 +130,8 @@ interface Tunnel {
   flow: number; // 1: 单向, 2: 双向
   trafficRatio: number;
   ipPreference?: string;
+  probeTargetHost?: string;
+  probeTargetPort?: number;
   bestExitState?: BestExitState;
   status: number;
   createdTime: string;
@@ -156,6 +158,8 @@ interface TunnelForm {
   trafficRatio: number;
   inIp: string; // 入口IP
   ipPreference: string;
+  probeTargetHost?: string;
+  probeTargetPort?: number;
   status: number;
 }
 
@@ -584,6 +588,8 @@ export default function TunnelPage() {
             .join("\n")
         : "",
       ipPreference: tunnel.ipPreference || "",
+      probeTargetHost: tunnel.probeTargetHost || "",
+      probeTargetPort: tunnel.probeTargetPort || 0,
       status: tunnel.status,
     });
     setErrors({});
@@ -860,12 +866,18 @@ export default function TunnelPage() {
         .map((ip) => ip.trim())
         .filter((ip) => ip)
         .join(",");
+      const probeTargetHost = (form.probeTargetHost || "").trim();
+      const probeTargetPort = probeTargetHost
+        ? Number(form.probeTargetPort || 0)
+        : 0;
 
       const data = {
         ...form,
         inIp: inIpString,
         outNodeId: cleanedOutNodeId,
         chainNodes: cleanedChainNodes,
+        probeTargetHost,
+        probeTargetPort,
       };
 
       const response = isEdit
@@ -2322,6 +2334,55 @@ export default function TunnelPage() {
                       <SelectItem key="v6">优先IPv6</SelectItem>
                     </Select>
                   )}
+
+                  <div className="rounded-xl border border-divider/60 bg-default-50/40 p-3 space-y-3">
+                    <div>
+                      <div className="text-sm font-medium">质量检测目标</div>
+                      <p className="text-xs text-default-500 mt-0.5">
+                        用于实时隧道质量检测和 best 最优出口评分，留空使用
+                        www.bing.com:443
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_140px] gap-3">
+                      <Input
+                        errorMessage={errors.probeTargetHost}
+                        isInvalid={!!errors.probeTargetHost}
+                        label="Host"
+                        placeholder="www.bing.com"
+                        value={form.probeTargetHost || ""}
+                        variant="bordered"
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            probeTargetHost: e.target.value,
+                          }))
+                        }
+                      />
+                      <Input
+                        errorMessage={errors.probeTargetPort}
+                        isInvalid={!!errors.probeTargetPort}
+                        label="Port"
+                        max={65535}
+                        min={1}
+                        placeholder="443"
+                        type="number"
+                        value={
+                          form.probeTargetPort
+                            ? String(form.probeTargetPort)
+                            : ""
+                        }
+                        variant="bordered"
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            probeTargetPort: e.target.value
+                              ? Number(e.target.value)
+                              : 0,
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
 
                   <Divider />
                   <h3 className="text-lg font-semibold">入口配置</h3>

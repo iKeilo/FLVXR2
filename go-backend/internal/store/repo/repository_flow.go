@@ -253,12 +253,14 @@ func (r *Repository) GetTunnelRecord(tunnelID int64) (*model.TunnelRecord, error
 		return nil, err
 	}
 	tr := model.TunnelRecord{
-		ID:           t.ID,
-		Type:         t.Type,
-		Status:       t.Status,
-		Flow:         t.Flow,
-		TrafficRatio: t.TrafficRatio,
-		Protocol:     t.Protocol,
+		ID:              t.ID,
+		Type:            t.Type,
+		Status:          t.Status,
+		Flow:            t.Flow,
+		TrafficRatio:    t.TrafficRatio,
+		Protocol:        t.Protocol,
+		ProbeTargetHost: t.ProbeTargetHost,
+		ProbeTargetPort: t.ProbeTargetPort,
 	}
 	if tr.Flow <= 0 {
 		tr.Flow = 1

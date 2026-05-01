@@ -63,6 +63,19 @@ const MONITOR_TUNNEL_QUALITY_ENABLED_CONFIG_KEY =
   "monitor_tunnel_quality_enabled";
 const MONITOR_TUNNEL_QUALITY_ENABLED_EVENT =
   "monitorTunnelQualityEnabledChanged";
+const DEFAULT_PROBE_TARGET_LABEL = "www.bing.com:443";
+
+const probeTargetLabel = (quality?: TunnelQualityApiItem | null) => {
+  if (!quality?.probeTargetHost || !quality.probeTargetPort) {
+    return DEFAULT_PROBE_TARGET_LABEL;
+  }
+
+  const host = quality.probeTargetHost.includes(":")
+    ? `[${quality.probeTargetHost}]`
+    : quality.probeTargetHost;
+
+  return `${host}:${quality.probeTargetPort}`;
+};
 
 const formatTimestamp = (ts: number, rangeMs?: number): string => {
   const date = new Date(ts);
@@ -177,7 +190,7 @@ function UptimeHistoryBar({
           }
 
           const displayLatency = latency >= 0 ? `${latency.toFixed(0)}ms` : "-";
-          const tooltip = `${timeStr} | ${displayLatency} | ${statusText}`;
+          const tooltip = `${timeStr} | ${displayLatency} | ${statusText} | 测试目标: ${probeTargetLabel(q)}`;
 
           return (
             <div
@@ -305,7 +318,7 @@ const QualityChartCard = React.memo(function QualityChartCard({
                       name === "entryToExit"
                         ? "入口→出口"
                         : name === "exitToBing"
-                          ? "出口→Bing"
+                          ? "出口→测试目标"
                           : name;
 
                     return [`${n.toFixed(1)}ms`, label];
@@ -1001,9 +1014,12 @@ export function TunnelMonitorView({
           </Card>
           <Card className="border border-divider/60 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-background to-default-50/50">
             <CardBody className="py-3 px-4 flex flex-col items-center justify-center min-h-[5rem]">
-              <span className="text-[11px] text-default-500 mb-1.5 flex items-center gap-1">
+              <span
+                className="text-[11px] text-default-500 mb-1.5 flex items-center gap-1"
+                title={probeTargetLabel(quality)}
+              >
                 <Globe className="w-3 h-3" />
-                出口 → Bing 延迟
+                出口 → 测试目标 延迟
               </span>
               <LatencyDisplay
                 loading={qualityLoading}
@@ -1027,8 +1043,11 @@ export function TunnelMonitorView({
           </Card>
           <Card className="border border-divider/60 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-background to-default-50/50">
             <CardBody className="py-3 px-4 flex flex-col items-center justify-center min-h-[5rem]">
-              <span className="text-[11px] text-default-500 mb-1.5">
-                出口 → Bing 丢包
+              <span
+                className="text-[11px] text-default-500 mb-1.5"
+                title={probeTargetLabel(quality)}
+              >
+                出口 → 测试目标 丢包
               </span>
               <span
                 className={`text-sm font-semibold font-mono ${(quality?.exitToBingLoss ?? 0) > 0 ? "text-warning" : ""}`}
@@ -1054,6 +1073,9 @@ export function TunnelMonitorView({
               <span>实时隧道质量检测已关闭</span>
             </>
           )}
+          <span className="text-default-400">
+            · 测试目标: {probeTargetLabel(quality)}
+          </span>
           {quality?.timestamp && (
             <span className="text-default-400">
               · 最近更新:{" "}
@@ -1148,6 +1170,7 @@ export function TunnelMonitorView({
           {tunnels.map((tunnel) => {
             const quality = qualityMap[tunnel.id];
             const isEnabled = tunnel.status === 1;
+            const targetLabel = probeTargetLabel(quality);
 
             return (
               <Card
@@ -1203,7 +1226,13 @@ export function TunnelMonitorView({
                     <div className="space-y-1">
                       <div className="text-[10px] text-default-500 flex items-center gap-1">
                         <Globe className="w-3 h-3" />
-                        出口→Bing
+                        出口→测试目标
+                      </div>
+                      <div
+                        aria-label={`测试目标 ${targetLabel}`}
+                        className="text-[10px] text-default-400 truncate"
+                      >
+                        {targetLabel}
                       </div>
                       <UptimeHistoryBar
                         history={qualityHistoryMap[tunnel.id]}
@@ -1259,13 +1288,14 @@ export function TunnelMonitorView({
               <TableColumn>状态</TableColumn>
               <TableColumn>名称</TableColumn>
               <TableColumn>入口→出口</TableColumn>
-              <TableColumn>出口→Bing</TableColumn>
+              <TableColumn>出口→测试目标</TableColumn>
               <TableColumn>更新时间</TableColumn>
             </TableHeader>
             <TableBody emptyContent="暂无隧道">
               {tunnels.map((tunnel) => {
                 const quality = qualityMap[tunnel.id];
                 const isEnabled = tunnel.status === 1;
+                const targetLabel = probeTargetLabel(quality);
 
                 return (
                   <TableRow
@@ -1295,11 +1325,19 @@ export function TunnelMonitorView({
                       />
                     </TableCell>
                     <TableCell>
-                      <UptimeHistoryBar
-                        history={qualityHistoryMap[tunnel.id]}
-                        latestValue={quality?.exitToBingLatency}
-                        type="exitToBing"
-                      />
+                      <div
+                        aria-label={`出口到测试目标 ${targetLabel}`}
+                        className="space-y-1"
+                      >
+                        <UptimeHistoryBar
+                          history={qualityHistoryMap[tunnel.id]}
+                          latestValue={quality?.exitToBingLatency}
+                          type="exitToBing"
+                        />
+                        <span className="block max-w-[160px] truncate text-[10px] text-default-400">
+                          {targetLabel}
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell>
                       {quality?.timestamp ? (

@@ -8,12 +8,104 @@ interface TunnelFormInput {
   inNodeId: TunnelChainNode[];
   outNodeId?: TunnelChainNode[];
   trafficRatio: number;
+  probeTargetHost?: string;
+  probeTargetPort?: number;
 }
 
 interface TunnelNodeInput {
   id: number;
   status: number;
 }
+
+const isValidProbeIPv4 = (host: string) => {
+  const parts = host.split(".");
+
+  return (
+    parts.length === 4 &&
+    parts.every((part) => {
+      if (!/^\d+$/.test(part)) {
+        return false;
+      }
+      if (part.length > 1 && part.startsWith("0")) {
+        return false;
+      }
+
+      const value = Number(part);
+
+      return value >= 0 && value <= 255;
+    })
+  );
+};
+
+const isIPv4LikeProbeHost = (host: string) =>
+  /^[0-9.]+$/.test(host) && host.includes(".");
+
+const isValidProbeIPv6 = (host: string) => {
+  let value = host;
+
+  if (host.startsWith("[") || host.endsWith("]")) {
+    if (!host.startsWith("[") || !host.endsWith("]")) {
+      return false;
+    }
+    value = host.slice(1, -1);
+  }
+
+  if (!value.includes(":") || value.includes("[") || value.includes("]")) {
+    return false;
+  }
+
+  try {
+    const url = new URL(`http://[${value}]`);
+
+    return url.hostname.length > 0;
+  } catch {
+    return false;
+  }
+};
+
+const isSchemeLikeProbeHost = (host: string) => {
+  if (isValidProbeIPv6(host)) {
+    return false;
+  }
+
+  const colonIndex = host.indexOf(":");
+
+  if (colonIndex <= 0) {
+    return false;
+  }
+
+  return /^[A-Za-z][A-Za-z0-9+.-]*$/.test(host.slice(0, colonIndex));
+};
+
+const isValidProbeDomain = (host: string) => {
+  if (!host || host.length > 253) {
+    return false;
+  }
+
+  return host.split(".").every((label) => {
+    if (
+      !label ||
+      label.length > 63 ||
+      label.startsWith("-") ||
+      label.endsWith("-")
+    ) {
+      return false;
+    }
+
+    return /^[A-Za-z0-9-]+$/.test(label);
+  });
+};
+
+const isValidProbeTargetHost = (host: string) => {
+  if (isValidProbeIPv6(host) || isValidProbeIPv4(host)) {
+    return true;
+  }
+  if (host.includes(":") || isIPv4LikeProbeHost(host)) {
+    return false;
+  }
+
+  return isValidProbeDomain(host);
+};
 
 export const createTunnelFormDefaults = () => {
   return {
@@ -26,6 +118,8 @@ export const createTunnelFormDefaults = () => {
     trafficRatio: 1.0,
     inIp: "",
     ipPreference: "",
+    probeTargetHost: "",
+    probeTargetPort: 0,
     status: 1,
   };
 };
@@ -61,6 +155,31 @@ export const validateTunnelForm = (
 
   if (form.trafficRatio <= 0 || form.trafficRatio > 100.0) {
     errors.trafficRatio = "流量倍率须大于0，支持小数（如 0.5）";
+  }
+
+  const rawProbeHost = form.probeTargetHost || "";
+  const probeHost = rawProbeHost.trim();
+  const probePortInput = form.probeTargetPort;
+  const probePort = Number(probePortInput ?? 0);
+  const hasProbeHostInput = rawProbeHost.length > 0;
+  const hasProbePort = probePortInput != null && probePortInput !== 0;
+
+  if (hasProbeHostInput || hasProbePort) {
+    if (!probeHost) {
+      errors.probeTargetHost = "请输入测试目标 Host";
+    } else if (
+      probeHost.includes("://") ||
+      /[\s/?#]/.test(rawProbeHost) ||
+      isSchemeLikeProbeHost(probeHost)
+    ) {
+      errors.probeTargetHost = "Host 不能包含协议、端口、空格或路径";
+    } else if (!isValidProbeTargetHost(probeHost)) {
+      errors.probeTargetHost = "测试目标 Host 格式无效";
+    }
+
+    if (!Number.isInteger(probePort) || probePort < 1 || probePort > 65535) {
+      errors.probeTargetPort = "端口必须是 1-65535";
+    }
   }
 
   if (form.type === 2) {

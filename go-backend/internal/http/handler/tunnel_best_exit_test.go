@@ -2,6 +2,9 @@ package handler
 
 import (
 	"errors"
+	"fmt"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 )
@@ -189,7 +192,7 @@ func TestBestExitEnsureAppliedDoesNotOverrideExistingAppliedExit(t *testing.T) {
 	}
 }
 
-func TestBestExitRoundPingerCachesPublicProbeOnly(t *testing.T) {
+func TestBestExitRoundPingerCachesByNodeHostAndPort(t *testing.T) {
 	publicCalls := 0
 	ownerCalls := 0
 	pinger := newBestExitRoundPinger(func(nodeID int64, ip string, port int, _ diagnosisExecOptions) (float64, float64, error) {
@@ -220,8 +223,8 @@ func TestBestExitRoundPingerCachesPublicProbeOnly(t *testing.T) {
 	if _, _, err := pinger(10, "10.0.0.30", 30030, diagnosisExecOptions{}); err != nil {
 		t.Fatalf("unexpected repeated owner ping err=%v", err)
 	}
-	if ownerCalls != 2 {
-		t.Fatalf("expected owner-to-exit probes not cached, got %d calls", ownerCalls)
+	if ownerCalls != 1 {
+		t.Fatalf("expected owner-to-exit probes cached by target, got %d calls", ownerCalls)
 	}
 }
 
@@ -375,12 +378,40 @@ func TestEvaluateBestExitOwnerScoresAllCandidates(t *testing.T) {
 		}
 	}
 
-	scores := evaluateBestExitOwner(owner, exits, nodes, "", diagnosisExecOptions{}, pinger)
+	scores := evaluateBestExitOwner(owner, exits, nodes, "", diagnosisExecOptions{}, defaultTunnelProbeTarget(), pinger)
 	if len(scores) != 2 {
 		t.Fatalf("expected two scores, got %+v", scores)
 	}
 	if scores[0].ExitNodeID != 31 {
 		t.Fatalf("expected exit-b first, got %+v", scores)
+	}
+}
+
+func TestEvaluateBestExitOwnerUsesConfiguredPublicProbeTarget(t *testing.T) {
+	owner := chainNodeRecord{NodeID: 10, NodeName: "entry-a"}
+	exits := []chainNodeRecord{{NodeID: 30, NodeName: "exit-a", Port: 30001}}
+	nodes := map[int64]*nodeRecord{
+		10: {ID: 10, Name: "entry-a", ServerIP: "10.0.0.10", ServerIPv4: "10.0.0.10"},
+		30: {ID: 30, Name: "exit-a", ServerIP: "10.0.0.30", ServerIPv4: "10.0.0.30"},
+	}
+	target := tunnelProbeTarget{Host: "speed.example.com", Port: 8443}
+	var calls []string
+	ping := func(nodeID int64, ip string, port int, options diagnosisExecOptions) (float64, float64, error) {
+		calls = append(calls, fmt.Sprintf("%d|%s|%d", nodeID, ip, port))
+		return 10, 0, nil
+	}
+
+	scores := evaluateBestExitOwner(owner, exits, nodes, "", diagnosisExecOptions{}, target, ping)
+	if len(scores) != 1 || !scores[0].Success {
+		t.Fatalf("expected successful score, got %+v", scores)
+	}
+	if !slices.Contains(calls, "30|speed.example.com|8443") {
+		t.Fatalf("expected exit public probe to use configured target, calls=%+v", calls)
+	}
+	for _, call := range calls {
+		if strings.Contains(call, defaultTunnelProbeTargetHost) {
+			t.Fatalf("did not expect default target call when custom target configured: %+v", calls)
+		}
 	}
 }
 
@@ -395,7 +426,7 @@ func TestEvaluateBestExitOwnerMarksCandidateFailedWhenOwnerToExitFails(t *testin
 		return 0, 100, errBestExitProbeForTest
 	}
 
-	scores := evaluateBestExitOwner(owner, exits, nodes, "", diagnosisExecOptions{}, pinger)
+	scores := evaluateBestExitOwner(owner, exits, nodes, "", diagnosisExecOptions{}, defaultTunnelProbeTarget(), pinger)
 	if len(scores) != 1 || scores[0].Success {
 		t.Fatalf("expected failed candidate, got %+v", scores)
 	}
@@ -413,7 +444,7 @@ func TestEvaluateBestExitOwnerMarksCandidateFailedWhenTargetResolutionFails(t *t
 		return 0, 100, nil
 	}
 
-	scores := evaluateBestExitOwner(owner, exits, nodes, "v4", diagnosisExecOptions{}, pinger)
+	scores := evaluateBestExitOwner(owner, exits, nodes, "v4", diagnosisExecOptions{}, defaultTunnelProbeTarget(), pinger)
 	if len(scores) != 1 || scores[0].Success {
 		t.Fatalf("expected failed candidate, got %+v", scores)
 	}
