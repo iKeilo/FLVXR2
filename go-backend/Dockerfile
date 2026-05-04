@@ -16,9 +16,9 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     wget \
-    && wget -q https://download.docker.com/linux/static/stable/x86_64/docker-27.0.0.tgz \
-    && tar -xzvf docker-27.0.0.tgz docker/docker --strip-components=1 -C /usr/local/bin/ \
-    && rm -rf docker-27.0.0.tgz /var/lib/apt/lists/*
+    && wget -q https://download.docker.com/linux/static/stable/x86_64/docker-27.0.1.tgz \
+    && tar -xzf docker-27.0.1.tgz --strip-components=1 -C /usr/local/bin/ docker/docker \
+    && rm -rf docker-27.0.1.tgz /var/lib/apt/lists/*
 
 COPY --from=builder /out/paneld /app/paneld
 
