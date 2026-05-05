@@ -637,13 +637,17 @@ func (h *Handler) executePanelUpgrade(currentVersion, targetVersion string) erro
 		_ = os.Remove(backupComposeFile)
 	}()
 
-	latestComposeURL := fmt.Sprintf("%s/%s/releases/download/%s/docker-compose-v4.yml", githubAPIBase, githubRepo, targetVersion)
-	latestComposeURL = strings.Replace(latestComposeURL, "https://api.github.com/repos", "https://github.com", 1)
-	latestComposeURL = strings.Replace(latestComposeURL, "/releases/download", "/releases/download", 1)
+	latestComposeURL := fmt.Sprintf("https://github.com/%s/releases/download/%s/docker-compose-v4.yml", githubRepo, targetVersion)
+
+	globalURL, _ := h.repo.GetViteConfigValue("global_download_url")
+	if globalURL == "" {
+		globalURL = "https://ghfast.top"
+	}
+	downloadURL := fmt.Sprintf("%s/%s", globalURL, latestComposeURL)
 
 	h.broadcastPanelUpgradeProgress("downloading", 10, "下载 docker-compose.yml...", false)
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Get(latestComposeURL)
+	client := &http.Client{Timeout: 60 * time.Second}
+	resp, err := client.Get(downloadURL)
 	if err != nil {
 		h.broadcastPanelUpgradeProgress("failed", 0, fmt.Sprintf("下载 docker-compose.yml 失败：%v", err), true)
 		return fmt.Errorf("下载 docker-compose.yml 失败：%v", err)
@@ -679,14 +683,7 @@ func (h *Handler) executePanelUpgrade(currentVersion, targetVersion string) erro
 		return fmt.Errorf("拉取镜像失败：%v", err)
 	}
 
-	fmt.Println("停止服务...")
-	h.broadcastPanelUpgradeProgress("stopping", 70, "停止旧服务...", false)
-	if err := runDockerComposeDown(installDir); err != nil {
-		h.broadcastPanelUpgradeProgress("failed", 0, fmt.Sprintf("停止服务失败：%v", err), true)
-		return fmt.Errorf("停止服务失败：%v", err)
-	}
-
-	fmt.Println("启动服务...")
+	fmt.Println("启动服务（自动重建容器）...")
 	h.broadcastPanelUpgradeProgress("starting_containers", 80, "启动新服务...", false)
 	if err := runDockerComposeUp(installDir); err != nil {
 		h.broadcastPanelUpgradeProgress("failed", 0, fmt.Sprintf("启动服务失败：%v", err), true)
