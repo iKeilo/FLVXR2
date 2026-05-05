@@ -569,7 +569,7 @@ function SortableTableRow({
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="text-[11px] font-medium text-default-500">
-                      到期提醒
+                      续费提醒
                     </div>
                     <button
                       className="text-[10px] text-default-400 hover:text-default-600 transition-colors"
@@ -831,7 +831,7 @@ export function NodeListView({
               placeholder:
                 "text-sm text-default-600 font-semibold uppercase tracking-wider",
             }}
-            placeholder="到期提醒"
+            placeholder="续费提醒"
             selectedKeys={nodeFilterMode ? [nodeFilterMode] : []}
             size="sm"
             variant="flat"
