@@ -584,11 +584,22 @@ func (h *Handler) panelUpgrade(w http.ResponseWriter, r *http.Request) {
 
 	currentVersion := h.GetFluxVersion()
 
+	// 使用 panel_install.sh 脚本升级（更可靠）
 	go func() {
-		if err := h.executePanelUpgrade(currentVersion, targetVersion); err != nil {
-			fmt.Printf("面板升级失败：%v\n", err)
-			h.rollbackPanelUpgrade(currentVersion)
+		fmt.Printf("开始升级面板：%s -> %s\n", currentVersion, targetVersion)
+		
+		// 下载并执行 panel_install.sh
+		cmd := exec.Command("bash", "-c", `
+			curl -L https://raw.githubusercontent.com/abai569/flvx/main/panel_install.sh -o /tmp/panel_install.sh && \
+			chmod +x /tmp/panel_install.sh && \
+			echo -e "2\n" | /tmp/panel_install.sh
+		`)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			fmt.Printf("面板升级失败：%v\n输出：%s\n", err, string(output))
+			return
 		}
+		fmt.Printf("面板升级完成：%s\n", string(output))
 	}()
 
 	response.WriteJSON(w, response.OK(map[string]string{
