@@ -43,6 +43,12 @@ export default defineConfig({
         navigateFallback: "/index.html",
         cleanupOutdatedCaches: true,
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        skipWaiting: true,
+        clientsClaim: true,
+      },
+      devOptions: {
+        enabled: false,
+        type: "module",
       },
     }),
   ],
