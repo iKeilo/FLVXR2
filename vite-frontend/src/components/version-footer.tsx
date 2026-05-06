@@ -13,7 +13,7 @@ import {
   getUpdateReleaseChannel,
   hasVersionUpdate,
 } from "@/utils/version-update";
-import { getPanelReleases, upgradePanel, type PanelReleaseItem } from "@/api";
+import { getPanelReleases, runSystemUpgrade, type PanelReleaseItem } from "@/api";
 
 const FALLBACK_GITHUB_REPO = "https://github.com/abai569/flvx";
 
@@ -126,18 +126,13 @@ export function VersionFooter({
   const handleConfirmUpgrade = async () => {
     setUpgrading(true);
     try {
-      const res = await upgradePanel(selectedVersion || undefined, channel);
+      const res = await runSystemUpgrade(selectedVersion || undefined, channel);
       if (res.code === 0) {
         setUpgradeModalOpen(false);
-        // 静默等待升级完成，不显示 toast，倒计时结束后自动刷新
-        let countdown = 60;
-        const timer = setInterval(() => {
-          countdown -= 5;
-          if (countdown <= 0) {
-            clearInterval(timer);
-            window.location.reload();
-          }
-        }, 5000);
+        toast.success(res.data?.message || "升级已触发，面板将自动重启");
+        setTimeout(() => {
+          window.location.reload();
+        }, 60000);
       } else {
         toast.error(res.msg || "升级失败");
         setUpgrading(false);
