@@ -495,11 +495,11 @@ func (r *Repository) RefreshNodeExpiryReminder(nodeID int64) error {
 		return errors.New("repository not initialized")
 	}
 
-	// Get current node cycle and version info to calculate next expiry
 	var node struct {
-		RenewalCycle string `gorm:"column:renewal_cycle"`
+		RenewalCycle string          `gorm:"column:renewal_cycle"`
+		ExpiryTime   sql.NullInt64   `gorm:"column:expiry_time"`
 	}
-	if err := r.db.Model(&model.Node{}).Where("id = ?", nodeID).Select("renewal_cycle").Find(&node).Error; err != nil {
+	if err := r.db.Model(&model.Node{}).Where("id = ?", nodeID).Select("renewal_cycle, expiry_time").Find(&node).Error; err != nil {
 		return err
 	}
 
@@ -507,27 +507,40 @@ func (r *Repository) RefreshNodeExpiryReminder(nodeID int64) error {
 		return errors.New("renewal_cycle not set")
 	}
 
-	// Calculate new expiry time based on current time + cycle
-	now := time.Now()
-	var nextExpiry time.Time
-	switch node.RenewalCycle {
-	case "month":
-		nextExpiry = now.AddDate(0, 1, 0)
-	case "quarter":
-		nextExpiry = now.AddDate(0, 3, 0)
-	case "halfYear":
-		nextExpiry = now.AddDate(0, 6, 0)
-	case "year":
-		nextExpiry = now.AddDate(1, 0, 0)
-	default:
-		nextExpiry = now.AddDate(0, 1, 0)
+	if !node.ExpiryTime.Valid || node.ExpiryTime.Int64 <= 0 {
+		return errors.New("expiry_time not set")
 	}
 
-	// Update database
+	now := time.Now()
+	baseTime := time.UnixMilli(node.ExpiryTime.Int64)
+	nextExpiry := baseTime
+
+	intervalMonths := 0
+	switch node.RenewalCycle {
+	case "month":
+		intervalMonths = 1
+	case "quarter":
+		intervalMonths = 3
+	case "halfYear":
+		intervalMonths = 6
+	case "year":
+		intervalMonths = 12
+	default:
+		intervalMonths = 1
+	}
+
+	// 从基准日期按周期推，找到第一个超过今天的日期
+	for nextExpiry.Before(now) || nextExpiry.Equal(now) {
+		nextExpiry = nextExpiry.AddDate(0, intervalMonths, 0)
+	}
+
+	// 用户主动点击更新，进入下一个周期
+	nextExpiry = nextExpiry.AddDate(0, intervalMonths, 0)
+
 	return r.db.Model(&model.Node{}).Where("id = ?", nodeID).Updates(map[string]interface{}{
-		"expiry_time":                   strconv.FormatInt(nextExpiry.UnixMilli(), 10),
-		"expiry_reminder_dismissed":     0,
-		"expiry_reminder_dismissed_until": 0,
+		"expiry_time":                       strconv.FormatInt(nextExpiry.UnixMilli(), 10),
+		"expiry_reminder_dismissed":         0,
+		"expiry_reminder_dismissed_until":   0,
 	}).Error
 }
 
