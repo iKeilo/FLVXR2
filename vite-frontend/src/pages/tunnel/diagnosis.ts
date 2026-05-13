@@ -6,6 +6,7 @@ export interface DiagnosisEntry {
   nodeId: string;
   targetIp: string;
   targetPort?: number;
+  actualTarget?: string;
   message?: string;
   averageTime?: number;
   packetLoss?: number;

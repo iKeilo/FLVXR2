@@ -4311,8 +4311,7 @@ export default function TunnelPage() {
                                                 {result.description}
                                               </div>
                                               <div className="text-xs text-default-500 truncate">
-                                                {result.targetIp}:
-                                                {result.targetPort}
+                                                {result.actualTarget ? `${result.actualTarget}:${result.targetPort}` : `${result.targetIp}:${result.targetPort}`}
                                               </div>
                                             </div>
                                           </div>
@@ -4481,7 +4480,7 @@ export default function TunnelPage() {
                                           {result.description}
                                         </div>
                                         <div className="text-xs text-default-500 mt-0.5 break-all">
-                                          {result.targetIp}:{result.targetPort}
+                                          {result.actualTarget ? `${result.actualTarget}:${result.targetPort}` : `${result.targetIp}:${result.targetPort}`}
                                         </div>
                                       </div>
                                       <div

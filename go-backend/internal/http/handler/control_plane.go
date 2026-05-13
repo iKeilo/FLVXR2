@@ -85,6 +85,11 @@ func (h *Handler) buildDiagnosisStreamStartItems(workItems []diagnosisWorkItem) 
 			targetPort = 443
 		}
 
+		// For exitTest items with empty targetIP, use the first rotation target for stream start display
+		if targetIP == "" && workItem.metadata["exitTest"] == true && len(exitTestTargets) > 0 {
+			targetIP = exitTestTargets[0].host
+		}
+
 		nodeName := fmt.Sprintf("node_%d", workItem.fromNodeID)
 		if node, err := h.cachedNode(nodeCache, workItem.fromNodeID); err == nil && strings.TrimSpace(node.Name) != "" {
 			nodeName = node.Name
@@ -1352,11 +1357,16 @@ func (h *Handler) appendExitTestRotation(results *[]map[string]interface{}, from
 	nodeCache := map[int64]*nodeRecord{}
 	allFailedTargets := []string{}
 
-	for _, t := range exitTestTargets {
+	for i, t := range exitTestTargets {
 		single := make([]map[string]interface{}, 0, 1)
 		h.appendPathDiagnosis(&single, nodeCache, fromNodeID, t.host, t.port, description, metadata, options)
 		if len(single) > 0 && asBool(single[0]["success"], false) {
-			single[0]["targetIp"] = t.host
+			// Use first rotation target for frontend row matching
+			single[0]["targetIp"] = exitTestTargets[0].host
+			// Record actual successful target for display
+			if i > 0 {
+				single[0]["actualTarget"] = t.host
+			}
 			*results = append(*results, single[0])
 			return
 		}
