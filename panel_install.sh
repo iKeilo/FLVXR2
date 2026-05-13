@@ -627,14 +627,13 @@ update_panel() {
   echo "⏳ 准备清理旧版本镜像..."
   sleep 10
   
-  # 兼容 Nerdctl/Docker Desktop 等非标准输出的清理逻辑
-  # 1. 过滤警告行和表头
-  # 2. 提取第一列 (通常是 Repo:Tag)
-  # 3. 匹配 ghcr.io/abai569 且排除当前版本
-  OLD_IMAGES=$(docker images 2>/dev/null | grep -v "WARNING" | grep -v "^IMAGE " | grep "ghcr.io/abai569" | grep -v "$LATEST_VERSION" | awk '{print $1}')
+  # 解决 Nerdctl/Docker 格式不兼容以及 $1 提取错误 (如 Tag 和 ID 粘连) 的问题
+  # 使用正则提取标准镜像格式：ghcr.io/abai569/<名称>:<版本>
+  # 排除当前最新版本 $LATEST_VERSION
+  OLD_IMAGES=$(docker images 2>/dev/null | grep -v "WARNING" | grep -oE 'ghcr.io/abai569/[^:]+:[^[:space:]":]+' | grep -v ":${LATEST_VERSION}$" | sort -u)
   
   if [ -n "$OLD_IMAGES" ]; then
-    echo "🧹 发现旧版本面板镜像，正在强制删除："
+    echo " 发现旧版本面板镜像，正在强制删除："
     echo "$OLD_IMAGES"
     echo "$OLD_IMAGES" | xargs docker rmi -f >/dev/null 2>&1 || true
     echo "✅ 旧版本面板镜像清理完毕"
