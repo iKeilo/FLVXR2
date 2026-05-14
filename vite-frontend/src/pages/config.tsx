@@ -735,40 +735,22 @@ export default function ConfigPage() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      {/* 页面标题 
-      <div className="flex items-center gap-3 mb-6">
-        <Button
-          isIconOnly
-          aria-label="返回上一页"
-          className="min-w-0 w-9 h-9"
-          size="sm"
-          variant="flat"
-          onPress={handleBack}
-        >
-          <BackIcon className="w-5 h-5" />
-        </Button>
-        <SettingsIcon className="w-8 h-8 text-primary" />
-        <div>
-          <h1 className="text-2xl font-bold">网站配置</h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            管理网站的基本信息和显示设置
-          </p>
-        </div>
-      </div> */}
-      <Card className="shadow-md">
-        <CardHeader className="pb-6">
-          <div className="flex items-center w-full">
-            <div>
-              <h2 className="text-xl font-semibold">基本设置</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                配置网站的基本信息，这些设置会影响网站的显示效果
-              </p>
+    <div className="grid lg:grid-cols-2 gap-6 max-w-7xl mx-auto p-6">
+      {/* 左栏：基本设置 */}
+      <div>
+        <Card className="shadow-md">
+          <CardHeader className="pb-6">
+            <div className="flex items-center w-full">
+              <div>
+                <h2 className="text-xl font-semibold">基本设置</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  配置网站的基本信息，这些设置会影响网站的显示效果
+                </p>
+              </div>
             </div>
-          </div>
-        </CardHeader>
-        <Divider />
-        <CardBody className="space-y-6 pt-8 md:pt-8">
+          </CardHeader>
+          <Divider />
+          <CardBody className="space-y-6 pt-8 md:pt-8">
           {CONFIG_ITEMS.map((item, index) => {
             // 检查配置项是否应该显示
             if (!shouldShowItem(item)) {
@@ -913,71 +895,11 @@ export default function ConfigPage() {
           </AnimatePresence>
         </CardBody>
       </Card>
-      {/* 授权码配置 */}
-      <Card className="mt-6 shadow-md">
-        <CardHeader className="pb-6">
-          <div className="flex justify-between items-center w-full gap-4">
-            <div>
-              <h2 className="text-xl font-semibold">授权码配置</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                输入授权码和面板域名以激活授权服务
-              </p>
-            </div>
-          </div>
-        </CardHeader>
-        <Divider />
-        <CardBody className="space-y-6 pt-8 md:pt-8">
-          <div className="space-y-5">
-            <div className="space-y-3">
-              <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                授权码 UUID
-              </label>
-              <Input
-                classNames={{ input: "text-sm" }}
-                placeholder="请输入授权码 UUID"
-                size="md"
-                value={licenseKey}
-                variant="bordered"
-                onChange={(e) => setLicenseKey(e.target.value)}
-              />
-            </div>
-            <div className="space-y-3">
-              <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                面板域名
-              </label>
-              <Input
-                classNames={{ input: "text-sm" }}
-                placeholder="例如：panel.example.com"
-                size="md"
-                value={licenseDomain}
-                variant="bordered"
-                onChange={(e) => setLicenseDomain(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="flex justify-between items-center pt-4 border-t border-divider/50">
-            <div className="flex items-center gap-2">
-              {licenseStatus && (
-                <span className={`text-xs font-medium ${licenseStatus.has_license_key ? (licenseStatus.valid ? "text-green-600" : "text-red-600") : "text-yellow-600"}`}>
-                  {licenseStatus.has_license_key
-                    ? (licenseStatus.valid
-                        ? `授权有效，剩余 ${licenseStatus.expire_time ? Math.floor((licenseStatus.expire_time - Date.now()) / 86400000) : "？"} 天`
-                        : `授权无效：${licenseStatus.reason || "未知原因"}`)
-                    : "当前为体验模式（资源已限制）"}
-                </span>
-              )}
-            </div>
-            <Button
-              color="primary"
-              isLoading={licenseSaving}
-              onPress={handleLicenseSave}
-            >
-              {licenseSaving ? "保存中" : "保存并验证"}
-            </Button>
-          </div>
-        </CardBody>
-      </Card>
-      <Card className="mt-6 shadow-md">
+    </div>
+
+    {/* 右栏：公告管理、导出数据、授权码配置 */}
+    <div className="space-y-6">
+      <Card className="shadow-md">
         <CardHeader className="pb-6">
           <div className="flex justify-between items-center w-full gap-4">
             <div>
@@ -986,7 +908,6 @@ export default function ConfigPage() {
                 设置首页显示的公告内容，启用后将在首页顶部展示
               </p>
             </div>
-            {/* 👇 开关被优雅地提到了这里，居右对齐 */}
             {!announcementLoading && (
               <Switch
                 color="primary"
@@ -1138,6 +1059,72 @@ export default function ConfigPage() {
           </div>
         </CardBody>
       </Card>
+
+      {/* 授权码配置 */}
+      <Card className="shadow-md">
+        <CardHeader className="pb-6">
+          <div className="flex justify-between items-center w-full gap-4">
+            <div>
+              <h2 className="text-xl font-semibold">授权码配置</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                输入授权码和面板域名以激活授权服务
+              </p>
+            </div>
+          </div>
+        </CardHeader>
+        <Divider />
+        <CardBody className="space-y-6 pt-8 md:pt-8">
+          <div className="space-y-5">
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                授权码 UUID
+              </label>
+              <Input
+                classNames={{ input: "text-sm" }}
+                placeholder="请输入授权码 UUID"
+                size="md"
+                value={licenseKey}
+                variant="bordered"
+                onChange={(e) => setLicenseKey(e.target.value)}
+              />
+            </div>
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                面板域名
+              </label>
+              <Input
+                classNames={{ input: "text-sm" }}
+                placeholder="例如：panel.example.com"
+                size="md"
+                value={licenseDomain}
+                variant="bordered"
+                onChange={(e) => setLicenseDomain(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex justify-between items-center pt-4 border-t border-divider/50">
+            <div className="flex items-center gap-2">
+              {licenseStatus && (
+                <span className={`text-xs font-medium ${licenseStatus.has_license_key ? (licenseStatus.valid ? "text-green-600" : "text-red-600") : "text-yellow-600"}`}>
+                  {licenseStatus.has_license_key
+                    ? (licenseStatus.valid
+                        ? `授权有效，剩余 ${licenseStatus.expire_time ? Math.floor((licenseStatus.expire_time - Date.now()) / 86400000) : "？"} 天`
+                        : `授权无效：${licenseStatus.reason || "未知原因"}`)
+                    : "当前为体验模式（资源已限制）"}
+                </span>
+              )}
+            </div>
+            <Button
+              color="primary"
+              isLoading={licenseSaving}
+              onPress={handleLicenseSave}
+            >
+              {licenseSaving ? "保存中" : "保存并验证"}
+            </Button>
+          </div>
+        </CardBody>
+      </Card>
     </div>
+  </div>
   );
 }
