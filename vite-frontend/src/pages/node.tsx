@@ -1093,15 +1093,17 @@ export default function NodePage() {
     if (!nodeToReset) return;
     setResetTrafficLoading(true);
     try {
-      const inFlowBefore = nodeToReset.periodTraffic?.tx || 0;
-      const outFlowBefore = nodeToReset.periodTraffic?.rx || 0;
+      // 从当前节点列表中获取最新流量数据
+      const currentNode = nodeList.find(n => n.id === nodeToReset.id);
+      const inFlowBefore = currentNode?.periodTraffic?.tx || 0;
+      const outFlowBefore = currentNode?.periodTraffic?.rx || 0;
       const res = await batchResetNodeTraffic([nodeToReset.id], "管理员手动归零", inFlowBefore, outFlowBefore);
 
       if (res.code === 0) {
         toast.success("流量归零成功");
         onResetTrafficModalClose();
-        // 刷新节点列表
-        await loadNodes();
+        // 静默刷新节点列表，保持当前滚动位置
+        await loadNodes({ silent: true });
       } else {
         toast.error(res.msg || "归零失败");
       }

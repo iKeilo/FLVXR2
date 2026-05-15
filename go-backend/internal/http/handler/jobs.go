@@ -166,9 +166,8 @@ func (h *Handler) runResetAndExpiryJob(now time.Time) {
 	h.resetUserQuotaWindows(now)
 	h.disableExpiredUsers(now.UnixMilli())
 	h.disableExpiredUserTunnels(now.UnixMilli())
-
-	// ✅ 新增：检查 Forward 规则到期
 	h.disableExpiredForwards(now.UnixMilli())
+	h.resetNodeMonthlyTraffic(now)
 }
 
 func (h *Handler) resetMonthlyFlow(now time.Time) {
@@ -182,6 +181,51 @@ func (h *Handler) resetMonthlyFlow(now time.Time) {
 		h.repo.RecordFlowResetHistory(snapshots, periodKey, nowMs, "自动周期归零")
 	}
 	_ = h.repo.ResetUserTunnelMonthlyFlow(currentDay, lastDay)
+}
+
+func (h *Handler) resetNodeMonthlyTraffic(now time.Time) {
+	if h == nil || h.repo == nil {
+		return
+	}
+
+	nodes, err := h.repo.ListNodesWithTrafficResetDue(now)
+	if err != nil || len(nodes) == 0 {
+		return
+	}
+
+	actorUserID := int64(1)
+	actorUserName := "system"
+	nowMs := now.UnixMilli()
+
+	for _, node := range nodes {
+		cmdResult, err := h.sendNodeCommandWithTimeout(
+			node.ID,
+			"ResetTraffic",
+			map[string]interface{}{
+				"reason": "自动周期归零",
+				"nodeId": node.ID,
+			},
+			10*time.Second,
+			false,
+			false,
+		)
+
+		if err != nil || !cmdResult.Success {
+			log.Printf("WARN: auto-reset node %d traffic failed: %v", node.ID, err)
+			continue
+		}
+
+		_ = h.repo.CreateNodeTrafficResetLog(&repo.NodeTrafficResetLogCreateParams{
+			NodeID:        node.ID,
+			NodeName:      node.Name,
+			ResetTime:     nowMs,
+			OperatorID:    actorUserID,
+			OperatorName:  actorUserName,
+			Reason:        "自动周期归零",
+			InFlowBefore:  node.PeriodTx,
+			OutFlowBefore: node.PeriodRx,
+		})
+	}
 }
 
 func (h *Handler) disableExpiredUsers(nowMs int64) {

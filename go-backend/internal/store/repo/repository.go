@@ -4055,3 +4055,58 @@ func (r *Repository) PruneServiceMonitorResults(olderThanMs int64) error {
 	}
 	return r.db.Where("timestamp < ?", olderThanMs).Delete(&model.ServiceMonitorResult{}).Error
 }
+
+type NodeTrafficResetDue struct {
+	ID       int64
+	Name     string
+	PeriodRx int64
+	PeriodTx int64
+}
+
+func (r *Repository) ListNodesWithTrafficResetDue(now time.Time) ([]NodeTrafficResetDue, error) {
+	if r == nil || r.db == nil {
+		return nil, errors.New("repository not initialized")
+	}
+
+	currentDay := now.Day()
+	nodes := make([]NodeTrafficResetDue, 0)
+
+	query := `
+		SELECT n.id, n.name, 
+		       COALESCE(nm.net_in_bytes, 0) as period_rx,
+		       COALESCE(nm.net_out_bytes, 0) as period_tx
+		FROM node n
+		LEFT JOIN node_metric nm ON nm.node_id = n.id
+		WHERE n.status = 1
+		  AND n.expiry_time > ?
+		  AND n.renewal_cycle IN ('month', 'quarter', 'year')
+	`
+
+	err := r.db.Raw(query, now.UnixMilli()).Scan(&nodes).Error
+	if err != nil {
+		return nil, err
+	}
+
+	filtered := make([]NodeTrafficResetDue, 0, len(nodes))
+	for _, node := range nodes {
+		expiryMs := r.getNodeExpiryTime(node.ID)
+		if expiryMs <= 0 {
+			continue
+		}
+		expiryTime := time.UnixMilli(expiryMs)
+		if expiryTime.Day() == currentDay {
+			filtered = append(filtered, node)
+		}
+	}
+
+	return filtered, nil
+}
+
+func (r *Repository) getNodeExpiryTime(nodeID int64) int64 {
+	var expiryTime sql.NullInt64
+	err := r.db.Model(&model.Node{}).Where("id = ?", nodeID).Select("expiry_time").Scan(&expiryTime).Error
+	if err != nil || !expiryTime.Valid {
+		return 0
+	}
+	return expiryTime.Int64
+}
