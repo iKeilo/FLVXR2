@@ -50,9 +50,18 @@ export default function DashboardPage() {
   const [addressModalTitle, setAddressModalTitle] = useState("");
   const [addressList, setAddressList] = useState<AddressItem[]>([]);
   const [quotaHistoryModalOpen, setQuotaHistoryModalOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [historyToDelete, setHistoryToDelete] = useState<number | null>(null);
   useEffect(() => {
     fetchQuotaHistory();
   }, [fetchQuotaHistory]);
+  const handleDeleteHistory = async () => {
+    if (historyToDelete) {
+      await deleteQuotaHistory(historyToDelete);
+      setHistoryToDelete(null);
+      setDeleteConfirmOpen(false);
+    }
+  };
   const formatFlow = (value: number, unit: string = "bytes"): string => {
     // 99999 表示无限制
     if (value === 99999) {
@@ -1091,83 +1100,154 @@ export default function DashboardPage() {
           </ModalBody>
         </ModalContent>
       </Modal>
+      {/* 流量历史记录弹窗 */}
       <Modal
         backdrop="blur"
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-[500px] rounded-xl",
         }}
         isOpen={quotaHistoryModalOpen}
         placement="center"
-        scrollBehavior="outside"
-        size="md"
         onOpenChange={setQuotaHistoryModalOpen}
       >
         <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader className="flex flex-col gap-1">
-                <h2 className="text-xl font-bold">流量历史记录</h2>
-              </ModalHeader>
-              <ModalBody>
-                {quotaHistory.length > 0 ? (
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {quotaHistory.map((log) => (
-                      <div
-                        key={log.id}
-                        className="p-3 rounded-lg border border-divider bg-default-50/50"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs text-default-500">
-                            {new Date(log.resetTime).toLocaleString("zh-CN", { hour12: false }).replace(/\//g, "-")}
-                          </span>
-                          <Button
-                            isIconOnly
-                            className="w-6 h-6 min-w-6 text-danger hover:bg-danger/10"
-                            size="sm"
-                            variant="flat"
-                            onPress={() => {
-                              if (window.confirm("确定要删除该条记录吗？")) {
-                                deleteQuotaHistory(log.id);
-                              }
-                            }}
+          <ModalHeader className="flex items-center justify-between">
+            <span className="text-base font-semibold">流量历史记录</span>
+            <Button
+              isIconOnly
+              className="w-8 h-8 min-w-8"
+              size="sm"
+              variant="flat"
+              onPress={() => setQuotaHistoryModalOpen(false)}
+            >
+              <svg
+                aria-hidden="true"
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M6 18L18 6M6 6l12 12"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </Button>
+          </ModalHeader>
+          <ModalBody className="py-6">
+            {quotaHistory.length > 0 ? (
+              <div className="space-y-3 max-h-80 overflow-y-auto">
+                {quotaHistory.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-3 bg-default-50/50 dark:bg-default-100/20 rounded-lg"
+                  >
+                    <div className="flex items-center justify-between w-full mb-2">
+                      <span className="text-sm font-medium text-default-600">
+                        {item.resetReason === "管理员手动归零" || item.resetReason === "管理员手动重置"
+                          ? "admin"
+                          : "归零时间"}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-default-500">
+                          {new Date(item.resetTime).toLocaleString("zh-CN", { hour12: false }).replace(/\//g, "-")}
+                        </span>
+                        <Button
+                          isIconOnly
+                          className="w-6 h-6 min-w-6 text-danger hover:bg-danger/10"
+                          size="sm"
+                          variant="flat"
+                          onPress={() => {
+                            setHistoryToDelete(item.id);
+                            setDeleteConfirmOpen(true);
+                          }}
+                        >
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
                           >
-                            <svg
-                              className="w-3.5 h-3.5"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path
-                                clipRule="evenodd"
-                                d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                                fillRule="evenodd"
-                              />
-                            </svg>
-                          </Button>
-                        </div>
-                        <div className="text-sm text-default-600">
-                          归零前流量：<span className="text-blue-600">{(log.inFlowBefore / 1024 / 1024 / 1024).toFixed(2)} GB</span> ↑ <span className="text-orange-600">{(log.outFlowBefore / 1024 / 1024 / 1024).toFixed(2)} GB</span> ↓ <span className="font-medium">总 {(log.usedBytes / 1024 / 1024 / 1024).toFixed(2)} GB</span>
-                        </div>
-                        {log.resetReason && (
-                          <div className="text-xs text-default-500 mt-1">
-                            归零原因：{log.resetReason}
-                          </div>
-                        )}
+                            <path
+                              clipRule="evenodd"
+                              d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                              fillRule="evenodd"
+                            />
+                          </svg>
+                        </Button>
                       </div>
-                    ))}
+                    </div>
+                    <div className="flex flex-col gap-1 w-full">
+                      <div className="w-full">
+                        <span className="text-default-500 text-sm block mb-1">
+                          归零前流量
+                        </span>
+                        <div className="flex items-center justify-end gap-2 flex-wrap">
+                          <span className="text-primary-600 text-sm whitespace-nowrap dark:text-primary-400">
+                            ↑{(item.inFlowBefore / 1024 / 1024 / 1024).toFixed(2)} GB
+                          </span>
+                          <span className="text-success-600 text-sm whitespace-nowrap dark:text-success-400">
+                            ↓{(item.outFlowBefore / 1024 / 1024 / 1024).toFixed(2)} GB
+                          </span>
+                          <span className="text-default-600 text-sm whitespace-nowrap font-medium">
+                            总 {(item.usedBytes / 1024 / 1024 / 1024).toFixed(2)} GB
+                          </span>
+                        </div>
+                      </div>
+                      {item.resetReason && (
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-default-500 text-sm">
+                            归零原因
+                          </span>
+                          <span className="text-red-500 text-sm">
+                            {item.resetReason}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                ) : (
-                  <div className="text-center text-default-500 py-8">
-                    暂无流量历史记录
-                  </div>
-                )}
-              </ModalBody>
-              <ModalFooter>
-                <Button size="sm" variant="flat" onPress={onClose}>
-                  关闭
-                </Button>
-              </ModalFooter>
-            </>
-          )}
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-default-400">
+                <div className="text-sm">暂无记录</div>
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button onPress={() => setQuotaHistoryModalOpen(false)}>关闭</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* 删除历史记录确认弹窗 */}
+      <Modal
+        backdrop="blur"
+        classNames={{
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-[400px] rounded-xl",
+        }}
+        isOpen={deleteConfirmOpen}
+        placement="center"
+        onOpenChange={setDeleteConfirmOpen}
+      >
+        <ModalContent>
+          <ModalHeader className="text-base font-semibold">
+            确认删除
+          </ModalHeader>
+          <ModalBody className="py-4">
+            <p className="text-sm text-default-600">
+              确定要删除这条流量历史记录吗？此操作不可恢复！
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="flat" onPress={() => setDeleteConfirmOpen(false)}>
+              取消
+            </Button>
+            <Button color="danger" onPress={handleDeleteHistory}>
+              确认
+            </Button>
+          </ModalFooter>
         </ModalContent>
       </Modal>
     </AnimatedPage>

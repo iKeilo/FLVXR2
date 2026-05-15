@@ -606,10 +606,10 @@ const SortableTunnelGroupContainer = ({
   const style: React.CSSProperties = {
     transform: transform
       ? CSS.Transform.toString({
-          ...transform,
-          x: Math.round(transform.x),
-          y: Math.round(transform.y),
-        })
+        ...transform,
+        x: Math.round(transform.x),
+        y: Math.round(transform.y),
+      })
       : undefined,
     transition: isDragging ? undefined : transition || undefined,
     opacity: isDragging ? 0.55 : 1,
@@ -688,10 +688,10 @@ const SortableForwardCard = ({ forward, renderCard }: any) => {
   const style: React.CSSProperties = {
     transform: transform
       ? CSS.Transform.toString({
-          ...transform,
-          x: Math.round(transform.x),
-          y: Math.round(transform.y),
-        })
+        ...transform,
+        x: Math.round(transform.x),
+        y: Math.round(transform.y),
+      })
       : undefined,
     transition: isDragging ? undefined : transition || undefined,
     opacity: isDragging ? 0.5 : 1,
@@ -745,19 +745,19 @@ const SortableTableRow = ({
     rawInIp === "默认 IP"
       ? rawInIp
       : rawInIp
-          .split(",")
-          .map((ip: string) => ip.trim().replace(/:\d+$/, ""))
-          .join(",");
+        .split(",")
+        .map((ip: string) => ip.trim().replace(/:\d+$/, ""))
+        .join(",");
   const inAddrWithPorts =
     rawInIp === "默认 IP"
       ? `默认 IP:${forward.inPort}`
       : rawInIp
-          .split(",")
-          .map(
-            (ip: string) =>
-              `${ip.trim().replace(/:\d+$/, "")}:${forward.inPort}`,
-          )
-          .join(",");
+        .split(",")
+        .map(
+          (ip: string) =>
+            `${ip.trim().replace(/:\d+$/, "")}:${forward.inPort}`,
+        )
+        .join(",");
   const remoteAddrOnly = (forward.remoteAddr.split(",")[0] || "").replace(
     /:\d+$/,
     "",
@@ -1045,19 +1045,19 @@ const SortableCompactTableRow = ({
     rawInIp === "默认IP"
       ? rawInIp
       : rawInIp
-          .split(",")
-          .map((ip: string) => ip.trim().replace(/:\d+$/, ""))
-          .join(",");
+        .split(",")
+        .map((ip: string) => ip.trim().replace(/:\d+$/, ""))
+        .join(",");
   const inAddrWithPorts =
     rawInIp === "默认IP"
       ? `默认IP:${forward.inPort}`
       : rawInIp
-          .split(",")
-          .map(
-            (ip: string) =>
-              `${ip.trim().replace(/:\d+$/, "")}:${forward.inPort}`,
-          )
-          .join(",");
+        .split(",")
+        .map(
+          (ip: string) =>
+            `${ip.trim().replace(/:\d+$/, "")}:${forward.inPort}`,
+        )
+        .join(",");
   const remoteAddrOnly = (forward.remoteAddr.split(",")[0] || "").replace(
     /:\d+$/,
     "",
@@ -1351,7 +1351,7 @@ export default function ForwardPage() {
   const activeFilterCount =
     (searchParams.name ? 1 : 0) +
     (searchParams.userId !== "all" &&
-    searchParams.userId !== (tokenUserId ? tokenUserId.toString() : "all")
+      searchParams.userId !== (tokenUserId ? tokenUserId.toString() : "all")
       ? 1
       : 0) +
     (searchParams.tunnelId !== "all" ? 1 : 0) +
@@ -1615,7 +1615,7 @@ export default function ForwardPage() {
         buildForwardGroupOrderLocalKey(tokenUserId),
         JSON.stringify(nextOrderMap),
       );
-    } catch {}
+    } catch { }
   };
   const persistGroupCollapsedToLocal = (
     nextCollapsedMap: ForwardGroupCollapsedMap,
@@ -1628,7 +1628,7 @@ export default function ForwardPage() {
         buildForwardGroupCollapsedLocalKey(tokenUserId),
         JSON.stringify(nextCollapsedMap),
       );
-    } catch {}
+    } catch { }
   };
   const persistGroupOrderToGlobal = async (
     nextOrderMap: ForwardGroupOrderMap,
@@ -1759,7 +1759,7 @@ export default function ForwardPage() {
               JSON.stringify(globalCollapsedBucket),
             );
           }
-        } catch {}
+        } catch { }
       }
       if (cancelled) {
         return;
@@ -2010,7 +2010,7 @@ export default function ForwardPage() {
     setViewMode(nextView);
     try {
       localStorage.setItem("forward-view-mode", nextView);
-    } catch {}
+    } catch { }
 
     // 保存精简/分组状态
     if (nextCompact !== compactMode) {
@@ -2493,10 +2493,10 @@ export default function ForwardPage() {
       if (res.code === 0) {
         const warningItems = Array.isArray((res as any).data?.warnings)
           ? (res as any).data.warnings
-              .map((item: unknown) =>
-                typeof item === "string" ? item.trim() : "",
-              )
-              .filter((item: string) => item)
+            .map((item: unknown) =>
+              typeof item === "string" ? item.trim() : "",
+            )
+            .filter((item: string) => item)
           : [];
 
         warningItems.forEach((warning: string) => {
@@ -2602,7 +2602,7 @@ export default function ForwardPage() {
           onStart: (payload) => {
             const startForwardName =
               typeof payload.forwardName === "string" &&
-              payload.forwardName.trim() !== ""
+                payload.forwardName.trim() !== ""
                 ? payload.forwardName
                 : forward.name;
             const startTotal = Number(payload.total);
@@ -3747,7 +3747,7 @@ export default function ForwardPage() {
       }
       if (
         normalizeTunnelTrafficRatio(existingTunnelGroup.tunnelTrafficRatio) ===
-          1 &&
+        1 &&
         normalizeTunnelTrafficRatio(forward.tunnelTrafficRatio) !== 1
       ) {
         existingTunnelGroup.tunnelTrafficRatio = normalizeTunnelTrafficRatio(
@@ -3956,19 +3956,19 @@ export default function ForwardPage() {
       rawInIp === "默认IP"
         ? rawInIp
         : rawInIp
-            .split(",")
-            .map((ip: string) => ip.trim().replace(/:\d+$/, ""))
-            .join(",");
+          .split(",")
+          .map((ip: string) => ip.trim().replace(/:\d+$/, ""))
+          .join(",");
     const inAddrWithPorts =
       rawInIp === "默认IP"
         ? `默认IP:${forward.inPort}`
         : rawInIp
-            .split(",")
-            .map(
-              (ip: string) =>
-                `${ip.trim().replace(/:\d+$/, "")}:${forward.inPort}`,
-            )
-            .join(",");
+          .split(",")
+          .map(
+            (ip: string) =>
+              `${ip.trim().replace(/:\d+$/, "")}:${forward.inPort}`,
+          )
+          .join(",");
     const statusDisplay = getStatusDisplay(forward.status);
     const strategyDisplay = getStrategyDisplay(forward.strategy);
 
@@ -4132,7 +4132,7 @@ export default function ForwardPage() {
                   onClick={() =>
                     copyToClipboard(
                       forward.remoteAddr.split(",")[0].match(/:(\d+)$/)?.[1] ||
-                        "",
+                      "",
                       "落地端口",
                     )
                   }
@@ -4173,7 +4173,7 @@ export default function ForwardPage() {
               </div>
             </div>
             {(forward.inFlow || 0) + (forward.outFlow || 0) > 0 ||
-            (forward.inSpeed || 0) + (forward.outSpeed || 0) > 0 ? (
+              (forward.inSpeed || 0) + (forward.outSpeed || 0) > 0 ? (
               <div className="flex items-center gap-1">
                 <div className="inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium bg-primary-500/10 text-primary-600 dark:text-primary-400">
                   ↑{formatFlow(forward.inFlow || 0)}
@@ -4532,7 +4532,7 @@ export default function ForwardPage() {
                             placeholder="隧道名称"
                             selectedKeys={
                               searchParams.tunnelId &&
-                              searchParams.tunnelId !== "all"
+                                searchParams.tunnelId !== "all"
                                 ? [searchParams.tunnelId]
                                 : []
                             }
@@ -4670,7 +4670,7 @@ export default function ForwardPage() {
               collisionDetection={pointerWithin}
               sensors={sensors}
               onDragEnd={handleDragEnd}
-              onDragStart={() => {}}
+              onDragStart={() => { }}
             >
               <SortableContext
                 items={sortableForwardIds}
@@ -4755,10 +4755,10 @@ export default function ForwardPage() {
                             .filter((id) => id > 0);
                           const collapsed =
                             sanitizedCollapsedTunnelGroups[
-                              buildTunnelGroupCollapseKey(
-                                group.userId,
-                                tunnel.tunnelKey,
-                              )
+                            buildTunnelGroupCollapseKey(
+                              group.userId,
+                              tunnel.tunnelKey,
+                            )
                             ] === true;
 
                           return (
@@ -5031,10 +5031,10 @@ export default function ForwardPage() {
                           .filter((id) => id > 0);
                         const collapsed =
                           sanitizedCollapsedTunnelGroups[
-                            buildTunnelGroupCollapseKey(
-                              group.userId,
-                              tunnel.tunnelKey,
-                            )
+                          buildTunnelGroupCollapseKey(
+                            group.userId,
+                            tunnel.tunnelKey,
+                          )
                           ] === true;
 
                         return (
@@ -5829,11 +5829,10 @@ export default function ForwardPage() {
                     {importResults.map((result, index) => (
                       <div
                         key={index}
-                        className={`p-2 rounded border ${
-                          result.success
+                        className={`p-2 rounded border ${result.success
                             ? "bg-success-50 dark:bg-success-100/10 border-success-200 dark:border-success-300/20"
                             : "bg-danger-50 dark:bg-danger-100/10 border-danger-200 dark:border-danger-300/20"
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center gap-2">
                           {result.success ? (
@@ -5866,11 +5865,10 @@ export default function ForwardPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-0.5">
                               <span
-                                className={`text-xs font-medium ${
-                                  result.success
+                                className={`text-xs font-medium ${result.success
                                     ? "text-success-700 dark:text-success-300"
                                     : "text-danger-700 dark:text-danger-300"
-                                }`}
+                                  }`}
                               >
                                 {result.success ? "成功" : "失败"}
                               </span>
@@ -5882,11 +5880,10 @@ export default function ForwardPage() {
                               </code>
                             </div>
                             <div
-                              className={`text-xs ${
-                                result.success
+                              className={`text-xs ${result.success
                                   ? "text-success-600 dark:text-success-400"
                                   : "text-danger-600 dark:text-danger-400"
-                              }`}
+                                }`}
                             >
                               {result.message}
                             </div>
@@ -5991,10 +5988,10 @@ export default function ForwardPage() {
                       <div className="text-center p-3 bg-success-50 dark:bg-success-900/20 rounded-lg border border-success-200 dark:border-success-700">
                         <div className="text-2xl font-bold text-success-600 dark:text-success-400">
                           {diagnosisProgress.completed > 0 ||
-                          diagnosisProgress.total > 0
+                            diagnosisProgress.total > 0
                             ? diagnosisProgress.success
                             : diagnosisResult.results.filter((r) => r.success)
-                                .length}
+                              .length}
                         </div>
                         <div className="text-xs text-success-600 dark:text-success-400/80 mt-1">
                           成功
@@ -6003,10 +6000,10 @@ export default function ForwardPage() {
                       <div className="text-center p-3 bg-danger-50 dark:bg-danger-900/20 rounded-lg border border-danger-200 dark:border-danger-700">
                         <div className="text-2xl font-bold text-danger-600 dark:text-danger-400">
                           {diagnosisProgress.completed > 0 ||
-                          diagnosisProgress.total > 0
+                            diagnosisProgress.total > 0
                             ? diagnosisProgress.failed
                             : diagnosisResult.results.filter((r) => !r.success)
-                                .length}
+                              .length}
                         </div>
                         <div className="text-xs text-danger-600 dark:text-danger-400/80 mt-1">
                           失败
@@ -6090,13 +6087,12 @@ export default function ForwardPage() {
                                     return (
                                       <tr
                                         key={index}
-                                        className={`hover:bg-default-50 dark:hover:bg-gray-700/50 ${
-                                          isDiagnosing
+                                        className={`hover:bg-default-50 dark:hover:bg-gray-700/50 ${isDiagnosing
                                             ? "bg-warning-50 dark:bg-warning-900/20"
                                             : isSuccess
                                               ? "bg-white dark:bg-gray-800"
                                               : "bg-danger-50 dark:bg-danger-900/30"
-                                        }`}
+                                          }`}
                                       >
                                         <td className="px-3 py-2">
                                           <div className="flex items-center gap-2">
@@ -6104,11 +6100,10 @@ export default function ForwardPage() {
                                               <Spinner size="sm" />
                                             ) : (
                                               <span
-                                                className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${
-                                                  isSuccess
+                                                className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${isSuccess
                                                     ? "bg-success text-white"
                                                     : "bg-danger text-white"
-                                                }`}
+                                                  }`}
                                               >
                                                 {isSuccess ? "✓" : "✗"}
                                               </span>
@@ -6149,11 +6144,10 @@ export default function ForwardPage() {
                                         <td className="px-3 py-2 text-center">
                                           {isSuccess ? (
                                             <span
-                                              className={`font-semibold ${
-                                                (result.packetLoss || 0) > 0
+                                              className={`font-semibold ${(result.packetLoss || 0) > 0
                                                   ? "text-warning"
                                                   : "text-success"
-                                              }`}
+                                                }`}
                                             >
                                               {result.packetLoss?.toFixed(1)}%
                                             </span>
@@ -6262,24 +6256,22 @@ export default function ForwardPage() {
                                 return (
                                   <div
                                     key={index}
-                                    className={`border rounded-lg p-3 ${
-                                      isDiagnosing
+                                    className={`border rounded-lg p-3 ${isDiagnosing
                                         ? "border-warning-200 dark:border-warning-300/30 bg-warning-50 dark:bg-warning-900/20"
                                         : isSuccess
                                           ? "border-divider bg-white dark:bg-gray-800"
                                           : "border-danger-200 dark:border-danger-300/30 bg-danger-50 dark:bg-danger-900/30"
-                                    }`}
+                                      }`}
                                   >
                                     <div className="flex items-start gap-2 mb-2">
                                       {isDiagnosing ? (
                                         <Spinner size="sm" />
                                       ) : (
                                         <span
-                                          className={`w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0 ${
-                                            isSuccess
+                                          className={`w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0 ${isSuccess
                                               ? "bg-success text-white"
                                               : "bg-danger text-white"
-                                          }`}
+                                            }`}
                                         >
                                           {isSuccess ? "✓" : "✗"}
                                         </span>
@@ -6314,11 +6306,10 @@ export default function ForwardPage() {
                                         </div>
                                         <div className="text-center">
                                           <div
-                                            className={`text-lg font-bold ${
-                                              (result.packetLoss || 0) > 0
+                                            className={`text-lg font-bold ${(result.packetLoss || 0) > 0
                                                 ? "text-warning"
                                                 : "text-success"
-                                            }`}
+                                              }`}
                                           >
                                             {result.packetLoss?.toFixed(1)}%
                                           </div>
@@ -6344,11 +6335,10 @@ export default function ForwardPage() {
                                     ) : (
                                       <div className="mt-2 pt-2 border-t border-divider">
                                         <div
-                                          className={`text-xs ${
-                                            isDiagnosing
+                                          className={`text-xs ${isDiagnosing
                                               ? "text-warning"
                                               : "text-danger"
-                                          }`}
+                                            }`}
                                         >
                                           {isDiagnosing
                                             ? result.message || "诊断中..."
@@ -6393,26 +6383,26 @@ export default function ForwardPage() {
                     {diagnosisResult.results.some(
                       (r) => r.success === false && !r.diagnosing,
                     ) && (
-                      <div className="space-y-2 hidden md:block">
-                        <h4 className="text-sm font-semibold text-danger">
-                          失败详情
-                        </h4>
-                        <div className="space-y-2">
-                          {diagnosisResult.results
-                            .filter((r) => r.success === false && !r.diagnosing)
-                            .map((result, index) => (
-                              <Alert
-                                key={index}
-                                className="text-xs"
-                                color="danger"
-                                description={result.message || "连接失败"}
-                                title={result.description}
-                                variant="flat"
-                              />
-                            ))}
+                        <div className="space-y-2 hidden md:block">
+                          <h4 className="text-sm font-semibold text-danger">
+                            失败详情
+                          </h4>
+                          <div className="space-y-2">
+                            {diagnosisResult.results
+                              .filter((r) => r.success === false && !r.diagnosing)
+                              .map((result, index) => (
+                                <Alert
+                                  key={index}
+                                  className="text-xs"
+                                  color="danger"
+                                  description={result.message || "连接失败"}
+                                  title={result.description}
+                                  variant="flat"
+                                />
+                              ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
                   </div>
                 ) : (
                   <div className="text-center py-16">
@@ -6564,17 +6554,14 @@ export default function ForwardPage() {
                               }}
                             >
                               <svg
-                                aria-hidden="true"
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth={2}
-                                viewBox="0 0 24 24"
+                                className="w-3.5 h-3.5"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
                               >
                                 <path
-                                  d="M6 18L18 6M6 6l12 12"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
+                                  clipRule="evenodd"
+                                  d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                                  fillRule="evenodd"
                                 />
                               </svg>
                             </Button>
@@ -6583,7 +6570,7 @@ export default function ForwardPage() {
                         <div className="flex flex-col gap-1 w-full">
                           <div className="w-full">
                             <span className="text-default-500 text-sm block mb-1">
-                              归零前流量:
+                              归零前流量
                             </span>
                             <div className="flex items-center justify-end gap-2 flex-wrap">
                               <span className="text-primary-600 text-sm whitespace-nowrap dark:text-primary-400">
@@ -6596,7 +6583,7 @@ export default function ForwardPage() {
                                 总量{" "}
                                 {formatFlow(
                                   (log.inFlowBefore || 0) +
-                                    (log.outFlowBefore || 0),
+                                  (log.outFlowBefore || 0),
                                 )}
                               </span>
                             </div>
@@ -6604,7 +6591,7 @@ export default function ForwardPage() {
                           {log.reason && (
                             <div className="flex items-center justify-between w-full">
                               <span className="text-default-500 text-sm">
-                                归零原因:
+                                归零原因
                               </span>
                               <span className="text-red-500 text-sm">
                                 {log.reason}

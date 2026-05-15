@@ -2334,12 +2334,12 @@ export default function NodePage() {
                 <div className="flex items-center text-xs ml-auto flex-shrink-0">
                   <span
                     className={`text-[10px] py-0.5 px-1.5 rounded font-medium ${expiryMeta.tone === "danger"
-                        ? "bg-danger-500/10 text-danger-600 dark:text-danger-400"
-                        : expiryMeta.tone === "warning"
-                          ? "bg-warning-500/10 text-warning-600 dark:text-warning-400"
-                          : expiryMeta.tone === "success"
-                            ? "bg-success-500/10 text-success-600 dark:text-success-400"
-                            : "bg-default-500/10 text-default-500"
+                      ? "bg-danger-500/10 text-danger-600 dark:text-danger-400"
+                      : expiryMeta.tone === "warning"
+                        ? "bg-warning-500/10 text-warning-600 dark:text-warning-400"
+                        : expiryMeta.tone === "success"
+                          ? "bg-success-500/10 text-success-600 dark:text-success-400"
+                          : "bg-default-500/10 text-default-500"
                       }`}
                   >
                     {expiryMeta.label}
@@ -3649,17 +3649,14 @@ export default function NodePage() {
                               }}
                             >
                               <svg
-                                aria-hidden="true"
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth={2}
-                                viewBox="0 0 24 24"
+                                className="w-3.5 h-3.5"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
                               >
                                 <path
-                                  d="M6 18L18 6M6 6l12 12"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
+                                  clipRule="evenodd"
+                                  d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                                  fillRule="evenodd"
                                 />
                               </svg>
                             </Button>
@@ -3668,7 +3665,7 @@ export default function NodePage() {
                         <div className="flex flex-col gap-1 w-full">
                           <div className="w-full">
                             <span className="text-default-500 text-sm block mb-1">
-                              归零前流量:
+                              归零前流量
                             </span>
                             <div className="flex items-center justify-end gap-2 flex-wrap">
                               <span className="text-primary-600 text-sm whitespace-nowrap dark:text-primary-400">
@@ -3689,7 +3686,7 @@ export default function NodePage() {
                           {log.reason && (
                             <div className="flex items-center justify-between w-full">
                               <span className="text-default-500 text-sm">
-                                归零原因:
+                                归零原因
                               </span>
                               <span className="text-red-500 text-sm">
                                 {log.reason}

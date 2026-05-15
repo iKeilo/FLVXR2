@@ -1218,7 +1218,7 @@ export default function UserPage() {
               });
             }
           }
-        } catch {}
+        } catch { }
 
         setUserToReset(null);
       } else {
@@ -1303,7 +1303,7 @@ export default function UserPage() {
               });
             }
           }
-        } catch {}
+        } catch { }
 
         setTunnelToReset(null);
       } else {
@@ -1438,10 +1438,10 @@ export default function UserPage() {
       <TableRow
         ref={setNodeRef}
         className={`cursor-default transition-colors ${selectedUserIds.has(user.id)
+          ? "bg-primary-50 dark:bg-primary-900/30"
+          : selectedUserId === user.id
             ? "bg-primary-50 dark:bg-primary-900/30"
-            : selectedUserId === user.id
-              ? "bg-primary-50 dark:bg-primary-900/30"
-              : "hover:bg-default-50/50"
+            : "hover:bg-default-50/50"
           }`}
         style={style}
         onClick={() => {
@@ -1705,8 +1705,8 @@ export default function UserPage() {
                         <TableCell className="whitespace-nowrap">
                           <div
                             className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${monitorPermissionUserIds.has(user.id)
-                                ? "bg-success-500/10 text-success-600 dark:text-success-400"
-                                : "bg-default-500/10 text-default-500"
+                              ? "bg-success-500/10 text-success-600 dark:text-success-400"
+                              : "bg-default-500/10 text-default-500"
                               }`}
                           >
                             {monitorPermissionUserIds.has(user.id) ? (
@@ -1894,8 +1894,8 @@ export default function UserPage() {
               <StaggerItem key={user.id}>
                 <div
                   className={`shadow-sm border border-divider hover:shadow-md transition-shadow duration-200 overflow-hidden h-full rounded-xl cursor-default ${selectedUserIds.has(user.id)
-                      ? "bg-primary-50 dark:bg-primary-900/30 border-primary-300 dark:border-primary-700"
-                      : ""
+                    ? "bg-primary-50 dark:bg-primary-900/30 border-primary-300 dark:border-primary-700"
+                    : ""
                     }`}
                   onClick={() => toggleUserSelection(user.id)}
                 >
@@ -2026,8 +2026,8 @@ export default function UserPage() {
                             <span className="text-default-600">监控权限</span>
                             <div
                               className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${monitorPermissionUserIds.has(user.id)
-                                  ? "bg-success-500/10 text-success-600 dark:text-success-400"
-                                  : "bg-default-500/10 text-default-500"
+                                ? "bg-success-500/10 text-success-600 dark:text-success-400"
+                                : "bg-default-500/10 text-default-500"
                                 }`}
                             >
                               {monitorPermissionUserIds.has(user.id) ? (
@@ -2337,8 +2337,8 @@ export default function UserPage() {
                   <div className="flex flex-row items-center gap-2 sm:gap-3 w-full">
                     <div
                       className={`group flex items-center px-3 sm:px-4 h-10 rounded-xl border-2 transition-all cursor-pointer shadow-sm overflow-hidden flex-1 min-w-0 ${isTunnelListExpanded
-                          ? "border-primary bg-primary-50/20 ring-4 ring-primary/10"
-                          : "border-default-200 bg-default-50 hover:border-primary-300"
+                        ? "border-primary bg-primary-50/20 ring-4 ring-primary/10"
+                        : "border-default-200 bg-default-50 hover:border-primary-300"
                         }`}
                       onClick={() =>
                         setIsTunnelListExpanded(!isTunnelListExpanded)
@@ -3265,8 +3265,8 @@ export default function UserPage() {
                   </div>
                   <div
                     className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${user.status === 1
-                        ? "bg-success-500/10 text-success-600 dark:text-success-400"
-                        : "bg-danger-500/10 text-danger-600 dark:text-danger-400"
+                      ? "bg-success-500/10 text-success-600 dark:text-success-400"
+                      : "bg-danger-500/10 text-danger-600 dark:text-danger-400"
                       }`}
                   >
                     {user.status === 1 ? "启用" : "禁用"}
@@ -3333,8 +3333,8 @@ export default function UserPage() {
                   </div>
                   <div
                     className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${user.status === 1
-                        ? "bg-success-500/10 text-success-600 dark:text-success-400"
-                        : "bg-danger-500/10 text-danger-600 dark:text-danger-400"
+                      ? "bg-success-500/10 text-success-600 dark:text-success-400"
+                      : "bg-danger-500/10 text-danger-600 dark:text-danger-400"
                       }`}
                   >
                     {user.status === 1 ? "启用" : "禁用"}
@@ -3433,17 +3433,14 @@ export default function UserPage() {
                           }}
                         >
                           <svg
-                            aria-hidden="true"
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth={2}
-                            viewBox="0 0 24 24"
+                            className="w-3.5 h-3.5"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
                           >
                             <path
-                              d="M6 18L18 6M6 6l12 12"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
+                              clipRule="evenodd"
+                              d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                              fillRule="evenodd"
                             />
                           </svg>
                         </Button>
@@ -3452,7 +3449,7 @@ export default function UserPage() {
                     <div className="flex flex-col gap-1 w-full">
                       <div className="w-full">
                         <span className="text-default-500 text-sm block mb-1">
-                          归零前流量:
+                          归零前流量
                         </span>
                         <div className="flex items-center justify-end gap-2 flex-wrap">
                           <span className="text-primary-600 text-sm whitespace-nowrap dark:text-primary-400">
@@ -3469,7 +3466,7 @@ export default function UserPage() {
                       {item.resetReason && (
                         <div className="flex items-center justify-between w-full">
                           <span className="text-default-500 text-sm">
-                            归零原因:
+                            归零原因
                           </span>
                           <span className="text-red-500 text-sm">
                             {item.resetReason}
