@@ -138,6 +138,13 @@ interface Node {
   upgradeLoading?: boolean;
   rollbackLoading?: boolean;
   groupId?: number | null;
+  periodTraffic?: {
+    rx: number;
+    tx: number;
+    since: number;
+    nextReset?: number;
+    cycle?: string;
+  };
 }
 interface NodeForm {
   id: number | null;
@@ -1086,7 +1093,9 @@ export default function NodePage() {
     if (!nodeToReset) return;
     setResetTrafficLoading(true);
     try {
-      const res = await batchResetNodeTraffic([nodeToReset.id]);
+      const inFlowBefore = nodeToReset.periodTraffic?.tx || 0;
+      const outFlowBefore = nodeToReset.periodTraffic?.rx || 0;
+      const res = await batchResetNodeTraffic([nodeToReset.id], "管理员手动归零", inFlowBefore, outFlowBefore);
 
       if (res.code === 0) {
         toast.success("流量归零成功");
