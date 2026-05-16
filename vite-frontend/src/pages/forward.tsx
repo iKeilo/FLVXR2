@@ -883,9 +883,6 @@ const SortableTableRow = ({
       </TableCell>
       <TableCell className={`whitespace-nowrap ${rowBg}`}>
         <div className="flex items-center gap-1">
-          <span className="text-sm font-medium text-black">
-            {formatFlow(getForwardDisplayFlow(forward))}
-          </span>
           <Button
             isIconOnly
             className="w-6 h-6 min-w-6"
@@ -908,6 +905,9 @@ const SortableTableRow = ({
               />
             </svg>
           </Button>
+          <span className="text-sm font-medium text-black">
+            {formatFlow(getForwardDisplayFlow(forward))}
+          </span>
         </div>
       </TableCell>
       <TableCell className={`whitespace-nowrap ${rowBg}`}>
@@ -1194,9 +1194,6 @@ const SortableCompactTableRow = ({
       </TableCell>
       <TableCell className={`whitespace-nowrap ${rowBg}`}>
         <div className="flex items-center gap-1">
-          <span className="text-sm font-medium text-black">
-            {formatFlow(getForwardDisplayFlow(forward))}
-          </span>
           <Button
             isIconOnly
             className="w-6 h-6 min-w-6"
@@ -1219,6 +1216,9 @@ const SortableCompactTableRow = ({
               />
             </svg>
           </Button>
+          <span className="text-sm font-medium text-black">
+            {formatFlow(getForwardDisplayFlow(forward))}
+          </span>
         </div>
       </TableCell>
       <TableCell className={`whitespace-nowrap ${rowBg}`}>
@@ -4430,14 +4430,15 @@ export default function ForwardPage() {
         viewMode === "grouped" ? (
           sortedForwards.length > 0 ? (
             <>
+            {/* 注释规则数量
               <div className="flex items-center justify-start px-1 mb-3">
                 <span className="text-sm font-semibold text-foreground">
                   全部规则
                 </span>
                 <span className="text-xs text-default-600">
-                  _{sortedForwards.length}个
+                  _{sortedForwards.length}条
                 </span>
-              </div>
+              </div> */}
               <div className="overflow-hidden rounded-xl border border-divider bg-content1 shadow-md">
                 <DndContext
                   collisionDetection={pointerWithin}
@@ -4514,7 +4515,7 @@ export default function ForwardPage() {
                           </TableColumn>
                         )}
                         <TableColumn className="whitespace-nowrap flex-shrink-0 w-[180px] text-left">
-                          规则名
+                          规则名_共{sortedForwards.length}条
                         </TableColumn>
                         {/* <TableColumn className="whitespace-nowrap flex-shrink-0 w-[180px] text-left">隧道倍率</TableColumn> */}
                         <TableColumn className="whitespace-nowrap flex-shrink-0 w-[180px] text-left">
@@ -4596,10 +4597,10 @@ export default function ForwardPage() {
                         <TableColumn className="whitespace-nowrap flex-shrink-0 w-[90px] text-left">
                           连接数
                         </TableColumn>
-                        <TableColumn className="whitespace-nowrap flex-shrink-0 w-[100px] text-left">
+                        <TableColumn className="whitespace-nowrap flex-shrink-0 w-[80px] text-left">
                           有效期
                         </TableColumn>
-                        <TableColumn className="whitespace-nowrap flex-shrink-0 w-[100px] text-left">
+                        <TableColumn className="whitespace-nowrap flex-shrink-0 w-[80px] text-left">
                           状态
                         </TableColumn>
                         <TableColumn
@@ -4658,14 +4659,15 @@ export default function ForwardPage() {
           )
         ) : sortedForwards.length > 0 ? (
           <>
+          {/* 注释规则数量
             <div className="flex items-center justify-start px-1 mb-3">
               <span className="text-sm font-semibold text-foreground">
                 全部规则
               </span>
               <span className="text-xs text-default-600">
-                _{sortedForwards.length}个
+                _{sortedForwards.length}条
               </span>
-            </div>
+            </div> */}
             <DndContext
               collisionDetection={pointerWithin}
               sensors={sensors}
@@ -4878,7 +4880,7 @@ export default function ForwardPage() {
                                           </TableColumn>
                                         )}
                                         <TableColumn className="whitespace-nowrap flex-shrink-0 w-[180px] text-left">
-                                          规则名
+                                          规则名_共{sortedForwards.length}条
                                         </TableColumn>
                                         {/* {isAdmin && <TableColumn className="whitespace-nowrap flex-shrink-0 w-[100px] text-left">速度限制</TableColumn>} */}
                                         <TableColumn className="whitespace-nowrap flex-shrink-0 w-[140px] text-left">
@@ -5830,8 +5832,8 @@ export default function ForwardPage() {
                       <div
                         key={index}
                         className={`p-2 rounded border ${result.success
-                            ? "bg-success-50 dark:bg-success-100/10 border-success-200 dark:border-success-300/20"
-                            : "bg-danger-50 dark:bg-danger-100/10 border-danger-200 dark:border-danger-300/20"
+                          ? "bg-success-50 dark:bg-success-100/10 border-success-200 dark:border-success-300/20"
+                          : "bg-danger-50 dark:bg-danger-100/10 border-danger-200 dark:border-danger-300/20"
                           }`}
                       >
                         <div className="flex items-center gap-2">
@@ -5866,8 +5868,8 @@ export default function ForwardPage() {
                             <div className="flex items-center gap-2 mb-0.5">
                               <span
                                 className={`text-xs font-medium ${result.success
-                                    ? "text-success-700 dark:text-success-300"
-                                    : "text-danger-700 dark:text-danger-300"
+                                  ? "text-success-700 dark:text-success-300"
+                                  : "text-danger-700 dark:text-danger-300"
                                   }`}
                               >
                                 {result.success ? "成功" : "失败"}
@@ -5881,8 +5883,8 @@ export default function ForwardPage() {
                             </div>
                             <div
                               className={`text-xs ${result.success
-                                  ? "text-success-600 dark:text-success-400"
-                                  : "text-danger-600 dark:text-danger-400"
+                                ? "text-success-600 dark:text-success-400"
+                                : "text-danger-600 dark:text-danger-400"
                                 }`}
                             >
                               {result.message}
@@ -6088,10 +6090,10 @@ export default function ForwardPage() {
                                       <tr
                                         key={index}
                                         className={`hover:bg-default-50 dark:hover:bg-gray-700/50 ${isDiagnosing
-                                            ? "bg-warning-50 dark:bg-warning-900/20"
-                                            : isSuccess
-                                              ? "bg-white dark:bg-gray-800"
-                                              : "bg-danger-50 dark:bg-danger-900/30"
+                                          ? "bg-warning-50 dark:bg-warning-900/20"
+                                          : isSuccess
+                                            ? "bg-white dark:bg-gray-800"
+                                            : "bg-danger-50 dark:bg-danger-900/30"
                                           }`}
                                       >
                                         <td className="px-3 py-2">
@@ -6101,8 +6103,8 @@ export default function ForwardPage() {
                                             ) : (
                                               <span
                                                 className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${isSuccess
-                                                    ? "bg-success text-white"
-                                                    : "bg-danger text-white"
+                                                  ? "bg-success text-white"
+                                                  : "bg-danger text-white"
                                                   }`}
                                               >
                                                 {isSuccess ? "✓" : "✗"}
@@ -6145,8 +6147,8 @@ export default function ForwardPage() {
                                           {isSuccess ? (
                                             <span
                                               className={`font-semibold ${(result.packetLoss || 0) > 0
-                                                  ? "text-warning"
-                                                  : "text-success"
+                                                ? "text-warning"
+                                                : "text-success"
                                                 }`}
                                             >
                                               {result.packetLoss?.toFixed(1)}%
@@ -6257,10 +6259,10 @@ export default function ForwardPage() {
                                   <div
                                     key={index}
                                     className={`border rounded-lg p-3 ${isDiagnosing
-                                        ? "border-warning-200 dark:border-warning-300/30 bg-warning-50 dark:bg-warning-900/20"
-                                        : isSuccess
-                                          ? "border-divider bg-white dark:bg-gray-800"
-                                          : "border-danger-200 dark:border-danger-300/30 bg-danger-50 dark:bg-danger-900/30"
+                                      ? "border-warning-200 dark:border-warning-300/30 bg-warning-50 dark:bg-warning-900/20"
+                                      : isSuccess
+                                        ? "border-divider bg-white dark:bg-gray-800"
+                                        : "border-danger-200 dark:border-danger-300/30 bg-danger-50 dark:bg-danger-900/30"
                                       }`}
                                   >
                                     <div className="flex items-start gap-2 mb-2">
@@ -6269,8 +6271,8 @@ export default function ForwardPage() {
                                       ) : (
                                         <span
                                           className={`w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0 ${isSuccess
-                                              ? "bg-success text-white"
-                                              : "bg-danger text-white"
+                                            ? "bg-success text-white"
+                                            : "bg-danger text-white"
                                             }`}
                                         >
                                           {isSuccess ? "✓" : "✗"}
@@ -6307,8 +6309,8 @@ export default function ForwardPage() {
                                         <div className="text-center">
                                           <div
                                             className={`text-lg font-bold ${(result.packetLoss || 0) > 0
-                                                ? "text-warning"
-                                                : "text-success"
+                                              ? "text-warning"
+                                              : "text-success"
                                               }`}
                                           >
                                             {result.packetLoss?.toFixed(1)}%
@@ -6336,8 +6338,8 @@ export default function ForwardPage() {
                                       <div className="mt-2 pt-2 border-t border-divider">
                                         <div
                                           className={`text-xs ${isDiagnosing
-                                              ? "text-warning"
-                                              : "text-danger"
+                                            ? "text-warning"
+                                            : "text-danger"
                                             }`}
                                         >
                                           {isDiagnosing

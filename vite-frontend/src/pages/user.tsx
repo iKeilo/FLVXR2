@@ -1823,9 +1823,6 @@ export default function UserPage() {
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           <div className="flex items-center gap-1">
-                            <span className="text-sm font-medium text-primary">
-                              {formatFlow(usedFlow)}
-                            </span>
                             <Button
                               isIconOnly
                               className="w-6 h-6 min-w-6"
@@ -1850,6 +1847,9 @@ export default function UserPage() {
                                 />
                               </svg>
                             </Button>
+                            <span className="text-sm font-medium text-primary">
+                              {formatFlow(usedFlow)}
+                            </span>
                           </div>
                           {user.flow !== 99999 && (
                             <Progress
@@ -1885,33 +1885,6 @@ export default function UserPage() {
                         <TableCell className="whitespace-nowrap">
                           {user.expTime && user.expTime > 0 ? (
                             <div className="flex items-center gap-1">
-                              {expStatus?.color === "success" ? (
-                                <span className="text-sm text-primary">
-                                  {new Date(user.expTime).toLocaleDateString(
-                                    "zh-CN",
-                                    {
-                                      year: "numeric",
-                                      month: "2-digit",
-                                      day: "2-digit",
-                                    },
-                                  ).replace(/\//g, "-")}
-                                </span>
-                              ) : (
-                                <div
-                                  className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${
-                                    ((expStatus?.color as string) || "") ===
-                                    "success"
-                                      ? "bg-success-500/10 text-success-600 dark:text-success-400"
-                                      : expStatus?.color === "warning"
-                                      ? "bg-warning-500/10 text-warning-600 dark:text-warning-400"
-                                      : expStatus?.color === "danger"
-                                      ? "bg-danger-500/10 text-danger-600 dark:text-danger-400"
-                                      : "bg-default-500/10 text-default-500"
-                                  }`}
-                                >
-                                  {expStatus?.text || "未知"}
-                                </div>
-                              )}
                               <Button
                                 isIconOnly
                                 className="w-6 h-6 min-w-6"
@@ -1936,6 +1909,32 @@ export default function UserPage() {
                                   />
                                 </svg>
                               </Button>
+                              {expStatus?.color === "success" ? (
+                                <span className="text-sm text-primary">
+                                  {new Date(user.expTime).toLocaleDateString(
+                                    "zh-CN",
+                                    {
+                                      year: "numeric",
+                                      month: "2-digit",
+                                      day: "2-digit",
+                                    },
+                                  ).replace(/\//g, "-")}
+                                </span>
+                              ) : (
+                                <div
+                                  className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${((expStatus?.color as string) || "") ===
+                                      "success"
+                                      ? "bg-success-500/10 text-success-600 dark:text-success-400"
+                                      : expStatus?.color === "warning"
+                                        ? "bg-warning-500/10 text-warning-600 dark:text-warning-400"
+                                        : expStatus?.color === "danger"
+                                          ? "bg-danger-500/10 text-danger-600 dark:text-danger-400"
+                                          : "bg-default-500/10 text-default-500"
+                                    }`}
+                                >
+                                  {expStatus?.text || "未知"}
+                                </div>
+                              )}
                             </div>
                           ) : (
                             <span className="text-sm text-default-600">永久</span>
@@ -1950,33 +1949,30 @@ export default function UserPage() {
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           <span
-                            className={`text-sm font-medium ${
-                              user.balance && user.balance > 0
+                            className={`text-sm font-medium ${user.balance && user.balance > 0
                                 ? "text-success"
                                 : "text-default-400"
-                            }`}
+                              }`}
                           >
                             {user.balance != null ? `${user.balance}元` : "-"}
                           </span>
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           <div
-                            className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${
-                              user.autoRenew === 1
+                            className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${user.autoRenew === 1
                                 ? "bg-success-500/10 text-success-600 dark:text-success-400"
                                 : "bg-danger-500/10 text-danger-600 dark:text-danger-400"
-                            }`}
+                              }`}
                           >
                             {user.autoRenew === 1 ? "启用" : "禁用"}
                           </div>
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           <div
-                            className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${
-                              user.autoBuyTraffic === 1
+                            className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${user.autoBuyTraffic === 1
                                 ? "bg-success-500/10 text-success-600 dark:text-success-400"
                                 : "bg-danger-500/10 text-danger-600 dark:text-danger-400"
-                            }`}
+                              }`}
                           >
                             {user.autoBuyTraffic === 1 ? "启用" : "禁用"}
                           </div>
@@ -2205,11 +2201,10 @@ export default function UserPage() {
                         <div className="flex justify-between text-sm items-center">
                           <span className="text-default-600 text-xs">可用余额</span>
                           <span
-                            className={`text-xs font-medium ${
-                              user.balance && user.balance > 0
+                            className={`text-xs font-medium ${user.balance && user.balance > 0
                                 ? "text-success"
                                 : "text-default-400"
-                            }`}
+                              }`}
                           >
                             {user.balance != null ? `${user.balance}元` : "-"}
                           </span>
@@ -2217,11 +2212,10 @@ export default function UserPage() {
                         <div className="flex justify-between text-sm items-center">
                           <span className="text-default-600 text-xs">自动续费</span>
                           <div
-                            className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded text-xs font-medium ${
-                              user.autoRenew === 1
+                            className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded text-xs font-medium ${user.autoRenew === 1
                                 ? "bg-success-500/10 text-success-600 dark:text-success-400"
                                 : "bg-danger-500/10 text-danger-600 dark:text-danger-400"
-                            }`}
+                              }`}
                           >
                             {user.autoRenew === 1 ? "启用" : "禁用"}
                           </div>
@@ -2229,11 +2223,10 @@ export default function UserPage() {
                         <div className="flex justify-between text-sm items-center">
                           <span className="text-default-600 text-xs">自动购流</span>
                           <div
-                            className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded text-xs font-medium ${
-                              user.autoBuyTraffic === 1
+                            className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded text-xs font-medium ${user.autoBuyTraffic === 1
                                 ? "bg-success-500/10 text-success-600 dark:text-success-400"
                                 : "bg-danger-500/10 text-danger-600 dark:text-danger-400"
-                            }`}
+                              }`}
                           >
                             {user.autoBuyTraffic === 1 ? "启用" : "禁用"}
                           </div>
@@ -2351,7 +2344,7 @@ export default function UserPage() {
         <ModalContent>
           <ModalHeader>{isEdit ? "编辑用户" : "新增用户"}</ModalHeader>
           <ModalBody>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <Input
                 isRequired
                 label="用户名"
@@ -2452,9 +2445,9 @@ export default function UserPage() {
                   {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
                     <SelectItem
                       key={day.toString()}
-                      textValue={`每月${day}号（0点归零）`}
+                      textValue={`每月${day}号-0点`}
                     >
-                      每月{day}号（0点归零）
+                      每月{day}号-0点
                     </SelectItem>
                   ))}
                 </>
@@ -2529,42 +2522,7 @@ export default function UserPage() {
                   }}
                 />
               </div>
-              <div className="flex items-end justify-between gap-4">
-                <div className="flex-1">
-                  <RadioGroup
-                    label="用户状态"
-                    orientation="horizontal"
-                    value={userForm.status.toString()}
-                    onValueChange={(value: string) =>
-                      setUserForm((prev) => ({
-                        ...prev,
-                        status: Number(value),
-                      }))
-                    }
-                  >
-                    <Radio value="1">启用</Radio>
-                    <Radio value="0">禁用</Radio>
-                  </RadioGroup>
-                </div>
-                <div className="flex-1">
-                  <RadioGroup
-                    label="自动续费"
-                    orientation="horizontal"
-                    value={userForm.autoRenew.toString()}
-                    onValueChange={(value: string) =>
-                      setUserForm((prev) => ({
-                        ...prev,
-                        autoRenew: Number(value),
-                      }))
-                    }
-                  >
-                    <Radio value="1">启用</Radio>
-                    <Radio value="0">禁用</Radio>
-                  </RadioGroup>
-                </div>               
-              </div>
-              <div className="border-t border-divider pt-3 mt-3">
-                <div className="text-sm font-medium text-foreground mb-3">自动购流</div>
+              <div className="pt-3 mt-3">
                 <div className="grid grid-cols-2 gap-4 mb-3">
                   <Input
                     label="每次购买量 (GB)"
@@ -2597,20 +2555,56 @@ export default function UserPage() {
                     }}
                   />
                 </div>
-                <RadioGroup
-                  label="状态"
-                  orientation="horizontal"
-                  value={userForm.autoBuyTraffic.toString()}
-                  onValueChange={(value: string) =>
-                    setUserForm((prev) => ({
-                      ...prev,
-                      autoBuyTraffic: Number(value),
-                    }))
-                  }
-                >
-                  <Radio value="1">启用</Radio>
-                  <Radio value="0">禁用</Radio>
-                </RadioGroup>
+              </div>
+              <div className="grid grid-cols-3 gap-4 pt-3 mt-3 border-t border-divider">
+                <div>
+                  <RadioGroup
+                    label="自动续费"
+                    orientation="horizontal"
+                    value={userForm.autoRenew.toString()}
+                    onValueChange={(value: string) =>
+                      setUserForm((prev) => ({
+                        ...prev,
+                        autoRenew: Number(value),
+                      }))
+                    }
+                  >
+                    <Radio value="1">启用</Radio>
+                    <Radio value="0">禁用</Radio>
+                  </RadioGroup>
+                </div>
+                <div>
+                  <RadioGroup
+                    label="自动购流"
+                    orientation="horizontal"
+                    value={userForm.autoBuyTraffic.toString()}
+                    onValueChange={(value: string) =>
+                      setUserForm((prev) => ({
+                        ...prev,
+                        autoBuyTraffic: Number(value),
+                      }))
+                    }
+                  >
+                    <Radio value="1">启用</Radio>
+                    <Radio value="0">禁用</Radio>
+                  </RadioGroup>
+                </div>
+                <div>
+                  <RadioGroup
+                    label="用户状态"
+                    orientation="horizontal"
+                    value={userForm.status.toString()}
+                    onValueChange={(value: string) =>
+                      setUserForm((prev) => ({
+                        ...prev,
+                        status: Number(value),
+                      }))
+                    }
+                  >
+                    <Radio value="1">启用</Radio>
+                    <Radio value="0">禁用</Radio>
+                  </RadioGroup>
+                </div>
               </div>
             </div>
           </ModalBody>
@@ -2705,11 +2699,10 @@ export default function UserPage() {
                       </TableCell>
                       <TableCell>
                         <span
-                          className={`text-xs px-2 py-0.5 rounded ${
-                            log.reason === "自动续费"
+                          className={`text-xs px-2 py-0.5 rounded ${log.reason === "自动续费"
                               ? "bg-success-500/10 text-success-600"
                               : "bg-default-500/10 text-default-600"
-                          }`}
+                            }`}
                         >
                           {log.reason}
                         </span>
