@@ -56,7 +56,6 @@ import {
 import { Select, SelectItem } from "@/shadcn-bridge/heroui/select";
 import { RadioGroup, Radio } from "@/shadcn-bridge/heroui/radio";
 import { Checkbox } from "@/shadcn-bridge/heroui/checkbox";
-import { Switch } from "@/shadcn-bridge/heroui/switch";
 import { DatePicker } from "@/shadcn-bridge/heroui/date-picker";
 import { DatePresets } from "@/shadcn-bridge/heroui/date-presets";
 import { Spinner } from "@/shadcn-bridge/heroui/spinner";
@@ -288,6 +287,7 @@ export default function UserPage() {
     onClose: onMonitorModalClose,
   } = useDisclosure();
   const [monitorModalUser, setMonitorModalUser] = useState<User | null>(null);
+  const [monitorModalValue, setMonitorModalValue] = useState<string>("0");
   const [isRenewalLogModalOpen, setIsRenewalLogModalOpen] = useState(false);
   const [selectedRenewalLogUser, setSelectedRenewalLogUser] = useState<User | null>(null);
   const [renewalLogs, setRenewalLogs] = useState<UserRenewalLog[]>([]);
@@ -296,7 +296,7 @@ export default function UserPage() {
   const [monitorPermissionUserIds, setMonitorPermissionUserIds] = useState<
     Set<number>
   >(new Set());
-  const [monitorPermissionLoading, setMonitorPermissionLoading] =
+  const [, setMonitorPermissionLoading] =
     useState(false);
   const [monitorPermissionMutatingUserId, setMonitorPermissionMutatingUserId] =
     useState<number | null>(null);
@@ -966,8 +966,20 @@ export default function UserPage() {
   // 打开监控权限弹窗
   const handleOpenMonitorModal = (user: User) => {
     setMonitorModalUser(user);
+    setMonitorModalValue(monitorPermissionUserIds.has(user.id) ? "1" : "0");
     onMonitorModalOpen();
   };
+  const handleSaveMonitorPermission = useCallback(async () => {
+    if (!monitorModalUser) return;
+    const currentlyEnabled = monitorPermissionUserIds.has(monitorModalUser.id);
+    const newEnabled = monitorModalValue === "1";
+    if (currentlyEnabled === newEnabled) {
+      onMonitorModalClose();
+      return;
+    }
+    await setUserMonitorPermission(monitorModalUser.id, newEnabled);
+    onMonitorModalClose();
+  }, [monitorModalUser, monitorModalValue, monitorPermissionUserIds, setUserMonitorPermission, onMonitorModalClose]);
   const handleOpenRenewalLogModal = async (user: User) => {
     setSelectedRenewalLogUser(user);
     setIsRenewalLogModalOpen(true);
@@ -3129,42 +3141,33 @@ export default function UserPage() {
             管理用户 {monitorModalUser?.user} 的监控权限
           </ModalHeader>
           <ModalBody>
-            <div className="flex items-center justify-between gap-4 py-4">
-              <div className="min-w-0">
-                <div className="text-sm font-medium text-foreground">
-                  允许访问监控功能
-                </div>
-                <div className="text-xs text-default-500 mt-1">
-                  授予后，该用户可以访问监控页面并管理服务监控（TCP/ICMP）。
-                </div>
+            <div className="py-4">
+              <div className="text-sm font-medium text-foreground mb-3">
+                允许访问监控功能
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                {monitorPermissionLoading ||
-                  monitorPermissionMutatingUserId === monitorModalUser?.id ? (
-                  <Spinner size="sm" />
-                ) : null}
-                <Switch
-                  isDisabled={
-                    !monitorModalUser ||
-                    monitorPermissionLoading ||
-                    monitorPermissionMutatingUserId === monitorModalUser?.id
-                  }
-                  isSelected={
-                    monitorModalUser
-                      ? monitorPermissionUserIds.has(monitorModalUser.id)
-                      : false
-                  }
-                  onValueChange={(v) =>
-                    monitorModalUser &&
-                    void setUserMonitorPermission(monitorModalUser.id, v)
-                  }
-                />
+              <div className="text-xs text-default-500 mb-4">
+                授予后，该用户可以访问监控页面并管理服务监控（TCP/ICMP）。
               </div>
+              <RadioGroup
+                orientation="horizontal"
+                value={monitorModalValue}
+                onValueChange={(value: string) => setMonitorModalValue(value)}
+              >
+                <Radio value="1">启用</Radio>
+                <Radio value="0">禁用</Radio>
+              </RadioGroup>
             </div>
           </ModalBody>
-          <ModalFooter className="justify-end">
+          <ModalFooter className="justify-end gap-2">
             <Button variant="flat" onPress={onMonitorModalClose}>
               关闭
+            </Button>
+            <Button
+              color="primary"
+              isLoading={monitorPermissionMutatingUserId === monitorModalUser?.id}
+              onPress={handleSaveMonitorPermission}
+            >
+              保存
             </Button>
           </ModalFooter>
         </ModalContent>

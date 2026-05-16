@@ -4,7 +4,7 @@ import { Card, CardBody } from "@/shadcn-bridge/heroui/card";
 
 interface MetricCardProps {
   title: ReactNode;
-  value: string | number;
+  value: ReactNode;
   iconClassName: string;
   icon: ReactNode;
   bottomContent?: ReactNode;

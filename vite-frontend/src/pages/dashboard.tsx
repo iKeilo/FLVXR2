@@ -545,66 +545,54 @@ export default function DashboardPage() {
         </div>
         {!isAdmin && (
           <>
-            {/* 5. 续费信息 */}
+            {/* 5. 续费与余额 */}
             <div className="order-5 flex flex-col [&>*]:flex-1">
-          <MetricCard
-            icon={
-              <svg
-                aria-hidden="true"
-                className="w-4 h-4 lg:w-5 lg:h-5 text-blue-600 dark:text-blue-400"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
-                <path
-                  clipRule="evenodd"
-                  d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"
-                  fillRule="evenodd"
-                />
-              </svg>
-            }
-            iconClassName="bg-blue-100 dark:bg-blue-500/20"
-            title="续费金额"
-            value={
-              userInfo.renewalAmount && userInfo.renewalAmount > 0
-                ? userInfo.renewalAmount
-                : "未设置"
-            }
-            bottomContent={
-              userInfo.autoRenew === 1 ? (
-                <div className="mt-1 flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-success"></div>
-                  <span className="text-xs text-success">自动续费已启用</span>
-                </div>
-              ) : null
-            }
-          />
-        </div>
-        {/* 6. 可用余额 */}
-        <div className="order-6 flex flex-col [&>*]:flex-1">
-          <MetricCard
-            icon={
-              <svg
-                aria-hidden="true"
-                className="w-4 h-4 lg:w-5 lg:h-5 text-green-600 dark:text-green-400"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.301 2.301 0 01-.567.267z" />
-                <path
-                  clipRule="evenodd"
-                  d="M17 6a3 3 0 013 3v5.275a1 1 0 11-2 0V9a1 1 0 00-1-1H3a1 1 0 00-1 1v5.275a1 1 0 11-2 0V9a3 3 0 013-3h14zM12 13a1 1 0 10-2 0v.755a.756.756 0 01-.242.553l-.01.01A1.99 1.99 0 019 14.99a1.99 1.99 0 01-.75-.292l-.008-.01A.756.756 0 018 14.245V13a1 1 0 10-2 0v.755a2.756 2.756 0 00.892 2.052A3.99 3.99 0 009 16.99c.82 0 1.574-.293 2.158-.783a2.756 2.756 0 00.892-2.052V13z"
-                  fillRule="evenodd"
-                />
-              </svg>
-            }
-            iconClassName="bg-green-100 dark:bg-green-500/20"
-            title="可用余额"
-            value={userInfo.balance ?? 0}
-          />
-        </div>
-        {/* 7. 到期时间 */}
-        <div className="order-7 flex flex-col [&>*]:flex-1">
+              <MetricCard
+                icon={
+                  <svg
+                    aria-hidden="true"
+                    className="w-4 h-4 lg:w-5 lg:h-5 text-blue-600 dark:text-blue-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
+                    <path
+                      clipRule="evenodd"
+                      d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"
+                      fillRule="evenodd"
+                    />
+                  </svg>
+                }
+                iconClassName="bg-blue-100 dark:bg-blue-500/20"
+                title="续费信息"
+                value={
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-default-500">续费金额</span>
+                      <span className="text-sm font-semibold">
+                        {userInfo.renewalAmount && userInfo.renewalAmount > 0
+                          ? userInfo.renewalAmount
+                          : "未设置"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-default-500">可用余额</span>
+                      <span className={`text-sm font-semibold ${userInfo.balance && userInfo.balance > 0 ? "text-success" : ""}`}>
+                        {userInfo.balance ?? 0}
+                      </span>
+                    </div>
+                  </div>
+                }
+                bottomContent={
+                  <div className="mt-1 flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-default-400"></div>
+                    <span className="text-xs text-default-500">请联系管理员手动充值余额</span>
+                  </div>
+                }
+              />
+            </div>
+            {/* 6. 到期时间 */}
+            <div className="order-7 flex flex-col [&>*]:flex-1">
           <MetricCard
             icon={<svg aria-hidden="true" className="w-4 h-4 lg:w-5 lg:h-5 text-purple-600 dark:text-purple-400" fill="currentColor" viewBox="0 0 20 20"><path clipRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" fillRule="evenodd" /></svg>}
             iconClassName="bg-purple-100 dark:bg-purple-500/20"
@@ -613,7 +601,7 @@ export default function DashboardPage() {
             bottomContent={userInfo.expTime && typeof userInfo.expTime === "number" && Number(userInfo.expTime) > 0 ? (<div className="mt-1 flex items-center gap-1"><div className={`w-1.5 h-1.5 rounded-full ${(Number(userInfo.expTime) - Date.now()) / (1000 * 60 * 60 * 24) > 7 ? "bg-success" : "bg-warning"}`}></div><span className={`text-xs ${(Number(userInfo.expTime) - Date.now()) / (1000 * 60 * 60 * 24) > 7 ? "text-success" : "text-warning"}`}>{Math.ceil((Number(userInfo.expTime) - Date.now()) / (1000 * 60 * 60 * 24))} 天后到期</span></div>) : null}
           />
         </div>
-        {/* 8. 自动续费 */}
+        {/* 7. 自动续费 */}
         <div className="order-8 flex flex-col [&>*]:flex-1">
           <MetricCard
             icon={<svg aria-hidden="true" className="w-4 h-4 lg:w-5 lg:h-5 text-cyan-600 dark:text-cyan-400" fill="currentColor" viewBox="0 0 20 20"><path clipRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" fillRule="evenodd" /></svg>}
@@ -630,7 +618,7 @@ export default function DashboardPage() {
               </div>
             }
             value={userInfo.autoRenew === 1 ? "启用" : "禁用"}
-            bottomContent={userInfo.autoRenew === 1 ? (<div className="mt-1 flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-success"></div><span className="text-xs text-success">自动续费运行中</span></div>) : (<div className="mt-1 flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-default-400"></div><span className="text-xs text-default-500">到期后将禁用</span></div>)}
+            bottomContent={userInfo.autoRenew === 1 ? (<div className="mt-1 flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-success"></div><span className="text-xs text-success">自动续费运行中</span></div>) : (<div className="mt-1 flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-default-400"></div><span className="text-xs text-default-500">到期后将停用</span></div>)}
           />
             </div>
           </>

@@ -387,9 +387,10 @@ export default function AdminLayout({
     });
   };
 
-  // 过滤菜单项（根据权限）
+  // 过滤菜单项（根据权限 & 监控权限）
   const filteredMenuItems = menuItems.filter(
-    (item) => !item.adminOnly || isAdmin,
+    (item) =>
+      (!item.adminOnly || isAdmin) && !(item.path === "/monitor" && monitorAllowed !== true),
   );
 
   return (

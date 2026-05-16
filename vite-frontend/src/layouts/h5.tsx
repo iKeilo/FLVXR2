@@ -20,7 +20,7 @@ import {
 import { Input } from "@/shadcn-bridge/heroui/input";
 import { BrandLogo } from "@/components/brand-logo";
 import { VersionFooter } from "@/components/version-footer";
-import { getLicenseInfo, updatePassword } from "@/api";
+import { getLicenseInfo, getMonitorAccess, updatePassword } from "@/api";
 import { safeLogout } from "@/utils/logout";
 import { siteConfig } from "@/config/site";
 import { getAdminFlag, getSessionName } from "@/utils/session";
@@ -48,6 +48,7 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
 
   const [isAdmin, setIsAdmin] = useState(false);
   const [username, setUsername] = useState("");
+  const [monitorAllowed, setMonitorAllowed] = useState<boolean | null>(null);
   const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
   const [licenseInfo, setLicenseInfo] = useState<null | {
     valid: boolean;
@@ -214,6 +215,19 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
     fetchLicense();
     const licenseInterval = setInterval(fetchLicense, 5 * 60 * 1000);
 
+    const adminFlag = getAdminFlag();
+    if (adminFlag) {
+      setMonitorAllowed(true);
+    } else {
+      getMonitorAccess().then((res) => {
+        if (res.code === 0 && res.data) {
+          setMonitorAllowed(Boolean(res.data.allowed));
+        } else {
+          setMonitorAllowed(true);
+        }
+      }).catch(() => setMonitorAllowed(true));
+    }
+
     return () => {
       clearInterval(licenseInterval);
     };
@@ -301,7 +315,8 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
   };
 
   const filteredMenuItems = menuItems.filter(
-    (item) => !item.adminOnly || isAdmin,
+    (item) =>
+      (!item.adminOnly || isAdmin) && !(item.path === "/monitor" && monitorAllowed !== true),
   );
 
   return (
