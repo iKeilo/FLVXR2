@@ -94,7 +94,3 @@ volumes:
 networks:
   gost-network:
     enable_ipv6: true
-    ipam:
-      config:
-        - subnet: 172.80.0.0/16 
-        - subnet: fd00:dead:beef::/48
