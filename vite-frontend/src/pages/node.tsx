@@ -2568,20 +2568,32 @@ export default function NodePage() {
                 </CardBody>
               </Card>
             ) : (
-              <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-                <SortableContext
-                  items={sortableNodeIds}
-                  strategy={rectSortingStrategy}
-                >
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-                    {displayNodes.map((node) => (
-                      <SortableItem key={node.id} id={node.id}>
-                        {(listeners) => renderNodeCard(node, listeners)}
-                      </SortableItem>
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
+              <div className="overflow-hidden rounded-xl border border-divider bg-content1 shadow-md">
+                <div className="flex items-center justify-between border-b border-divider bg-default-100/40 px-4 py-3">
+                  <span className="text-sm font-semibold text-foreground">
+                    admin
+                  </span>
+                  <span className="text-xs text-default-500">
+                    {displayNodes.length} 个节点
+                  </span>
+                </div>
+                <div className="p-4">
+                  <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+                    <SortableContext
+                      items={sortableNodeIds}
+                      strategy={rectSortingStrategy}
+                    >
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                        {displayNodes.map((node) => (
+                          <SortableItem key={node.id} id={node.id}>
+                            {(listeners) => renderNodeCard(node, listeners)}
+                          </SortableItem>
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                </div>
+              </div>
             )
           )}
           {viewMode === "grouped" && (
@@ -2609,8 +2621,18 @@ export default function NodePage() {
                 </CardBody>
               </Card>
             ) : (
-              <div className="space-y-4">
-                {groupedNodes.map(({ group, nodes }) => {
+              <div className="overflow-hidden rounded-xl border border-divider bg-content1 shadow-md">
+                <div className="flex items-center justify-between border-b border-divider bg-default-100/40 px-4 py-3">
+                  <span className="text-sm font-semibold text-foreground">
+                    admin
+                  </span>
+                  <span className="text-xs text-default-500">
+                    {displayNodes.length} 个节点
+                  </span>
+                </div>
+                <div className="p-4">
+                  <div className="space-y-4">
+                    {groupedNodes.map(({ group, nodes }) => {
                   const groupSortableIds = nodes.map((n) => n.id);
                   const groupIdStr = String(group ? group.id : "none");
                   const isCollapsed = collapsedGroups[groupIdStr];
@@ -2751,7 +2773,9 @@ export default function NodePage() {
                   );
                 })}
               </div>
-            )
+            </div>
+          </div>
+        )
           )}
           {viewMode === "list" && (
             <DndContext sensors={sensors} onDragEnd={handleDragEnd}>

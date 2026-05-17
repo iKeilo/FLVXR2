@@ -721,7 +721,7 @@ export function NodeListView({
       <Table
         aria-label="节点列表"
         classNames={{
-          th: "bg-default-100/50 text-default-600 font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle",
+          th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle",
           td: "py-3 border-b border-divider/30 group-data-[last=true]:border-b-0 bg-white/80 backdrop-blur-sm dark:bg-content1/50",
           tr: "hover:bg-default-50/80 dark:hover:bg-default-100/30 transition-colors",
           wrapper: "p-0 shadow-none bg-transparent rounded-none pb-8",
@@ -857,7 +857,12 @@ export function NodeListView({
           </Select>
         </TableColumn>
         <TableColumn className="whitespace-nowrap flex-shrink-0 w-[160px] text-left">
-          操作
+          <div className="flex items-center justify-between w-full">
+            <span>操作</span>
+            <span className="text-xs text-default-500 font-normal">
+              {displayNodes.length} 个节点
+            </span>
+          </div>
         </TableColumn>
       </TableHeader>
       <TableBody>
