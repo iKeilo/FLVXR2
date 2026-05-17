@@ -302,7 +302,7 @@ export default function LimitPage() {
                   <div className="flex items-center justify-between w-full">
                     <span>操作</span>
                     <span className="text-xs text-default-500 font-normal">
-                      {filteredRules.length} 个规则
+                      {filteredRules.length} 个限速
                     </span>
                   </div>
                 </TableColumn>
@@ -395,7 +395,7 @@ export default function LimitPage() {
                 admin
               </span>
               <span className="text-xs text-default-500">
-                {filteredRules.length} 个规则
+                {filteredRules.length} 个限速
               </span>
             </div>
             <div className="p-4">
