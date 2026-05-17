@@ -81,7 +81,7 @@ func (r *Repository) UpdateUserWithPassword(id int64, username, pwdHash, name st
 	if r == nil || r.db == nil {
 		return errors.New("repository not initialized")
 	}
-	// 使用 Select 强制更新所有字段，包括零值
+	// 使用 Select 强制更新所有字段，包括零�?
 	return r.db.Model(&model.User{}).
 		Where("id = ?", id).
 		Select("user", "name", "pwd", "flow", "num", "exp_time", "flow_reset_time", "status", "updated_time", "renewal_amount", "balance", "auto_renew").
@@ -105,7 +105,7 @@ func (r *Repository) UpdateUserWithoutPassword(id int64, username, name string, 
 	if r == nil || r.db == nil {
 		return errors.New("repository not initialized")
 	}
-	// 使用 Select 强制更新所有字段，包括零值
+	// 使用 Select 强制更新所有字段，包括零�?
 	return r.db.Model(&model.User{}).
 		Where("id = ?", id).
 		Select("user", "name", "flow", "num", "exp_time", "flow_reset_time", "status", "updated_time", "renewal_amount", "balance", "auto_renew").
@@ -214,7 +214,7 @@ func (r *Repository) ResetUserFlowByUser(userID int64, now int64) {
 			UsedBytes:     totalBytes,
 			ResetTime:     now,
 			CreatedTime:   now,
-			ResetReason:   "管理员手动归零",
+			ResetReason:   "管理员手动归�?,
 		}
 		r.db.Create(history)
 	}
@@ -260,7 +260,7 @@ func (r *Repository) ResetUserFlowByUserTunnel(userTunnelID int64) {
 			UsedBytes:     totalBytes,
 			ResetTime:     time.Now().UnixMilli(),
 			CreatedTime:   time.Now().UnixMilli(),
-			ResetReason:   "管理员手动归零",
+			ResetReason:   "管理员手动归�?,
 		}
 		r.db.Create(&history)
 	}
@@ -438,7 +438,7 @@ func (r *Repository) GetViteConfigValue(name string) (string, error) {
 		return "", errors.New("repository not initialized")
 	}
 
-	// 先尝试新配置项名称
+	// 先尝试新配置项名�?
 	var cfg model.ViteConfig
 	err := r.db.Select("value").Where("name = ?", name).First(&cfg).Error
 	if err == nil && cfg.Value != "" {
@@ -640,7 +640,7 @@ func (r *Repository) RefreshNodeExpiryReminder(nodeID int64) error {
 		nextExpiry = nextExpiry.AddDate(0, intervalMonths, 0)
 	}
 
-	// 用户主动点击更新，进入下一个周期
+	// 用户主动点击更新，进入下一个周�?
 	nextExpiry = nextExpiry.AddDate(0, intervalMonths, 0)
 
 	return r.db.Model(&model.Node{}).Where("id = ?", nodeID).Updates(map[string]interface{}{
@@ -806,12 +806,12 @@ func (r *Repository) IsRemoteNodeTx(tx *gorm.DB, nodeID int64) (bool, error) {
 		return false, errors.New("database unavailable")
 	}
 	if nodeID <= 0 {
-		return false, errors.New("节点不存在")
+		return false, errors.New("节点不存�?)
 	}
 	var node model.Node
 	err := tx.Select("is_remote").Where("id = ?", nodeID).First(&node).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return false, errors.New("节点不存在")
+		return false, errors.New("节点不存�?)
 	}
 	if err != nil {
 		return false, err
@@ -832,7 +832,7 @@ func (r *Repository) pickNodePortTx(tx *gorm.DB, nodeID int64, allocated map[int
 		return 0, errors.New("database unavailable")
 	}
 	if nodeID <= 0 {
-		return 0, errors.New("节点不存在")
+		return 0, errors.New("节点不存�?)
 	}
 	if port, ok := allocated[nodeID]; ok && port > 0 {
 		return port, nil
@@ -841,7 +841,7 @@ func (r *Repository) pickNodePortTx(tx *gorm.DB, nodeID int64, allocated map[int
 	var node model.Node
 	err := tx.Select("port").Where("id = ?", nodeID).First(&node).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return 0, errors.New("节点不存在")
+		return 0, errors.New("节点不存�?)
 	}
 	if err != nil {
 		return 0, err
@@ -1728,7 +1728,7 @@ func (r *Repository) EnsureUserTunnelGrant(userID, tunnelID int64) (int64, bool,
 	return ut.ID, true, nil
 }
 
-func (r *Repository) CreateForwardTx(userID int64, userName, name string, tunnelID int64, remoteAddr, strategy string, now int64, inx int, entryNodeIDs []int64, port int, inIp string, speedID interface{}, maxConnections int, trafficLimit int64, expiryTime interface{}, speedLimitEnabled bool, speedLimit int) (int64, error) {
+func (r *Repository) CreateForwardTx(userID int64, userName, name string, tunnelID int64, remoteAddr, strategy string, now int64, inx int, entryNodeIDs []int64, port int, inIp string, speedID interface{}, maxConnections int, trafficLimit int64, expiryTime interface{}, speedLimitEnabled bool, speedLimit int, mode string) (int64, error) {
 	if r == nil || r.db == nil {
 		return 0, errors.New("repository not initialized")
 	}
@@ -1753,6 +1753,7 @@ func (r *Repository) CreateForwardTx(userID int64, userName, name string, tunnel
 			ExpiryTime:        nullInt64FromInterface(expiryTime),
 			SpeedLimitEnabled: speedLimitEnabled,
 			SpeedLimit:        speedLimit,
+			Mode:               defaultString(mode, "gost"),
 		}
 		if err := tx.Create(&fwd).Error; err != nil {
 			return err

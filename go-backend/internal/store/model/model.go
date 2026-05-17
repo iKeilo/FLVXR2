@@ -59,6 +59,7 @@ type Forward struct {
 	SpeedLimit        int           `gorm:"column:speed_limit;not null;default:0"`
 	UploadSpeed       int           `gorm:"column:upload_speed;not null;default:0"`
 	DownloadSpeed     int           `gorm:"column:download_speed;not null;default:0"`
+	Mode              string        `gorm:"type:varchar(20);not null;default:'gost'"`
 }
 
 func (Forward) TableName() string { return "forward" }
@@ -72,6 +73,20 @@ type ForwardPort struct {
 }
 
 func (ForwardPort) TableName() string { return "forward_port" }
+
+type NftablesRule struct {
+	ID        int64  `gorm:"primaryKey;autoIncrement"`
+	ForwardID  int64  `gorm:"column:forward_id;not null;index:idx_nftables_forward_id"`
+	NodeID     int64  `gorm:"column:node_id;not null"`
+	Protocol   string `gorm:"type:varchar(10);not null"`
+	Port       int    `gorm:"not null"`
+	Table      string `gorm:"type:varchar(50);not null;default:'flvx'"`
+	Chain      string `gorm:"type:varchar(100);not null"`
+	RuleHandle uint64 `gorm:"column:rule_handle"`
+	Status     int    `gorm:"not null;default:1"`
+}
+
+func (NftablesRule) TableName() string { return "nftables_rule" }
 
 type Node struct {
 	ID                           int64          `gorm:"primaryKey;autoIncrement"`

@@ -169,7 +169,8 @@ interface ForwardForm {
   trafficLimit: number;
   expiryTime: number | null;
   speedLimitEnabled: boolean;
-  speedLimit: number;
+	speedLimit: number;
+  mode: "gost" | "nftables";
 }
 interface ForwardUserGroup {
   userId: number;
@@ -190,7 +191,7 @@ interface BatchProgressState {
 type ForwardGroupOrderMap = Record<string, string[]>;
 type ForwardGroupCollapsedMap = Record<string, boolean>;
 const UNKNOWN_FORWARD_USER_NAME = "未知用户";
-const UNCATEGORIZED_FORWARD_TUNNEL_NAME = "未分类";
+const UNCATEGORIZED_FORWARD_TUNNEL_NAME = "未分�?;
 const FORWARD_COMPACT_MODE_CONFIG_KEY = "forward_compact_mode";
 const FORWARD_COMPACT_MODE_EVENT = "forwardCompactModeChanged";
 const FORWARD_GROUP_ORDER_CONFIG_KEY = "forward_group_order_map";
@@ -290,10 +291,10 @@ const formatExpiryTime = (expiryTime: number | null | undefined): string => {
   const dateStr = `${month}/${day}`;
 
   if (diffDays <= 0) {
-    return `${dateStr} (已过期)`;
+    return `${dateStr} (已过�?`;
   }
   if (diffDays <= 7) {
-    return `${dateStr} (剩余${diffDays}天)`;
+    return `${dateStr} (剩余${diffDays}�?`;
   }
 
   return dateStr;
@@ -651,7 +652,7 @@ const SortableTunnelGroupContainer = ({
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className={countClassName}>{tunnel.items.length} 个规则</span>
+          <span className={countClassName}>{tunnel.items.length} 个规�?/span>
           <div
             className="cursor-grab active:cursor-grabbing p-1 text-default-400 flex-shrink-0 hover:text-default-600 transition-colors"
             title="拖拽分组排序"
@@ -704,7 +705,7 @@ const SortableForwardCard = ({ forward, renderCard }: any) => {
     </div>
   );
 };
-// 可拖拽的表格行组件
+// 可拖拽的表格行组�?
 const SortableTableRow = ({
   copyToClipboard,
   forward,
@@ -804,9 +805,9 @@ const SortableTableRow = ({
       <TableCell className={`whitespace-nowrap text-black ${rowBg}`}>
         <span
           className="cursor-pointer hover:text-primary transition-colors text-black"
-          onClick={() => copyToClipboard(forward.name, "规则名")}
+          onClick={() => copyToClipboard(forward.name, "规则�?)}
         >
-          {forward.name}
+          {forward.name}{forward.mode === "nftables" && (<span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">nftables</span>)}
         </span>
       </TableCell>
       <TableCell className={rowBg}>
@@ -916,13 +917,13 @@ const SortableTableRow = ({
             className="block w-full min-w-[80px] min-h-[20px] px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400"
             title="上行带宽"
           >
-            <span className="mr-1">↑</span>{formatSpeed(forward.inSpeed || 0)}
+            <span className="mr-1">�?/span>{formatSpeed(forward.inSpeed || 0)}
           </span>
           <span
             className="block w-full min-w-[80px] min-h-[20px] px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/10 text-purple-600 dark:text-purple-400"
             title="下行带宽"
           >
-            <span className="mr-1">↓</span>{formatSpeed(forward.outSpeed || 0)}
+            <span className="mr-1">�?/span>{formatSpeed(forward.outSpeed || 0)}
           </span>
         </div>
       </TableCell>
@@ -1104,7 +1105,7 @@ const SortableCompactTableRow = ({
       <TableCell className={`whitespace-nowrap text-black ${rowBg}`}>
         <span
           className="cursor-pointer hover:text-primary transition-colors text-black"
-          onClick={() => copyToClipboard(forward.name, "规则名")}
+          onClick={() => copyToClipboard(forward.name, "规则�?)}
         >
           {forward.name}
         </span>
@@ -1227,13 +1228,13 @@ const SortableCompactTableRow = ({
             className="block w-full min-w-[80px] min-h-[20px] px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400"
             title="上行带宽"
           >
-            <span className="mr-1">↑</span>{formatSpeed(forward.inSpeed || 0)}
+            <span className="mr-1">�?/span>{formatSpeed(forward.inSpeed || 0)}
           </span>
           <span
             className="block w-full min-w-[80px] min-h-[20px] px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/10 text-purple-600 dark:text-purple-400"
             title="下行带宽"
           >
-            <span className="mr-1">↓</span>{formatSpeed(forward.outSpeed || 0)}
+            <span className="mr-1">�?/span>{formatSpeed(forward.outSpeed || 0)}
           </span>
         </div>
       </TableCell>
@@ -1342,7 +1343,7 @@ export default function ForwardPage() {
     },
   );
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  // 工具栏搜索框状态
+  // 工具栏搜索框状�?
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [searchKeyword, setSearchKeyword] = useLocalStorageState(
     "forward-search-keyword",
@@ -1374,7 +1375,7 @@ export default function ForwardPage() {
   // isSearchVisible removed
   const [compactMode, setCompactMode] = useState(false);
 
-  // 用户切换时归零筛选条件
+  // 用户切换时归零筛选条�?
   useEffect(() => {
     const currentUserId = tokenUserId ? tokenUserId.toString() : null;
     const prevUserId = localStorage.getItem("forward-last-user-id");
@@ -1390,10 +1391,10 @@ export default function ForwardPage() {
         remoteAddr: "",
       });
     }
-    // 保存当前用户 ID 到 localStorage
+    // 保存当前用户 ID �?localStorage
     localStorage.setItem("forward-last-user-id", currentUserId || "");
   }, [tokenUserId, setSearchParams]);
-  // 显示模式状态 - 从localStorage读取，默认为平铺显示
+  // 显示模式状�?- 从localStorage读取，默认为平铺显示
   const [viewMode, setViewMode] = useState<"grouped" | "direct">(() => {
     try {
       const savedMode = localStorage.getItem("forward-view-mode");
@@ -1403,12 +1404,12 @@ export default function ForwardPage() {
       return "direct";
     }
   });
-  // 筛选状态
+  // 筛选状�?
   // filterUserId removed
   // filterTunnelId removed
-  // 拖拽排序相关状态
+  // 拖拽排序相关状�?
   const [forwardOrder, setForwardOrder] = useState<number[]>([]);
-  // 模态框状态
+  // 模态框状�?
   const [modalOpen, setModalOpen] = useState(false);
   // isFilterModalOpen removed
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -1433,7 +1434,7 @@ export default function ForwardPage() {
   const diagnosisAbortRef = useRef<AbortController | null>(null);
   const [addressModalTitle, setAddressModalTitle] = useState("");
   const [addressList, setAddressList] = useState<ForwardAddressItem[]>([]);
-  // 导出相关状态
+  // 导出相关状�?
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportData, setExportData] = useState("");
   const [exportLoading, setExportLoading] = useState(false);
@@ -1441,7 +1442,7 @@ export default function ForwardPage() {
     number | null
   >(null);
 
-  // 导入相关状态
+  // 导入相关状�?
   type ImportFormat = "flvx" | "ny";
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [importData, setImportData] = useState("");
@@ -1458,7 +1459,7 @@ export default function ForwardPage() {
       forwardName?: string;
     }>
   >([]);
-  // 表单状态
+  // 表单状�?
   const [form, setForm] = useState<ForwardForm>({
     name: "",
     tunnelId: null,
@@ -1472,12 +1473,13 @@ export default function ForwardPage() {
     trafficLimit: 0,
     expiryTime: null,
     speedLimitEnabled: false,
-    speedLimit: 0,
+	speedLimit: 0,
+    mode: "gost",
   });
   const [inIpTouched, setInIpTouched] = useState(false);
   // 表单验证错误
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  // 批量操作相关状态
+  // 批量操作相关状�?
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [batchDeleteModalOpen, setBatchDeleteModalOpen] = useState(false);
@@ -1492,12 +1494,12 @@ export default function ForwardPage() {
   const [batchDeleteLoading, setBatchDeleteLoading] = useState(false);
   const [batchChangeTunnelLoading, setBatchChangeTunnelLoading] =
     useState(false);
-  // 批量归零相关状态
+  // 批量归零相关状�?
   const [batchResetTrafficLoading, setBatchResetTrafficLoading] =
     useState(false);
   const [batchResetTrafficModalOpen, setBatchResetTrafficModalOpen] =
     useState(false);
-  // 流量归零日志相关状态
+  // 流量归零日志相关状�?
   const [trafficResetLogModalOpen, setTrafficResetLogModalOpen] =
     useState(false);
   const [trafficResetLogsLoading, setTrafficResetLogsLoading] = useState(false);
@@ -1686,10 +1688,10 @@ export default function ForwardPage() {
       );
 
       if (saveRes.code !== 0) {
-        toast.error(saveRes.msg || "保存分组折叠状态失败");
+        toast.error(saveRes.msg || "保存分组折叠状态失�?);
       }
     } catch {
-      toast.error("保存分组折叠状态失败");
+      toast.error("保存分组折叠状态失�?);
     }
   };
 
@@ -1993,7 +1995,7 @@ export default function ForwardPage() {
     },
     [],
   );
-  // 3形态模式切换（分组 -> 列表 -> 卡片）
+  // 3形态模式切换（分组 -> 列表 -> 卡片�?
   const handleModeCycle = async () => {
     let nextCompact = compactMode;
     let nextView = viewMode;
@@ -2007,13 +2009,13 @@ export default function ForwardPage() {
       nextView = "grouped";
     }
 
-    // 保存列表/卡片状态
+    // 保存列表/卡片状�?
     setViewMode(nextView);
     try {
       localStorage.setItem("forward-view-mode", nextView);
     } catch { }
 
-    // 保存精简/分组状态
+    // 保存精简/分组状�?
     if (nextCompact !== compactMode) {
       setCompactMode(nextCompact);
       try {
@@ -2027,7 +2029,7 @@ export default function ForwardPage() {
           }),
         );
       } catch (e) {
-        // 非管理员或网络错误忽略
+        // 非管理员或网络错误忽�?
       }
     }
   };
@@ -2084,7 +2086,7 @@ export default function ForwardPage() {
     },
     [applyForwardList],
   );
-  // 加载所有数据
+  // 加载所有数�?
   const loadData = useCallback(
     async (lod = true) => {
       setLoading(lod);
@@ -2120,7 +2122,7 @@ export default function ForwardPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
-  // 定时刷新连接数（每5秒）
+  // 定时刷新连接数（�?秒）
   useEffect(() => {
     const interval = setInterval(() => {
       // 只在页面可见时刷新，且不在加载中
@@ -2138,7 +2140,7 @@ export default function ForwardPage() {
         .filter((speedLimit) => {
           const name = speedLimit.name || "";
 
-          return name.includes("不限速") || speedLimit.speed === 0;
+          return name.includes("不限�?) || speedLimit.speed === 0;
         })
         .map((speedLimit) => speedLimit.id),
     );
@@ -2169,14 +2171,14 @@ export default function ForwardPage() {
 
     return !speedLimitIds.has(speedId);
   };
-  // const selectedSpeedId = normalizeSpeedId(form.speedId); // 已弃用
+  // const selectedSpeedId = normalizeSpeedId(form.speedId); // 已弃�?
   const validateForm = (): boolean => {
     const newErrors: { [key: string]: string } = {};
 
     if (!form.name.trim()) {
-      newErrors.name = "请输入规则名称";
+      newErrors.name = "请输入规则名�?;
     } else if (form.name.length < 2 || form.name.length > 50) {
-      newErrors.name = "规则名称长度应在2-50个字符之间";
+      newErrors.name = "规则名称长度应在2-50个字符之�?;
     }
     if (!form.tunnelId) {
       newErrors.tunnelId = "请选择关联隧道";
@@ -2217,7 +2219,7 @@ export default function ForwardPage() {
           !ipv6FullPattern.test(addr) &&
           !domainPattern.test(addr)
         ) {
-          newErrors.remoteAddr = `第${i + 1}行地址格式错误`;
+          newErrors.remoteAddr = `�?{i + 1}行地址格式错误`;
           break;
         }
       }
@@ -2322,7 +2324,7 @@ export default function ForwardPage() {
 
       if (res.code === 0) {
         toast.success("删除成功");
-        // 重新获取最新列表
+        // 重新获取最新列�?
         const refreshRes = await getForwardTrafficResetLogs(
           currentLogForward.id,
           30,
@@ -2374,9 +2376,9 @@ export default function ForwardPage() {
           return next;
         });
       } else {
-        // 删除失败，询问是否强制删除
+        // 删除失败，询问是否强制删�?
         const confirmed = window.confirm(
-          `常规删除失败：${res.msg || "删除失败"}\n\n是否需要强制删除？\n\n⚠️ 注意：强制删除不会去验证节点端是否已经删除对应的规则服务。`,
+          `常规删除失败�?{res.msg || "删除失败"}\n\n是否需要强制删除？\n\n⚠️ 注意：强制删除不会去验证节点端是否已经删除对应的规则服务。`,
         );
 
         if (confirmed) {
@@ -2476,7 +2478,8 @@ export default function ForwardPage() {
           trafficLimit: form.trafficLimit,
           expiryTime: form.expiryTime,
           speedLimitEnabled: form.speedLimitEnabled,
-          speedLimit: form.speedLimit,
+	speedLimit: form.speedLimit,
+          mode: form.mode,
         };
 
         res = await createForward(createData);
@@ -2497,7 +2500,7 @@ export default function ForwardPage() {
           });
         });
         if (speedLimitAutoCleared) {
-          toast("所选限速规则不存在，已自动清除为不限速", {
+          toast("所选限速规则不存在，已自动清除为不限�?, {
             icon: "⚠️",
             duration: 5000,
           });
@@ -2514,7 +2517,7 @@ export default function ForwardPage() {
       setSubmitLoading(false);
     }
   };
-  // 处理服务开关
+  // 处理服务开�?
   const handleServiceToggle = async (forward: Forward) => {
     if (forward.status !== 1 && forward.status !== 0) {
       toast.error("规则状态异常，无法操作");
@@ -2538,15 +2541,15 @@ export default function ForwardPage() {
         res = await pauseForwardService(forward.id);
       }
       if (res.code === 0) {
-        toast.success(targetState ? "服务已启动" : "服务已暂停");
-        // 更新规则状态
+        toast.success(targetState ? "服务已启�? : "服务已暂�?);
+        // 更新规则状�?
         setForwards((prev) =>
           prev.map((f) =>
             f.id === forward.id ? { ...f, status: targetState ? 1 : 0 } : f,
           ),
         );
       } else {
-        // 操作失败，恢复UI状态
+        // 操作失败，恢复UI状�?
         setForwards((prev) =>
           prev.map((f) =>
             f.id === forward.id ? { ...f, serviceRunning: !targetState } : f,
@@ -2555,13 +2558,13 @@ export default function ForwardPage() {
         toast.error(res.msg || "操作失败");
       }
     } catch {
-      // 操作失败，恢复UI状态
+      // 操作失败，恢复UI状�?
       setForwards((prev) =>
         prev.map((f) =>
           f.id === forward.id ? { ...f, serviceRunning: !targetState } : f,
         ),
       );
-      toast.error("网络错误，操作失败");
+      toast.error("网络错误，操作失�?);
     }
   };
   // 诊断规则
@@ -2696,7 +2699,7 @@ export default function ForwardPage() {
               forwardName: forward.name,
               remoteAddr: forward.remoteAddr,
               description: "诊断失败",
-              message: response.msg || "诊断过程中发生错误",
+              message: response.msg || "诊断过程中发生错�?,
             }),
           );
           setDiagnosisProgress({
@@ -2714,7 +2717,7 @@ export default function ForwardPage() {
         toast.error(streamErrorMessage);
       }
       if (streamResult.timedOut) {
-        toast.error("诊断超时（单条30秒 / 整体2分钟），已返回当前结果");
+        toast.error("诊断超时（单�?0�?/ 整体2分钟），已返回当前结�?);
       }
     } catch {
       if (abortController.signal.aborted) {
@@ -2743,7 +2746,7 @@ export default function ForwardPage() {
       setDiagnosisLoading(false);
     }
   };
-  // 格式化流量
+  // 格式化流�?
   const formatFlow = (value: number): string => {
     if (value === 0) return "0 B";
     if (value < 1024) return value + " B";
@@ -2764,7 +2767,7 @@ export default function ForwardPage() {
       parseFloat((bytesPerSecond / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
     );
   };
-  // 格式化日期时间
+  // 格式化日期时�?
   const formatDateTime = (timestamp: number): string => {
     if (!timestamp) return "-";
     const date = new Date(timestamp);
@@ -2802,7 +2805,7 @@ export default function ForwardPage() {
     try {
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(text);
-        toast.success(`已复制${label}`);
+        toast.success(`已复�?{label}`);
       } else {
         const textArea = document.createElement("textarea");
 
@@ -2815,7 +2818,7 @@ export default function ForwardPage() {
         textArea.select();
         try {
           document.execCommand("copy");
-          toast.success(`已复制${label}`);
+          toast.success(`已复�?{label}`);
         } catch (err) {
           toast.error("复制失败");
         }
@@ -2872,7 +2875,7 @@ export default function ForwardPage() {
       );
 
       if (forwardsToExport.length === 0) {
-        toast.error("所选隧道没有规则数据");
+        toast.error("所选隧道没有规则数�?);
         setExportLoading(false);
 
         return;
@@ -2904,7 +2907,7 @@ export default function ForwardPage() {
   // 执行导入
   const executeImport = async () => {
     if (!importData.trim()) {
-      toast.error("请输入要导入的数据");
+      toast.error("请输入要导入的数�?);
 
       return;
     }
@@ -2965,7 +2968,7 @@ export default function ForwardPage() {
                 {
                   line: item.line,
                   success: true,
-                  message: `创建成功 (${parsedNyItem.dest.length}个目标)`,
+                  message: `创建成功 (${parsedNyItem.dest.length}个目�?`,
                   forwardName: nyForwardInput.name,
                 },
                 ...prev,
@@ -2985,7 +2988,7 @@ export default function ForwardPage() {
               {
                 line: item.line,
                 success: false,
-                message: "网络错误，创建失败",
+                message: "网络错误，创建失�?,
               },
               ...prev,
             ]);
@@ -3006,7 +3009,7 @@ export default function ForwardPage() {
               {
                 line,
                 success: false,
-                message: "格式错误：需要至少包含落地地址和规则名称",
+                message: "格式错误：需要至少包含落地地址和规则名�?,
               },
               ...prev,
             ]);
@@ -3019,7 +3022,7 @@ export default function ForwardPage() {
               {
                 line,
                 success: false,
-                message: "落地地址和规则名称不能为空",
+                message: "落地地址和规则名称不能为�?,
               },
               ...prev,
             ]);
@@ -3037,7 +3040,7 @@ export default function ForwardPage() {
                 line,
                 success: false,
                 message:
-                  "落地地址格式错误，应为 地址:端口 格式，多个地址用逗号分隔",
+                  "落地地址格式错误，应�?地址:端口 格式，多个地址用逗号分隔",
               },
               ...prev,
             ]);
@@ -3054,7 +3057,7 @@ export default function ForwardPage() {
                   {
                     line,
                     success: false,
-                    message: "入口端口格式错误，应为1-65535之间的数字",
+                    message: "入口端口格式错误，应�?-65535之间的数�?,
                   },
                   ...prev,
                 ]);
@@ -3095,7 +3098,7 @@ export default function ForwardPage() {
               {
                 line,
                 success: false,
-                message: "网络错误，创建失败",
+                message: "网络错误，创建失�?,
               },
               ...prev,
             ]);
@@ -3105,12 +3108,12 @@ export default function ForwardPage() {
       toast.success("导入执行完成");
       await refreshForwardList(false);
     } catch {
-      toast.error("导入过程中发生错误");
+      toast.error("导入过程中发生错�?);
     } finally {
       setImportLoading(false);
     }
   };
-  // 获取状态显示
+  // 获取状态显�?
   const getStatusDisplay = (status: number) => {
     switch (status) {
       case 1:
@@ -3181,12 +3184,12 @@ export default function ForwardPage() {
 
       return;
     }
-    // 确保 forwardOrder 存在且有效
+    // 确保 forwardOrder 存在且有�?
     if (!forwardOrder || forwardOrder.length === 0) return;
     const activeId = Number(active.id);
     const overId = Number(over.id);
 
-    // 检查 ID 是否有效
+    // 检�?ID 是否有效
     if (isNaN(activeId) || isNaN(overId)) return;
     const activeForward = forwards.find((forward) => forward.id === activeId);
     const overForward = forwards.find((forward) => forward.id === overId);
@@ -3228,7 +3231,7 @@ export default function ForwardPage() {
         setForwardOrder(newOrder);
         saveOrder(FORWARD_ORDER_KEY, newOrder);
       }
-      // 持久化到数据库
+      // 持久化到数据�?
       try {
         const forwardsToUpdate = newOrder.map((id, index) => ({
           id,
@@ -3254,7 +3257,7 @@ export default function ForwardPage() {
             }),
           );
         } else {
-          toast.error("保存排序失败：" + (response.msg || "未知错误"));
+          toast.error("保存排序失败�? + (response.msg || "未知错误"));
         }
       } catch {
         toast.error("保存排序失败，请重试");
@@ -3279,7 +3282,7 @@ export default function ForwardPage() {
     setBatchDeleteLoading(true);
     setBatchProgress({
       active: true,
-      label: `正在删除 ${selectedIds.size} 项规则...`,
+      label: `正在删除 ${selectedIds.size} 项规�?..`,
       percent: 30,
     });
     try {
@@ -3327,7 +3330,7 @@ export default function ForwardPage() {
             .length || 0;
 
         toast.success(
-          `已成功归零 ${successCount}/${selectedLocalIds.length} 个规则的流量统计`,
+          `已成功归�?${successCount}/${selectedLocalIds.length} 个规则的流量统计`,
         );
         setBatchResetTrafficModalOpen(false);
         setSelectMode(false);
@@ -3347,7 +3350,7 @@ export default function ForwardPage() {
     setBatchPauseLoading(true);
     setBatchProgress({
       active: true,
-      label: `正在停用 ${selectedIds.size} 项规则...`,
+      label: `正在停用 ${selectedIds.size} 项规�?..`,
       percent: 30,
     });
     try {
@@ -3381,7 +3384,7 @@ export default function ForwardPage() {
     setBatchResumeLoading(true);
     setBatchProgress({
       active: true,
-      label: `正在启用 ${selectedIds.size} 项规则...`,
+      label: `正在启用 ${selectedIds.size} 项规�?..`,
       percent: 30,
     });
     try {
@@ -3415,7 +3418,7 @@ export default function ForwardPage() {
     setBatchRedeployLoading(true);
     setBatchProgress({
       active: true,
-      label: `正在重新下发 ${selectedIds.size} 项规则...`,
+      label: `正在重新下发 ${selectedIds.size} 项规�?..`,
       percent: 30,
     });
     try {
@@ -3448,7 +3451,7 @@ export default function ForwardPage() {
     setBatchChangeTunnelLoading(true);
     setBatchProgress({
       active: true,
-      label: `正在为 ${selectedIds.size} 项规则切换隧道...`,
+      label: `正在�?${selectedIds.size} 项规则切换隧�?..`,
       percent: 30,
     });
     try {
@@ -3483,7 +3486,7 @@ export default function ForwardPage() {
       setBatchChangeTunnelLoading(false);
     }
   };
-  // 传感器配置 - 使用默认配置避免错误
+  // 传感器配�?- 使用默认配置避免错误
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: {
@@ -3502,7 +3505,7 @@ export default function ForwardPage() {
   );
   // 根据排序顺序获取规则列表
   const orderedForwards = useMemo((): Forward[] => {
-    // 确保 forwards 数组存在且有效
+    // 确保 forwards 数组存在且有�?
     if (!forwards || forwards.length === 0) {
       return [];
     }
@@ -3522,15 +3525,15 @@ export default function ForwardPage() {
         (f) => f.tunnelId === targetTunnelId,
       );
     }
-    // 添加限速规则筛选
+    // 添加限速规则筛�?
     if (searchParams.speedLimitId !== undefined) {
       if (searchParams.speedLimitId === -1) {
-        // 不限速（speedId 为 null 或 undefined）
+        // 不限速（speedId �?null �?undefined�?
         filteredForwards = filteredForwards.filter(
           (f) => f.speedId === null || f.speedId === undefined,
         );
       } else {
-        // 特定限速规则
+        // 特定限速规�?
         filteredForwards = filteredForwards.filter(
           (f) => f.speedId === searchParams.speedLimitId,
         );
@@ -3559,7 +3562,7 @@ export default function ForwardPage() {
         // 落地端口精确匹配（从 remoteAddr 中提取端口）
         const remotePortMatch = (() => {
           if (isNaN(keywordPort) || !f.remoteAddr) return false;
-          // 从 remoteAddr 中提取最后一个端口号（支持多个地址的情况）
+          // �?remoteAddr 中提取最后一个端口号（支持多个地址的情况）
           const remotePort = f.remoteAddr.split(",")[0].match(/:(\d+)$/)?.[1];
 
           return remotePort && parseInt(remotePort) === keywordPort;
@@ -3588,7 +3591,7 @@ export default function ForwardPage() {
     if (!filteredForwards || filteredForwards.length === 0) {
       return [];
     }
-    // 优先使用数据库中的 inx 字段进行排序
+    // 优先使用数据库中�?inx 字段进行排序
     const sortedByDb = [...filteredForwards].sort((a, b) => {
       const aInx = a.inx ?? 0;
       const bInx = b.inx ?? 0;
@@ -3600,7 +3603,7 @@ export default function ForwardPage() {
       return (a.id ?? 0) - (b.id ?? 0);
     });
 
-    // 如果数据库中没有排序信息，则使用本地存储的顺序
+    // 如果数据库中没有排序信息，则使用本地存储的顺�?
     if (
       forwardOrder &&
       forwardOrder.length > 0 &&
@@ -3860,7 +3863,7 @@ export default function ForwardPage() {
         <option value={50}>50</option>
         <option value={100}>100</option>
       </select>
-      <span className="text-default-400 text-sm">条</span>
+      <span className="text-default-400 text-sm">�?/span>
     </div>
   );
 
@@ -3908,7 +3911,7 @@ export default function ForwardPage() {
         <option value={10}>10</option>
         <option value={20}>20</option>
       </select>
-      <span className="text-default-400 text-sm">个分组</span>
+      <span className="text-default-400 text-sm">个分�?/span>
     </div>
   );
 
@@ -3999,18 +4002,18 @@ export default function ForwardPage() {
 
     return users;
   }, [forwards, isAdmin, tokenUserId]);
-  // 生成用作筛选项的隧道列表（先按用户过滤，再检查是否有规则）
+  // 生成用作筛选项的隧道列表（先按用户过滤，再检查是否有规则�?
   const availableTunnels = useMemo(() => {
     // 如果选中了特定用户，只返回该用户有规则的隧道
     if (searchParams.userId !== "all") {
       const targetUserId = parseInt(searchParams.userId);
 
-      // 先找出该用户的所有规则
+      // 先找出该用户的所有规�?
       const userForwards = forwards.filter(
         (f) => f.userId === targetUserId || (targetUserId === 0 && !f.userId),
       );
 
-      // 提取这些规则涉及的隧道 ID
+      // 提取这些规则涉及的隧�?ID
       const tunnelIdsWithForwards = new Set<number>();
 
       userForwards.forEach((f) => {
@@ -4019,13 +4022,13 @@ export default function ForwardPage() {
         }
       });
 
-      // 只返回有规则的隧道
+      // 只返回有规则的隧�?
       return tunnels.filter((tunnel) =>
         tunnelIdsWithForwards.has(tunnel.id),
       );
     }
 
-    // 如果是"全部用户"，返回所有有规则的隧道
+    // 如果�?全部用户"，返回所有有规则的隧�?
     const tunnelIdsWithForwards = new Set<number>();
 
     forwards.forEach((f) => {
@@ -4065,7 +4068,7 @@ export default function ForwardPage() {
         className="group h-full flex flex-col shadow-sm border border-divider hover:shadow-md transition-shadow duration-200 overflow-hidden"
       >
         <CardHeader className="pb-2 md:pb-2 flex-col items-start gap-1.5">
-          {/* 第一行：复选框与开关 */}
+          {/* 第一行：复选框与开�?*/}
           <div className="flex justify-between items-center w-full">
             <div className="flex items-center -ml-1">
               <Checkbox
@@ -4104,7 +4107,7 @@ export default function ForwardPage() {
             <div className="flex items-center justify-between gap-2 mb-1">
               <h3
                 className="font-bold text-foreground truncate text-sm cursor-pointer hover:text-primary transition-colors flex-1 min-w-0"
-                onClick={() => copyToClipboard(forward.name, "规则名")}
+                onClick={() => copyToClipboard(forward.name, "规则�?)}
               >
                 {forward.name}
               </h3>
@@ -4128,7 +4131,7 @@ export default function ForwardPage() {
         {/* 卡片视图卡片布局显示 */}
         <CardBody className="flex flex-1 flex-col pt-0 pb-3 md:pt-0 md:pb-3">
           <div className="space-y-3 flex-1 py-1">
-            {/* 入口信息区 */}
+            {/* 入口信息�?*/}
             <div className="space-y-1">
               <div className="flex gap-1 px-1 text-[11px] font-bold text-foreground uppercase tracking-wider">
                 <span className="flex-1 text-left">入口地址</span>
@@ -4179,7 +4182,7 @@ export default function ForwardPage() {
                 </div>
               </div>
             </div>
-            {/* 落地信息区 */}
+            {/* 落地信息�?*/}
             <div className="space-y-1">
               <div className="flex gap-1 px-1 text-[11px] font-bold text-foreground uppercase tracking-wider">
                 <span className="flex-1 text-left">落地地址</span>
@@ -4238,7 +4241,7 @@ export default function ForwardPage() {
               </div>
             </div>
           </div>
-          {/* 底部 Chip 区 */}
+          {/* 底部 Chip �?*/}
           <div className="flex items-center justify-between pt-2 border-t border-divider gap-1 whitespace-nowrap">
             <div className="flex items-center gap-1">
               <div className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${strategyDisplay.color === "primary" ? "bg-primary-500/10 text-primary-600 dark:text-primary-400" : strategyDisplay.color === "success" ? "bg-success-500/10 text-success-600 dark:text-success-400" : strategyDisplay.color === "warning" ? "bg-warning-500/10 text-warning-600 dark:text-warning-400" : strategyDisplay.color === "danger" ? "bg-danger-500/10 text-danger-600 dark:text-danger-400" : "bg-default-500/10 text-default-500"}`}>
@@ -4312,7 +4315,7 @@ export default function ForwardPage() {
                 variant="flat"
                 onPress={selectAll}
               >
-                全选
+                全�?
               </Button>
               <Button
                 color="warning"
@@ -4378,7 +4381,7 @@ export default function ForwardPage() {
                 删除
               </Button>
               <span className="text-sm text-danger-400 shrink-0">
-                已选 {selectedIds.size} 项
+                已�?{selectedIds.size} �?
               </span>
             </>
           ) : (
@@ -4393,7 +4396,7 @@ export default function ForwardPage() {
                 onOpen={() => setIsSearchVisible(true)}
               />
               {/* 显示模式切换按钮 */}
-              {/* 显示模式4形态切换按钮 */}
+              {/* 显示模式4形态切换按�?*/}
               <Button
                 color={modeBtnConfig.color as any}
                 size="sm"
@@ -4429,7 +4432,7 @@ export default function ForwardPage() {
               >
                 新增
               </Button>
-              {/* 筛选按钮 */}
+              {/* 筛选按�?*/}
               {/* <Button
                 className="whitespace-nowrap bg-red-100"
                 color={activeFilterCount > 0 ? "secondary" : "danger"}
@@ -4490,7 +4493,7 @@ export default function ForwardPage() {
                   全部规则
                 </span>
                 <span className="text-xs text-default-600">
-                  _{sortedForwards.length}条
+                  _{sortedForwards.length}�?
                 </span>
               </div> */}
               {paginationUI}
@@ -4519,7 +4522,7 @@ export default function ForwardPage() {
                             {/* @ts-ignore */}
                             <div className="flex items-center justify-center h-full">
                               <Checkbox
-                                aria-label="全选"
+                                aria-label="全�?
                                 isSelected={isAllSelected}
                                 onValueChange={handleSelectAllToggle}
                               />
@@ -4529,11 +4532,11 @@ export default function ForwardPage() {
                         <TableColumn className="whitespace-nowrap flex-shrink-0 w-16 pl-2 text-left">
                           排序
                         </TableColumn>
-                        {/* <TableColumn className="whitespace-nowrap flex-shrink-0 w-[100px] text-left">用户名</TableColumn> */}
+                        {/* <TableColumn className="whitespace-nowrap flex-shrink-0 w-[100px] text-left">用户�?/TableColumn> */}
                         {isAdmin && (
                           <TableColumn className="whitespace-nowrap flex-shrink-0 w-[100px] text-left">
                             <Select
-                              aria-label="按用户筛选"
+                              aria-label="按用户筛�?
                               className="w-full min-w-[80px]"
                               classNames={{
                                 trigger: "bg-transparent border-none shadow-none p-0 min-h-0 h-auto gap-1.5 hover:bg-default-100/50 transition-colors flex flex-row items-center justify-start",
@@ -4551,8 +4554,8 @@ export default function ForwardPage() {
                                   userId: key || "all",
                                 }));
                               }}
-                              placeholder="所属用户"
-                              // 🎯 逻辑对齐：如果是 "all" 或者空，传 [] 让它显示 placeholder ("所属用户")
+                              placeholder="所属用�?
+                              // 🎯 逻辑对齐：如果是 "all" 或者空，传 [] 让它显示 placeholder ("所属用�?)
                               selectedKeys={(!searchParams?.userId || searchParams.userId === "all") ? [] : [String(searchParams.userId)]}
                             >
                               <SelectItem key="all" textValue="全部用户">
@@ -4572,13 +4575,13 @@ export default function ForwardPage() {
                         <TableColumn className="whitespace-nowrap flex-shrink-0 w-[180px] text-left">
                           规则名称
                           <span className="text-xs text-primary-500 font-normal">
-                            ^{sortedForwards.length}个
+                            ^{sortedForwards.length}�?
                           </span>
                         </TableColumn>
                         {/* <TableColumn className="whitespace-nowrap flex-shrink-0 w-[180px] text-left">隧道倍率</TableColumn> */}
                         <TableColumn className="whitespace-nowrap flex-shrink-0 w-[180px] text-left">
                           <Select
-                            aria-label="按所属隧道筛选"
+                            aria-label="按所属隧道筛�?
                             className="w-full"
                             classNames={{
                               trigger:
@@ -4653,13 +4656,13 @@ export default function ForwardPage() {
                           实时带宽
                         </TableColumn>
                         <TableColumn className="whitespace-nowrap flex-shrink-0 w-[90px] text-left">
-                          连接数
+                          连接�?
                         </TableColumn>
                         <TableColumn className="whitespace-nowrap flex-shrink-0 w-[80px] text-left">
-                          有效期
+                          有效�?
                         </TableColumn>
                         <TableColumn className="whitespace-nowrap flex-shrink-0 w-[80px] text-left">
-                          状态
+                          状�?
                         </TableColumn>
                         <TableColumn align="left" className="whitespace-nowrap flex-shrink-0 min-w-[220px] pl-4">
                           操作
@@ -4704,7 +4707,7 @@ export default function ForwardPage() {
                   暂无规则配置
                 </h3>
                 <p className="text-default-500 text-sm max-w-xs mx-auto leading-relaxed">
-                  还没有任何规则配置，点击新增按钮开始创建
+                  还没有任何规则配置，点击新增按钮开始创�?
                 </p>
               </CardBody>
             </Card>
@@ -4719,7 +4722,7 @@ export default function ForwardPage() {
                     {paginatedForwards[0]?.userRemark?.trim() || paginatedForwards[0]?.userName || "全部规则"}
                   </span>
                 </div>
-                <span className="text-xs text-default-500">{sortedForwards.length} 个规则</span>
+                <span className="text-xs text-default-500">{sortedForwards.length} 个规�?/span>
               </div>
               <div className="p-4">
                 <DndContext
@@ -4755,7 +4758,7 @@ export default function ForwardPage() {
                 暂无规则配置
               </h3>
               <p className="text-default-500 text-sm max-w-xs mx-auto leading-relaxed">
-                还没有创建任何规则配置，点击上方按钮开始创建
+                还没有创建任何规则配置，点击上方按钮开始创�?
               </p>
             </CardBody>
           </Card>
@@ -4782,7 +4785,7 @@ export default function ForwardPage() {
                           {group.userName}
                         </span>
                       </div>
-                      <span className="text-xs text-default-500">{groupForwardCount} 个规则</span>
+                      <span className="text-xs text-default-500">{groupForwardCount} 个规�?/span>
                     </div>
                     <div className="space-y-4 p-4">
                       <DndContext
@@ -4873,7 +4876,7 @@ export default function ForwardPage() {
                                           >
                                             <div className="flex items-center justify-center h-full">
                                               <Checkbox
-                                                aria-label="本组全选"
+                                                aria-label="本组全�?
                                                 isSelected={isGroupSelected}
                                                 onValueChange={handleGroupToggle}
                                               />
@@ -4882,11 +4885,11 @@ export default function ForwardPage() {
                                           <TableColumn className="whitespace-nowrap flex-shrink-0 w-16 pl-2 text-left">
                                             排序
                                           </TableColumn>
-                                          {/* <TableColumn className="whitespace-nowrap flex-shrink-0 w-[100px] text-left">用户名</TableColumn> */}
+                                          {/* <TableColumn className="whitespace-nowrap flex-shrink-0 w-[100px] text-left">用户�?/TableColumn> */}
                                           {isAdmin && (
                                             <TableColumn className="whitespace-nowrap flex-shrink-0 w-[100px] text-left">
                                               <Select
-                                                aria-label="按用户筛选"
+                                                aria-label="按用户筛�?
                                                 className="w-full min-w-[80px]"
                                                 classNames={{
                                                   trigger: "bg-transparent border-none shadow-none p-0 min-h-0 h-auto gap-1.5 hover:bg-default-100/50 transition-colors flex flex-row items-center justify-start",
@@ -4904,8 +4907,8 @@ export default function ForwardPage() {
                                                     userId: key || "all",
                                                   }));
                                                 }}
-                                                placeholder="所属用户"
-                                                // 🎯 逻辑对齐：如果是 "all" 或者空，传 [] 让它显示 placeholder ("所属用户")
+                                                placeholder="所属用�?
+                                                // 🎯 逻辑对齐：如果是 "all" 或者空，传 [] 让它显示 placeholder ("所属用�?)
                                                 selectedKeys={(!searchParams?.userId || searchParams.userId === "all") ? [] : [String(searchParams.userId)]}
                                               >
                                                 <SelectItem
@@ -4928,7 +4931,7 @@ export default function ForwardPage() {
                                             </TableColumn>
                                           )}
                                           <TableColumn className="whitespace-nowrap flex-shrink-0 w-[180px] text-left">
-                                            规则名
+                                            规则�?
                                           </TableColumn>
                                           {/* {isAdmin && <TableColumn className="whitespace-nowrap flex-shrink-0 w-[100px] text-left">速度限制</TableColumn>} */}
                                           <TableColumn className="whitespace-nowrap flex-shrink-0 w-[140px] text-left">
@@ -4950,13 +4953,13 @@ export default function ForwardPage() {
                                             实时带宽
                                           </TableColumn>
                                           <TableColumn className="whitespace-nowrap flex-shrink-0 w-[90px] text-left">
-                                            连接数
+                                            连接�?
                                           </TableColumn>
                                           <TableColumn className="whitespace-nowrap flex-shrink-0 w-[100px] text-left">
-                                            有效期
+                                            有效�?
                                           </TableColumn>
                                           <TableColumn className="whitespace-nowrap flex-shrink-0 w-[100px] text-left">
-                                            状态
+                                            状�?
                                           </TableColumn>
                                           <TableColumn
                                             align="left"
@@ -5024,7 +5027,7 @@ export default function ForwardPage() {
                 暂无规则配置
               </h3>
               <p className="text-default-500 text-sm max-w-xs mx-auto leading-relaxed">
-                还没有创建任何规则配置，点击上方按钮开始创建
+                还没有创建任何规则配置，点击上方按钮开始创�?
               </p>
             </CardBody>
           </Card>
@@ -5060,7 +5063,7 @@ export default function ForwardPage() {
                       errorMessage={errors.name}
                       isInvalid={!!errors.name}
                       label="规则名称"
-                      placeholder="请输入规则名称"
+                      placeholder="请输入规则名�?
                       value={form.name}
                       variant="bordered"
                       onChange={(e) =>
@@ -5071,13 +5074,13 @@ export default function ForwardPage() {
                     <Input
                       description={
                         currentTunnelPortRange
-                          ? `指定入口端口，留空自动分配 (允许范围: ${currentTunnelPortRange.min}-${currentTunnelPortRange.max})`
+                          ? `指定入口端口，留空自动分�?(允许范围: ${currentTunnelPortRange.min}-${currentTunnelPortRange.max})`
                           : "指定入口端口，留空则从节点可用端口中自动分配"
                       }
                       errorMessage={errors.inPort}
                       isInvalid={!!errors.inPort}
                       label="入口端口"
-                      placeholder="留空则自动分配可用端口"
+                      placeholder="留空则自动分配可用端�?
                       type="number"
                       value={form.inPort !== null ? form.inPort.toString() : ""}
                       variant="bordered"
@@ -5090,11 +5093,11 @@ export default function ForwardPage() {
                         }));
                       }}
                     />
-                    {/* 暂时保留旧限速选择 - 后续可删除
+                    {/* 暂时保留旧限速选择 - 后续可删�?
                   {isAdmin && (
                     <Select
-                      label="规则限速"
-                      placeholder="不限速"
+                      label="规则限�?
+                      placeholder="不限�?
                       selectedKeys={
                         selectedSpeedId !== null
                           ? [selectedSpeedId.toString()]
@@ -5116,10 +5119,10 @@ export default function ForwardPage() {
                         <SelectItem
                           key={speedLimit.id.toString()}
                           textValue={
-                            speedLimit.name || `限速${speedLimit.speed}`
+                            speedLimit.name || `限�?{speedLimit.speed}`
                           }
                         >
-                          {speedLimit.name || `限速${speedLimit.speed}`}
+                          {speedLimit.name || `限�?{speedLimit.speed}`}
                         </SelectItem>
                       ))}
                     </Select>
@@ -5131,13 +5134,13 @@ export default function ForwardPage() {
                     <Select
                       description={
                         isEdit
-                          ? "更改隧道将释放原端口并在新隧道分配端口"
+                          ? "更改隧道将释放原端口并在新隧道分配端�?
                           : "看括号内说明选择隧道"
                       }
                       errorMessage={errors.tunnelId}
                       isInvalid={!!errors.tunnelId}
                       label="选择隧道"
-                      placeholder="请选择关联的隧道"
+                      placeholder="请选择关联的隧�?
                       selectedKeys={
                         form.tunnelId ? [form.tunnelId.toString()] : []
                       }
@@ -5151,12 +5154,12 @@ export default function ForwardPage() {
                       }}
                     >
                       {tunnels.map((tunnel) => {
-                        // 从 allTunnels 中获取 trafficRatio
+                        // �?allTunnels 中获�?trafficRatio
                         const allTunnel = allTunnels.find(
                           (t) => t.id === tunnel.id,
                         );
                         const trafficRatio = allTunnel?.trafficRatio;
-                        // 调用统一个格式化函数，自带 x 后缀
+                        // 调用统一个格式化函数，自�?x 后缀
                         const formattedRatio =
                           formatTunnelTrafficRatio(trafficRatio);
 
@@ -5193,7 +5196,7 @@ export default function ForwardPage() {
                       description={
                         isCurrentTunnelMultiEntrance
                           ? "多入口隧道不支持自定义监听IP，使用各节点默认IP"
-                          : "从入口节点IP中选择，留空使用默认"
+                          : "从入口节点IP中选择，留空使用默�?
                       }
                       isDisabled={
                         !form.tunnelId ||
@@ -5231,7 +5234,7 @@ export default function ForwardPage() {
                   </div>
                   <div className="space-y-4 pb-4">
                     <Textarea
-                      description="格式: IP:端口 或 域名:端口，支持多个地址（每行一个）"
+                      description="格式: IP:端口 �?域名:端口，支持多个地址（每行一个）"
                       errorMessage={errors.remoteAddr}
                       isInvalid={!!errors.remoteAddr}
                       label="落地地址"
@@ -5249,7 +5252,7 @@ export default function ForwardPage() {
                     />
                     {getAddressCount(form.remoteAddr) > 1 && (
                       <Select
-                        description="多个落地地址的负载均衡策略"
+                        description="多个落地地址的负载均衡策�?
                         label="负载策略"
                         placeholder="请选择负载均衡策略"
                         selectedKeys={[form.strategy]}
@@ -5267,7 +5270,24 @@ export default function ForwardPage() {
                         <SelectItem key="round">轮询模式 - 依次轮换</SelectItem>
                         <SelectItem key="rand">随机模式 - 随机选择</SelectItem>
                         <SelectItem key="hash">哈希模式 - IP 哈希</SelectItem>
-                      </Select>
+                    )}
+                    <Select
+                      description="nftables Ϊ�ں�̬ת�������ܸ��ߵ�Э������ݲ�����"
+                      label="ת��ģʽ"
+                      placeholder="��ѡ��ת��ģʽ"
+                      selectedKeys={[form.mode]}
+                      variant="bordered"
+                      onSelectionChange={(keys) => {
+                        const selectedKey = Array.from(keys)[0] as string;
+                        setForm((prev) => ({
+                          ...prev,
+                          mode: selectedKey as "gost" | "nftables"
+                        }));
+                      }}
+                    >
+                      <SelectItem key="gost">GOST �û�̬ת��</SelectItem>
+                      <SelectItem key="nftables">nftables �ں�̬ת��</SelectItem>
+                    </Select>
                     )}
                   </div>
                   {/* 高级功能折叠面板 - 移到最底部 */}
@@ -5298,7 +5318,7 @@ export default function ForwardPage() {
                     </button>
                     {advancedOptionsOpen && (
                       <div className="p-4 space-y-4 bg-content1">
-                        {/* 限速配置 */}
+                        {/* 限速配�?*/}
                         <SpeedLimitConfigField
                           enabled={form.speedLimitEnabled}
                           speedLimit={form.speedLimit}
@@ -5315,7 +5335,7 @@ export default function ForwardPage() {
                             }))
                           }
                         />
-                        {/* 连接数限制 & 流量控制 - 同一行 */}
+                        {/* 连接数限�?& 流量控制 - 同一�?*/}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
                           <ConnectionLimitField
                             value={form.maxConnections}
@@ -5336,7 +5356,7 @@ export default function ForwardPage() {
                             }
                           />
 
-                          {/* 有效期 */}
+                          {/* 有效�?*/}
                           <ExpiryTimeField
                             value={form.expiryTime}
                             onChange={(val) =>
@@ -5395,7 +5415,7 @@ export default function ForwardPage() {
                   吗？
                 </p>
                 <p className="text-small text-default-500 mt-2">
-                  此操作无法撤销，删除后该规则将永久消失。
+                  此操作无法撤销，删除后该规则将永久消失�?
                 </p>
               </ModalBody>
               <ModalFooter>
@@ -5521,7 +5541,7 @@ export default function ForwardPage() {
                   ))}
                 </Select>
               </div>
-              {/* 导出按钮和数据 */}
+              {/* 导出按钮和数�?*/}
               {exportData && (
                 <div className="flex justify-between items-center">
                   <Button
@@ -5639,7 +5659,7 @@ export default function ForwardPage() {
             {importFormat === "flvx" ? (
               <>
                 <p className="text-small text-default-500">
-                  格式：落地地址|规则名称|入口端口，每行一个，入口端口留空将自动分配可用端口
+                  格式：落地地址|规则名称|入口端口，每行一个，入口端口留空将自动分配可用端�?
                 </p>
                 <p className="text-small text-default-400">
                   落地地址支持单个地址(如：example.com:8080)或多个地址用逗号分隔(如：3.3.3.3:3,4.4.4.4:4)
@@ -5648,10 +5668,10 @@ export default function ForwardPage() {
             ) : (
               <>
                 <p className="text-small text-default-500">
-                  ny格式：JSON对象，支持多个落地地址（负载均衡），按所选隧道导入
+                  ny格式：JSON对象，支持多个落地地址（负载均衡），按所选隧道导�?
                 </p>
                 <p className="text-small text-default-400">
-                  格式：&#123;&quot;dest&quot;:[&quot;地址:端口&quot;],&quot;listen_port&quot;:端口,&quot;name&quot;:&quot;名称&quot;&#125;（listen_port可省略，自动分配端口）
+                  格式�?#123;&quot;dest&quot;:[&quot;地址:端口&quot;],&quot;listen_port&quot;:端口,&quot;name&quot;:&quot;名称&quot;&#125;（listen_port可省略，自动分配端口�?
                 </p>
               </>
             )}
@@ -5680,10 +5700,10 @@ export default function ForwardPage() {
                   flvx格式（管道分隔）
                 </SelectItem>
                 <SelectItem key="ny" textValue="ny格式">
-                  ny格式（JSON）
+                  ny格式（JSON�?
                 </SelectItem>
               </Select>
-              {/* 隧道选择 - 两种格式都需要 */}
+              {/* 隧道选择 - 两种格式都需�?*/}
               <Select
                 isRequired
                 label="选择导入隧道"
@@ -5733,7 +5753,7 @@ export default function ForwardPage() {
                 placeholder={
                   importFormat === "flvx"
                     ? "请输入要导入的规则数据，格式：落地地址|规则名称|入口端口"
-                    : '请输入ny格式数据，每行一个JSON对象，如：{"dest":["1.2.3.4:80"],"listen_port":8080,"name":"规则1"}；listen_port可省略自动分配'
+                    : '请输入ny格式数据，每行一个JSON对象，如：{"dest":["1.2.3.4:80"],"listen_port":8080,"name":"规则1"}；listen_port可省略自动分�?
                 }
                 value={importData}
                 variant="flat"
@@ -5836,7 +5856,7 @@ export default function ForwardPage() {
               isLoading={importLoading}
               onPress={executeImport}
             >
-              开始导入
+              开始导�?
             </Button>
           </ModalFooter>
         </ModalContent>
@@ -5891,14 +5911,14 @@ export default function ForwardPage() {
                           </span>
                         </div>
                         <div className="inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium bg-primary-500/10 text-primary-600 dark:text-primary-400">
-                          流式更新中
+                          流式更新�?
                         </div>
                       </div>
                     )}
                     {diagnosisProgress.timedOut && (
                       <Alert
                         color="warning"
-                        description="诊断超时（单条30秒 / 整体2分钟），以下为当前已完成结果。"
+                        description="诊断超时（单�?0�?/ 整体2分钟），以下为当前已完成结果�?
                         title="诊断超时"
                         variant="flat"
                       />
@@ -5940,10 +5960,10 @@ export default function ForwardPage() {
                         </div>
                       </div>
                     </div>
-                    {/* 桌面端表格展示 */}
+                    {/* 桌面端表格展�?*/}
                     <div className="hidden md:block space-y-3">
                       {(() => {
-                        // 使用后端返回的 chainType 和 inx 字段进行分组
+                        // 使用后端返回�?chainType �?inx 字段进行分组
                         const groupedResults = {
                           entry: diagnosisResult.results.filter(
                             (r) => r.fromChainType === 1,
@@ -5957,7 +5977,7 @@ export default function ForwardPage() {
                           ),
                         };
 
-                        // 按 inx 分组链路测试
+                        // �?inx 分组链路测试
                         diagnosisResult.results.forEach((r) => {
                           if (r.fromChainType === 2 && r.fromInx != null) {
                             if (!groupedResults.chains[r.fromInx]) {
@@ -5989,13 +6009,13 @@ export default function ForwardPage() {
                                       路径
                                     </th>
                                     <th className="px-3 py-2 text-center font-semibold text-xs w-20">
-                                      状态
+                                      状�?
                                     </th>
                                     <th className="px-3 py-2 text-center font-semibold text-xs w-24">
                                       延迟(ms)
                                     </th>
                                     <th className="px-3 py-2 text-center font-semibold text-xs w-24">
-                                      丢包率
+                                      丢包�?
                                     </th>
                                     <th className="px-3 py-2 text-center font-semibold text-xs w-20">
                                       质量
@@ -6035,7 +6055,7 @@ export default function ForwardPage() {
                                                   : "bg-danger text-white"
                                                   }`}
                                               >
-                                                {isSuccess ? "✓" : "✗"}
+                                                {isSuccess ? "�? : "�?}
                                               </span>
                                             )}
                                             <div className="flex-1 min-w-0">
@@ -6054,7 +6074,7 @@ export default function ForwardPage() {
                                             className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${isDiagnosing ? "bg-warning-500/10 text-warning-600 dark:text-warning-400" : isSuccess ? "bg-success-500/10 text-success-600 dark:text-success-400" : "bg-danger-500/10 text-danger-600 dark:text-danger-400"}`}
                                           >
                                             {isDiagnosing
-                                              ? "诊断中"
+                                              ? "诊断�?
                                               : isSuccess
                                                 ? "成功"
                                                 : "失败"}
@@ -6116,13 +6136,13 @@ export default function ForwardPage() {
                               "🚪 入口测试",
                               groupedResults.entry,
                             )}
-                            {/* 链路测试（按跳数排序） */}
+                            {/* 链路测试（按跳数排序�?*/}
                             {Object.keys(groupedResults.chains)
                               .map(Number)
                               .sort((a, b) => a - b)
                               .map((hop) =>
                                 renderTableSection(
-                                  `🔗 转发链 - 第${hop}跳`,
+                                  `🔗 转发�?- �?{hop}跳`,
                                   groupedResults.chains[hop],
                                 ),
                               )}
@@ -6135,10 +6155,10 @@ export default function ForwardPage() {
                         );
                       })()}
                     </div>
-                    {/* 移动端卡片展示 */}
+                    {/* 移动端卡片展�?*/}
                     <div className="md:hidden space-y-3">
                       {(() => {
-                        // 使用后端返回的 chainType 和 inx 字段进行分组
+                        // 使用后端返回�?chainType �?inx 字段进行分组
                         const groupedResults = {
                           entry: diagnosisResult.results.filter(
                             (r) => r.fromChainType === 1,
@@ -6152,7 +6172,7 @@ export default function ForwardPage() {
                           ),
                         };
 
-                        // 按 inx 分组链路测试
+                        // �?inx 分组链路测试
                         diagnosisResult.results.forEach((r) => {
                           if (r.fromChainType === 2 && r.fromInx != null) {
                             if (!groupedResults.chains[r.fromInx]) {
@@ -6203,7 +6223,7 @@ export default function ForwardPage() {
                                             : "bg-danger text-white"
                                             }`}
                                         >
-                                          {isSuccess ? "✓" : "✗"}
+                                          {isSuccess ? "�? : "�?}
                                         </span>
                                       )}
                                       <div className="flex-1 min-w-0">
@@ -6218,7 +6238,7 @@ export default function ForwardPage() {
                                         className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${isDiagnosing ? "bg-warning-500/10 text-warning-600 dark:text-warning-400" : isSuccess ? "bg-success-500/10 text-success-600 dark:text-success-400" : "bg-danger-500/10 text-danger-600 dark:text-danger-400"}`}
                                       >
                                         {isDiagnosing
-                                          ? "诊断中"
+                                          ? "诊断�?
                                           : isSuccess
                                             ? "成功"
                                             : "失败"}
@@ -6244,7 +6264,7 @@ export default function ForwardPage() {
                                             {result.packetLoss?.toFixed(1)}%
                                           </div>
                                           <div className="text-xs text-default-500">
-                                            丢包率
+                                            丢包�?
                                           </div>
                                         </div>
                                         <div className="text-center">
@@ -6271,7 +6291,7 @@ export default function ForwardPage() {
                                             }`}
                                         >
                                           {isDiagnosing
-                                            ? result.message || "诊断中..."
+                                            ? result.message || "诊断�?.."
                                             : result.message || "连接失败"}
                                         </div>
                                       </div>
@@ -6290,13 +6310,13 @@ export default function ForwardPage() {
                               "🚪 入口测试",
                               groupedResults.entry,
                             )}
-                            {/* 链路测试（按跳数排序） */}
+                            {/* 链路测试（按跳数排序�?*/}
                             {Object.keys(groupedResults.chains)
                               .map(Number)
                               .sort((a, b) => a - b)
                               .map((hop) =>
                                 renderCardSection(
-                                  `🔗 转发链 - 第${hop}跳`,
+                                  `🔗 转发�?- �?{hop}跳`,
                                   groupedResults.chains[hop],
                                 ),
                               )}
@@ -6309,7 +6329,7 @@ export default function ForwardPage() {
                         );
                       })()}
                     </div>
-                    {/* 失败详情（仅桌面端显示，移动端已在卡片中显示） */}
+                    {/* 失败详情（仅桌面端显示，移动端已在卡片中显示�?*/}
                     {diagnosisResult.results.some(
                       (r) => r.success === false && !r.diagnosing,
                     ) && (
@@ -6397,7 +6417,7 @@ export default function ForwardPage() {
                   个规则的流量统计吗？
                 </p>
                 <p className="text-small text-default-500 mt-2">
-                  归零后，当前周期流量将归档到历史，新周期从 0 开始统计。
+                  归零后，当前周期流量将归档到历史，新周期�?0 开始统计�?
                 </p>
                 <ul className="text-small text-default-500 mt-2 space-y-1">
                   {Array.from(selectedIds)
@@ -6407,12 +6427,12 @@ export default function ForwardPage() {
 
                       return forward ? (
                         <li key={id} className="truncate">
-                          • {forward.name}
+                          �?{forward.name}
                         </li>
                       ) : null;
                     })}
                   {selectedIds.size > 5 && (
-                    <li>... 还有 {selectedIds.size - 5} 个规则</li>
+                    <li>... 还有 {selectedIds.size - 5} 个规�?/li>
                   )}
                 </ul>
               </ModalBody>
@@ -6500,7 +6520,7 @@ export default function ForwardPage() {
                         <div className="flex flex-col gap-1 w-full">
                           <div className="w-full">
                             <span className="text-default-500 text-sm block mb-1">
-                              归零前流量
+                              归零前流�?
                             </span>
                             <div className="flex items-center justify-end gap-2 flex-wrap">
                               <span className="text-primary-600 text-sm whitespace-nowrap dark:text-primary-400">
@@ -6560,7 +6580,7 @@ export default function ForwardPage() {
           </ModalHeader>
           <ModalBody className="py-4">
             <p className="text-sm text-default-600">
-              确定要删除这条归零记录吗？此操作不可恢复。
+              确定要删除这条归零记录吗？此操作不可恢复�?
             </p>
           </ModalBody>
           <ModalFooter>
@@ -6591,7 +6611,7 @@ export default function ForwardPage() {
               <ModalHeader>确认删除</ModalHeader>
               <ModalBody>
                 <p>
-                  确定要删除选中的 {selectedIds.size} 项规则吗？此操作不可撤销。
+                  确定要删除选中�?{selectedIds.size} 项规则吗？此操作不可撤销�?
                 </p>
               </ModalBody>
               <ModalFooter>
@@ -6624,7 +6644,7 @@ export default function ForwardPage() {
               <ModalHeader>隧道</ModalHeader>
               <ModalBody>
                 <p className="mb-4">
-                  将选中的 {selectedIds.size} 项规则迁移到新隧道：
+                  将选中�?{selectedIds.size} 项规则迁移到新隧道：
                 </p>
                 <Select
                   label="目标隧道"
@@ -6669,14 +6689,14 @@ export default function ForwardPage() {
                   isLoading={batchChangeTunnelLoading}
                   onPress={handleBatchChangeTunnel}
                 >
-                  确认换隧道
+                  确认换隧�?
                 </Button>
               </ModalFooter>
             </>
           )}
         </ModalContent>
       </Modal>
-      {/* 搜索筛选弹窗 */}
+      {/* 搜索筛选弹�?*/}
       <Modal
         classNames={{
           base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
@@ -6690,7 +6710,7 @@ export default function ForwardPage() {
           {() => (
             <>
               <ModalHeader className="flex flex-col gap-1">
-                搜索筛选规则
+                搜索筛选规�?
               </ModalHeader>
               <ModalBody>
                 <div className="flex flex-col gap-4 py-2">
@@ -6720,8 +6740,8 @@ export default function ForwardPage() {
                     }
                   />
                   <Input
-                    label="落地地址或端口 (模糊)"
-                    placeholder="请输入目标 IP、域名或端口"
+                    label="落地地址或端�?(模糊)"
+                    placeholder="请输入目�?IP、域名或端口"
                     value={searchParams.remoteAddr}
                     variant="bordered"
                     onChange={(e) =>
@@ -6766,7 +6786,7 @@ function ConnectionCountCell({
   current: number;
   max: number;
 }) {
-  // 都是 0 时显示 0/暂无
+  // 都是 0 时显�?0/暂无
   if (current === 0 && max === 0) {
     return <span className="text-sm text-default-400">0/暂无</span>;
   }
@@ -6808,10 +6828,10 @@ function ConnectionLimitField({
 
   return (
     <div className="space-y-2">
-      <span className="text-sm font-medium text-foreground">连接数限制</span>
+      <span className="text-sm font-medium text-foreground">连接数限�?/span>
       <Input
-        description="留空表示不限制"
-        placeholder="不限制"
+        description="留空表示不限�?
+        placeholder="不限�?
         type="number"
         value={value > 0 ? value.toString() : ""}
         variant="bordered"
@@ -6835,9 +6855,9 @@ function SpeedLimitConfigField({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-foreground">限速配置</span>
+        <span className="text-sm font-medium text-foreground">限速配�?/span>
         <Switch
-          aria-label="启用限速"
+          aria-label="启用限�?
           isSelected={enabled}
           size="sm"
           onValueChange={onEnabledChange}
@@ -6898,7 +6918,7 @@ function TrafficLimitField({
       <span className="text-sm font-medium text-foreground">流量控制</span>
       <Input
         description="留空表示不限制，单位：GB"
-        placeholder="不限制"
+        placeholder="不限�?
         type="number"
         value={value > 0 ? value.toString() : ""}
         variant="bordered"
@@ -6920,7 +6940,7 @@ function ExpiryTimeField({
       <DatePicker
         showMonthAndYearPickers
         description="留空表示永不过期"
-        label="有效期"
+        label="有效�?
         value={timestampToCalendarDate(value)}
         onChange={(date) => {
           onChange(calendarDateToTimestamp(date));
