@@ -2114,8 +2114,8 @@ export default function TunnelPage() {
             >
               <div className="overflow-x-auto rounded-xl border border-divider bg-content1 shadow-md">
                 <table className="w-full text-sm text-left border-collapse whitespace-nowrap">
-                  <thead className="bg-default-100/50 text-default-600 font-semibold text-sm border-b border-divider uppercase tracking-wider">
-                    <tr>
+                  <thead className="bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider uppercase tracking-wider">
+                    <tr> 
                       <th className="py-3 px-4 w-[56px] text-center align-middle">
                         <div className="flex items-center justify-center h-full">
                           <Checkbox
@@ -2216,7 +2216,14 @@ export default function TunnelPage() {
                         偏好
                       </th>
                       <th className="py-3 px-4 w-[150px] align-middle">备注</th>
-                      <th className="py-3 px-4 w-[280px] align-middle">操作</th>
+                      <th className="py-3 px-4 w-[280px] align-middle">
+                        <div className="flex items-center justify-between w-full">
+                          <span>操作</span>
+                          <span className="text-xs text-default-500 font-normal">
+                            {sortedTunnels.length} 个隧道
+                          </span>
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2448,95 +2455,108 @@ export default function TunnelPage() {
             </SortableContext>
           </DndContext>
         ) : (
-          <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-            <SortableContext
-              items={sortableTunnelIds}
-              strategy={rectSortingStrategy}
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-                {sortedTunnels.map((tunnel) => {
-                  const typeDisplay = getTunnelTypeDisplay(tunnel.type);
-                  const tunnelTypeChipClassName =
-                    tunnel.type === 1
-                      ? "inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium bg-primary-500/10 text-primary-600 dark:text-primary-400"
-                      : "inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium bg-success-500/10 text-success-600 dark:text-success-400";
+          <>
+            <div className="overflow-hidden rounded-xl border border-divider bg-content1 shadow-md">
+              <div className="flex items-center justify-between border-b border-divider bg-default-100/40 px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-foreground">
+                    admin
+                  </span>
+                </div>
+                <span className="text-xs text-default-500">
+                  {sortedTunnels.length} 个隧道
+                </span>
+              </div>
+              <div className="p-4">
+                <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+                  <SortableContext
+                    items={sortableTunnelIds}
+                    strategy={rectSortingStrategy}
+                  >
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                      {sortedTunnels.map((tunnel) => {
+                        const typeDisplay = getTunnelTypeDisplay(tunnel.type);
+                        const tunnelTypeChipClassName =
+                          tunnel.type === 1
+                            ? "inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium bg-primary-500/10 text-primary-600 dark:text-primary-400"
+                            : "inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium bg-success-500/10 text-success-600 dark:text-success-400";
 
-                  return (
-                    <SortableItem key={tunnel.id} id={tunnel.id}>
-                      {(listeners) => (
-                        <Card
-                          key={tunnel.id}
-                          className="group shadow-sm border border-divider hover:shadow-md transition-shadow duration-200 overflow-hidden h-full"
-                        >
-                          <CardHeader className="pb-0 md:pb-0">
-                            {/* 顶部工具栏：选择框 + 拖拽 */}
-                            <div className="flex justify-between items-center w-full mb-2">
-                              <Checkbox
-                                aria-label="选择"
-                                isSelected={selectedIds.has(tunnel.id)}
-                                onValueChange={() => toggleSelect(tunnel.id)}
-                              />
-                              <div
-                                className="cursor-grab active:cursor-grabbing p-1 text-default-400 hover:text-default-600 transition-colors touch-manipulation flex-shrink-0"
-                                {...listeners}
-                                style={{ touchAction: "none" }}
-                                title="拖拽排序"
+                        return (
+                          <SortableItem key={tunnel.id} id={tunnel.id}>
+                            {(listeners) => (
+                              <Card
+                                key={tunnel.id}
+                                className="group shadow-sm border border-divider hover:shadow-md transition-shadow duration-200 overflow-hidden h-full"
                               >
-                                <svg
-                                  aria-hidden="true"
-                                  className="w-4 h-4"
-                                  fill="currentColor"
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path d="M7 2a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 2zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 8zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 14zm6-8a2 2 0 1 1-.001-4.001A2 2 0 0 1 13 6zm0 2a2 2 0 1 1 .001 4.001A2 2 0 0 1 13 8zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 13 14z" />
-                                </svg>
-                              </div>
-                            </div>
-                            {/* 隧道名称和类型 */}
-                            <div className="flex-1 min-w-0">
-                              <h3
-                                className="font-semibold text-foreground truncate text-sm cursor-pointer hover:bg-default-200/50 rounded px-1 transition-colors w-fit max-w-full"
-                                title={tunnel.name}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  copyToClipboard(tunnel.name, "隧道名称");
-                                }}
-                              >
-                                {tunnel.name}
-                              </h3>
-                              <div className="flex items-center gap-1.5 mt-1">
-                                <div className={tunnelTypeChipClassName}>
-                                  {typeDisplay.text}
-                                </div>
-                                {tunnel.tunnelGroupId &&
-                                tunnel.tunnelGroupId > 0
-                                  ? (() => {
-                                      const group = tunnelGroupsNew.find(
-                                        (g) => g.id === tunnel.tunnelGroupId,
-                                      );
+                                <CardHeader className="pb-0 md:pb-0">
+                                  {/* 顶部工具栏：选择框 + 拖拽 */}
+                                  <div className="flex justify-between items-center w-full mb-2">
+                                    <Checkbox
+                                      aria-label="选择"
+                                      isSelected={selectedIds.has(tunnel.id)}
+                                      onValueChange={() => toggleSelect(tunnel.id)}
+                                    />
+                                    <div
+                                      className="cursor-grab active:cursor-grabbing p-1 text-default-400 hover:text-default-600 transition-colors touch-manipulation flex-shrink-0"
+                                      {...listeners}
+                                      style={{ touchAction: "none" }}
+                                      title="拖拽排序"
+                                    >
+                                      <svg
+                                        aria-hidden="true"
+                                        className="w-4 h-4"
+                                        fill="currentColor"
+                                        viewBox="0 0 20 20"
+                                      >
+                                        <path d="M7 2a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 2zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 8zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 14zm6-8a2 2 0 1 1-.001-4.001A2 2 0 0 1 13 6zm0 2a2 2 0 1 1 .001 4.001A2 2 0 0 1 13 8zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 13 14z" />
+                                      </svg>
+                                    </div>
+                                  </div>
+                                  {/* 隧道名称和类型 */}
+                                  <div className="flex-1 min-w-0">
+                                    <h3
+                                      className="font-semibold text-foreground truncate text-sm cursor-pointer hover:bg-default-200/50 rounded px-1 transition-colors w-fit max-w-full"
+                                      title={tunnel.name}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        copyToClipboard(tunnel.name, "隧道名称");
+                                      }}
+                                    >
+                                      {tunnel.name}
+                                    </h3>
+                                    <div className="flex items-center gap-1.5 mt-1">
+                                      <div className={tunnelTypeChipClassName}>
+                                        {typeDisplay.text}
+                                      </div>
+                                      {tunnel.tunnelGroupId &&
+                                      tunnel.tunnelGroupId > 0
+                                        ? (() => {
+                                            const group = tunnelGroupsNew.find(
+                                              (g) => g.id === tunnel.tunnelGroupId,
+                                            );
 
-                                      return group ? (
-                                        <div
-                                          className="inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium"
-                                          style={{
-                                            backgroundColor: `${group.color}1A`,
-                                            color: group.color,
-                                          }}
-                                        >
-                                          {group.name}
-                                        </div>
-                                      ) : null;
-                                    })()
-                                  : null}
-                              </div>
-                            </div>
-                          </CardHeader>
-                          <CardBody className="pt-0 pb-3 md:pt-0 md:pb-3">
-                            <div className="space-y-3">
-                              {/* 拓扑结构 */}
-                              <div className="pt-2 border-t border-divider">
-                                <div className="flex items-center justify-center gap-2 text-xs">
-                                  {/* 入口节点 */}
+                                            return group ? (
+                                              <div
+                                                className="inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium"
+                                                style={{
+                                                  backgroundColor: `${group.color}1A`,
+                                                  color: group.color,
+                                                }}
+                                              >
+                                                {group.name}
+                                              </div>
+                                            ) : null;
+                                          })()
+                                        : null}
+                                    </div>
+                                  </div>
+                                </CardHeader>
+                                <CardBody className="pt-0 pb-3 md:pt-0 md:pb-3">
+                                  <div className="space-y-3">
+                                    {/* 拓扑结构 */}
+                                    <div className="pt-2 border-t border-divider">
+                                      <div className="flex items-center justify-center gap-2 text-xs">
+                                        {/* 入口节点 */}
                                   <div className="flex items-center gap-1 px-2 py-1 bg-primary-50 dark:bg-primary-100/20 rounded border border-primary-200 dark:border-primary-300/20">
                                     <svg
                                       aria-hidden="true"
@@ -2723,6 +2743,9 @@ export default function TunnelPage() {
               </div>
             </SortableContext>
           </DndContext>
+              </div>
+            </div>
+          </>
         )
       ) : (
         <Card className="shadow-sm border border-gray-200 dark:border-gray-700 bg-default-50/50">
