@@ -93,7 +93,6 @@ volumes:
 
 networks:
   gost-network:
-    external: true
     enable_ipv6: true
     ipam:
       config:
