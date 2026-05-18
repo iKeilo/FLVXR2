@@ -195,7 +195,7 @@ type WebSocketReporter struct {
 	aesCrypto         *crypto.AESCrypto // AES 加密器
 	publicIPReported  bool              // 是否已上报公网 IP
 	serviceName       string            // 服务名
-	nftablesMgr       interface{}       // nftables manager (platform-specific)
+	nftablesMgr       NftablesManagerInterface // nftables manager (platform-specific)
 	nftablesCounters []NftablesCounterResult // nftables counter cache
 }
 

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/go-gost/x/nftables"
 )
 
 // AddNftablesRulesRequest nftables 规则创建请求

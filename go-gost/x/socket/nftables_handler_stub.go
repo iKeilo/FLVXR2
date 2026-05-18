@@ -36,14 +36,6 @@ type GetNftablesCountersRequest struct {
 	ForwardIDs []int64 `json:"forward_ids"`
 }
 
-type NftablesCounterResult struct {
-	ForwardID int64  `json:"forward_id"`
-	Protocol  string `json:"protocol"`
-	Port      int    `json:"port"`
-	Packets   uint64 `json:"packets"`
-	Bytes     uint64 `json:"bytes"`
-}
-
 func (w *WebSocketReporter) handleAddNftablesRules(data json.RawMessage) error {
 	return errors.New("nftables not supported on this platform")
 }
