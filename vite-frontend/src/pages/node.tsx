@@ -1415,6 +1415,8 @@ export default function NodePage() {
           toast.success(
             `批量升级命令已发送到 ${selectedLocalIds.length} 个节点`,
           );
+          setSelectedIds(new Set());
+          setSelectMode(false);
         } else {
           toast.error(res.msg || "批量升级失败");
         }
