@@ -1,4 +1,4 @@
-import type { ForwardApiItem, SpeedLimitApiItem } from "@/api/types";
+﻿import type { ForwardApiItem, SpeedLimitApiItem } from "@/api/types";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import toast from "react-hot-toast";
@@ -132,6 +132,7 @@ interface Forward {
   speedLimit?: number;
   inSpeed?: number; // 新增：实时上行速度 (bytes/s)
   outSpeed?: number; // 新增：实时下行速度 (bytes/s)
+  mode?: "gost" | "nftables";
 }
 interface Tunnel {
   id: number;
@@ -170,6 +171,7 @@ interface ForwardForm {
   expiryTime: number | null;
   speedLimitEnabled: boolean;
   speedLimit: number;
+  mode: "gost" | "nftables";
 }
 interface ForwardUserGroup {
   userId: number;
@@ -807,6 +809,11 @@ const SortableTableRow = ({
           onClick={() => copyToClipboard(forward.name, "规则名称")}
         >
           {forward.name}
+          {forward.mode === "nftables" && (
+            <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+              nftables
+            </span>
+          )}
         </span>
       </TableCell>
       <TableCell className={rowBg}>
@@ -1473,6 +1480,7 @@ export default function ForwardPage() {
     expiryTime: null,
     speedLimitEnabled: false,
     speedLimit: 0,
+    mode: "gost",
   });
   const [inIpTouched, setInIpTouched] = useState(false);
   // 表单验证错误
@@ -2244,6 +2252,7 @@ export default function ForwardPage() {
       expiryTime: null,
       speedLimitEnabled: false,
       speedLimit: 0,
+      mode: "gost",
     });
     setErrors({});
     setModalOpen(true);
@@ -2268,6 +2277,7 @@ export default function ForwardPage() {
       expiryTime: forward.expiryTime ?? null,
       speedLimitEnabled: forward.speedLimitEnabled ?? false,
       speedLimit: forward.speedLimit ?? 0,
+      mode: forward.mode || "gost",
     });
     setErrors({});
     setModalOpen(true);
@@ -2291,6 +2301,7 @@ export default function ForwardPage() {
       expiryTime: forward.expiryTime ?? null,
       speedLimitEnabled: forward.speedLimitEnabled ?? false,
       speedLimit: forward.speedLimit ?? 0,
+      mode: "gost",
     });
     setErrors({});
     setModalOpen(true);
@@ -2460,6 +2471,7 @@ export default function ForwardPage() {
           expiryTime: form.expiryTime,
           speedLimitEnabled: form.speedLimitEnabled,
           speedLimit: form.speedLimit,
+          mode: form.mode,
         };
 
         res = await updateForward(updateData);
@@ -2477,6 +2489,7 @@ export default function ForwardPage() {
           expiryTime: form.expiryTime,
           speedLimitEnabled: form.speedLimitEnabled,
           speedLimit: form.speedLimit,
+          mode: form.mode,
         };
 
         res = await createForward(createData);
@@ -5259,7 +5272,6 @@ export default function ForwardPage() {
                         variant="bordered"
                         onSelectionChange={(keys) => {
                           const selectedKey = Array.from(keys)[0] as string;
-
                           setForm((prev) => ({
                             ...prev,
                             strategy: selectedKey,
@@ -5272,6 +5284,22 @@ export default function ForwardPage() {
                         <SelectItem key="hash">哈希模式 - IP 哈希</SelectItem>
                       </Select>
                     )}
+                    <Select
+                      label="转发模式"
+                      description="nftables 为内核态转发，性能更高但协议阻断暂不可用"
+                      selectedKeys={[form.mode]}
+                      variant="bordered"
+                      onSelectionChange={(keys) => {
+                        const selectedKey = Array.from(keys)[0] as string;
+                        setForm((prev) => ({
+                          ...prev,
+                          mode: selectedKey as "gost" | "nftables"
+                        }));
+                      }}
+                    >
+                      <SelectItem key="gost">GOST 用户态转发</SelectItem>
+                      <SelectItem key="nftables">nftables 内核态转发</SelectItem>
+                    </Select>
                   </div>
                   {/* 高级功能折叠面板 - 移到最底部 */}
                   <div className="border border-divider rounded-lg overflow-hidden mt-4">
