@@ -26,6 +26,7 @@ import (
 	"github.com/go-gost/x/registry"
 	"github.com/go-gost/x/service"
 	"github.com/go-gost/x/stats"
+	"github.com/go-gost/x/nftables"
 	"github.com/go-gost/x/traffic"
 	"github.com/gorilla/websocket"
 	"github.com/shirou/gopsutil/v3/cpu"
@@ -196,7 +197,7 @@ type WebSocketReporter struct {
 	publicIPReported  bool              // 是否已上报公网 IP
 	serviceName       string            // 服务名
 	nftablesMgr       NftablesManagerInterface // nftables manager (platform-specific)
-	nftablesCounters []NftablesCounterResult // nftables counter cache
+	nftablesCounters []nftables.CounterResult // nftables counter cache
 }
 
 var wsDial = func(dialer *websocket.Dialer, rawURL string) (*websocket.Conn, *http.Response, error) {

@@ -4,6 +4,7 @@ package socket
 
 import (
 	"encoding/json"
+	"github.com/go-gost/x/nftables"
 	"fmt"
 
 )
@@ -42,14 +43,7 @@ type GetNftablesCountersRequest struct {
 	ForwardIDs []int64 `json:"forward_ids"`
 }
 
-// NftablesCounterResult 计数器结果
-type NftablesCounterResult struct {
-	ForwardID int64  `json:"forward_id"`
-	Protocol  string `json:"protocol"`
-	Port      int    `json:"port"`
-	Packets   uint64 `json:"packets"`
-	Bytes     uint64 `json:"bytes"`
-}
+// nftables.CounterResult 计数器结果
 
 // handleAddNftablesRules 处理添加 nftables 规则命令
 func (w *WebSocketReporter) handleAddNftablesRules(data json.RawMessage) error {
@@ -132,9 +126,9 @@ func (w *WebSocketReporter) handleGetNftablesCounters(data json.RawMessage) erro
 	}
 
 	counters := w.nftablesMgr.GetCounters()
-	var results []NftablesCounterResult
+	var results []nftables.CounterResult
 	for _, c := range counters {
-		results = append(results, NftablesCounterResult{
+		results = append(results, nftables.CounterResult{
 			ForwardID: c.ForwardID,
 			Protocol:  c.Protocol,
 			Port:      c.Port,
