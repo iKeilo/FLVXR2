@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/google/nftables"
@@ -111,6 +112,8 @@ func (m *Manager) initChains() error {
 func (m *Manager) AddRule(forwardID, nodeID int64, protocol string, port int, target string, speedLimit int) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	fmt.Printf("DEBUG AddRule: forwardID=%d protocol=%s port=%d target=%q speedLimit=%d\n", forwardID, protocol, port, target, speedLimit)
 
 	key := ruleKey(forwardID, protocol)
 	if _, exists := m.rules[key]; exists {
@@ -302,11 +305,15 @@ func ruleKey(forwardID int64, protocol string) string {
 }
 
 func parseTarget(target string) (string, int) {
+	target = strings.TrimSpace(target)
+	fmt.Printf("DEBUG parseTarget input: %q\n", target)
 	host, portStr, err := net.SplitHostPort(target)
 	if err != nil {
+		fmt.Printf("DEBUG parseTarget SplitHostPort failed: %v\n", err)
 		return "", 0
 	}
 	port, _ := strconv.Atoi(portStr)
+	fmt.Printf("DEBUG parseTarget result: host=%q port=%d\n", host, port)
 	return host, port
 }
 

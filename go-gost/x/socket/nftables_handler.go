@@ -47,6 +47,7 @@ type GetNftablesCountersRequest struct {
 
 // handleAddNftablesRules 处理添加 nftables 规则命令
 func (w *WebSocketReporter) handleAddNftablesRules(data json.RawMessage) error {
+	fmt.Printf("DEBUG handleAddNftablesRules raw data: %s\n", string(data))
 	if w.nftablesMgr == nil {
 		return fmt.Errorf("nftables manager not initialized")
 	}
@@ -54,6 +55,12 @@ func (w *WebSocketReporter) handleAddNftablesRules(data json.RawMessage) error {
 	var req AddNftablesRulesRequest
 	if err := json.Unmarshal(data, &req); err != nil {
 		return fmt.Errorf("parse request: %w", err)
+	}
+
+	fmt.Printf("DEBUG handleAddNftablesRules parsed rules count: %d\n", len(req.Rules))
+	for i, rule := range req.Rules {
+		fmt.Printf("DEBUG rule[%d]: ForwardID=%d NodeID=%d Protocol=%s Port=%d Target=%q ChainType=%d NextHopIP=%q NextHopPort=%d\n",
+			i, rule.ForwardID, rule.NodeID, rule.Protocol, rule.Port, rule.Target, rule.ChainType, rule.NextHopIP, rule.NextHopPort)
 	}
 
 	if len(req.Rules) == 0 {
@@ -66,7 +73,7 @@ func (w *WebSocketReporter) handleAddNftablesRules(data json.RawMessage) error {
 			target = fmt.Sprintf("%s:%d", rule.NextHopIP, rule.NextHopPort)
 		}
 		if err := w.nftablesMgr.AddRule(rule.ForwardID, rule.NodeID, rule.Protocol, rule.Port, target, rule.SpeedLimit); err != nil {
-			return fmt.Errorf("add rule for forward %d/%s: %w", rule.ForwardID, rule.Protocol, err)
+			return fmt.Errorf("add rule for forward %d/%s (target=%q): %w", rule.ForwardID, rule.Protocol, target, err)
 		}
 	}
 	return nil
