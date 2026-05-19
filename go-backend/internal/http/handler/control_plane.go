@@ -2025,6 +2025,19 @@ func (h *Handler) syncNftablesRules(forward *forwardRecord, tunnel *tunnelRecord
 
 	fmt.Printf("[nft.debug] syncNftablesRules called: forwardID=%d mode=%s\n", forward.ID, forward.Mode)
 
+	// Clean up any residual gost services before applying nftables rules.
+	// This handles both mode-switching scenarios and direct nftables creation
+	// where gost services might already be listening on the port.
+	for _, fp := range ports {
+		node, err := h.getNodeRecord(fp.NodeID)
+		if err != nil {
+			fmt.Printf("[nft.debug] getNodeRecord failed for nodeID=%d: %v\n", fp.NodeID, err)
+			continue
+		}
+		// Pass a temporary forwardRecord with empty mode to bypass the nftables skip check
+		_ = h.deleteForwardServicesOnNode(&forwardRecord{ID: forward.ID}, node.ID)
+	}
+
 	chainNodes, _ := h.listChainNodesForTunnel(forward.TunnelID)
 	rules := buildNftablesRulePayloads(forward, tunnel, ports, chainNodes, speedLimit)
 	fmt.Printf("[nft.debug] built %d rule payloads for forwardID=%d\n", len(rules), forward.ID)
