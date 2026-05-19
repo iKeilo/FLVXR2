@@ -2397,6 +2397,12 @@ func (h *Handler) forwardCreate(w http.ResponseWriter, r *http.Request) {
 		response.WriteJSON(w, response.Err(401, "无效的token或token已过期"))
 		return
 	}
+	// 管理员可以通过请求中的 userId 字段为其他用户创建转发
+	if roleID == 0 {
+		if reqUserID := asInt64(req["userId"], 0); reqUserID > 0 {
+			userID = reqUserID
+		}
+	}
 	tunnelID := asInt64(req["tunnelId"], 0)
 	if tunnelID <= 0 {
 		response.WriteJSON(w, response.ErrDefault("隧道ID不能为空"))

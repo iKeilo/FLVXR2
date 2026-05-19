@@ -2492,7 +2492,7 @@ export default function ForwardPage() {
 
         res = await updateForward(updateData);
       } else {
-        const createData = {
+        const createData: Record<string, unknown> = {
           name: form.name,
           tunnelId: form.tunnelId,
           inPort: form.inPort,
@@ -2507,6 +2507,9 @@ export default function ForwardPage() {
           speedLimit: form.speedLimit,
           mode: form.mode,
         };
+        if (isAdmin && form.userId) {
+          createData.userId = form.userId;
+        }
 
         res = await createForward(createData);
       }
