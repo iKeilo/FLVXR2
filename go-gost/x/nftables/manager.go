@@ -313,7 +313,7 @@ func (m *Manager) DeleteRuleWithPort(forwardID int64, protocol string, port int)
 	defer m.mu.Unlock()
 
 	key := ruleKey(forwardID, protocol)
-	rs, exists := m.rules[key]
+	_, exists := m.rules[key]
 	if !exists {
 		fmt.Printf("️ DeleteRuleWithPort: rule not in memory map %s, attempting kernel deletion\n", key)
 		return m.deleteRuleByPortFromKernel(protocol, port)
@@ -330,20 +330,16 @@ func (m *Manager) DeleteRuleByPort(protocol string, port int) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// 先从内存 map 中查找
+	// 先从内存 map 中移除
 	for key, rs := range m.rules {
 		if rs.Protocol == protocol && rs.Port == port {
-			if rs.Rule != nil {
-				m.conn.DelRule(rs.Rule)
-			}
 			delete(m.rules, key)
-			fmt.Printf("✅ Deleted rule from memory map: %s\n", key)
-			return m.conn.Flush()
+			fmt.Printf("✅ Removed rule from memory map: %s\n", key)
+			break
 		}
 	}
 
-	// 内存中没有，从内核直接删除
-	fmt.Printf("⚠️ DeleteRuleByPort: rule not in memory map %s/%d, attempting kernel deletion\n", protocol, port)
+	// 内核通过协议+端口扫描删除（不依赖 handle）
 	return m.deleteRuleByPortFromKernel(protocol, port)
 }
 

@@ -1439,6 +1439,7 @@ export default function ForwardPage() {
     timedOut: false,
   });
   const diagnosisAbortRef = useRef<AbortController | null>(null);
+  const isTogglingRef = useRef(false);
   const [addressModalTitle, setAddressModalTitle] = useState("");
   const [addressList, setAddressList] = useState<ForwardAddressItem[]>([]);
   // 导出相关状态
@@ -2133,7 +2134,7 @@ export default function ForwardPage() {
   useEffect(() => {
     const interval = setInterval(() => {
       // 只在页面可见时刷新，且不在加载中
-      if (!document.hidden && !loading) {
+      if (!document.hidden && !loading && !isTogglingRef.current) {
         refreshForwardList(false);
       }
     }, 5000);
@@ -2537,6 +2538,7 @@ export default function ForwardPage() {
     }
     const targetState = !forward.serviceRunning;
 
+    isTogglingRef.current = true;
     try {
       // 乐观更新UI
       setForwards((prev) =>
@@ -2576,6 +2578,8 @@ export default function ForwardPage() {
         ),
       );
       toast.error("网络错误，操作失败");
+    } finally {
+      isTogglingRef.current = false;
     }
   };
   // 诊断规则
