@@ -2460,6 +2460,16 @@ export default function ForwardPage() {
   // 提交表单
   const handleSubmit = async () => {
     if (!validateForm()) return;
+
+    const hasIPv6Target = form.remoteAddr.includes(":") || form.remoteAddr.includes("[");
+    if (form.mode === "nftables" && hasIPv6Target) {
+      toast("nftables 模式不支持 IPv4 客户端转发到 IPv6 落地机，请改用 gost 模式", {
+        icon: "⚠️",
+        duration: 5000,
+      });
+      return;
+    }
+
     setSubmitLoading(true);
     try {
       const processedRemoteAddr = form.remoteAddr
