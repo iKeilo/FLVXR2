@@ -1873,7 +1873,39 @@ func (w *WebSocketReporter) handleUpgradeAgent(data interface{}) error {
 	// 使用 systemd-run 在独立的 transient unit 中运行重启脚本，
 	// 避免 systemctl stop 杀死 cgroup 内所有进程（包括此脚本自身）导致 mv 未执行。
 	svcFile := "/etc/systemd/system/" + binaryName + ".service"
-	script := fmt.Sprintf("sleep 1 && systemctl stop %s && mv %s %s && sed -i 's/^StandardOutput=null$/StandardOutput=journal/' %s && sed -i 's/^StandardError=null$/StandardError=journal/' %s && systemctl daemon-reload && systemctl start %s", binaryName, tmpPath, binaryPath, svcFile, svcFile, binaryName)
+
+	var script string
+	if strings.HasPrefix(w.serviceName, "flux_agent") {
+		// OTA 升级时自动迁移 flux_agent* → flvx_agent* (支持多实例后缀)
+		suffix := strings.TrimPrefix(w.serviceName, "flux_agent")
+		newName := "flvx_agent" + suffix
+		newConfigDir := "/etc/" + newName
+		newBinaryPath := newConfigDir + "/" + newName
+		newSvcFile := "/etc/systemd/system/" + newName + ".service"
+		oldConfigDir := "/etc/" + w.serviceName
+		script = fmt.Sprintf(
+			"sleep 1 && "+
+				"systemctl stop %[1]s && "+
+				"systemctl disable %[1]s && "+
+				"mkdir -p %[5]s && "+
+				"cp -r %[7]s/* %[5]s/ && "+
+				`sed -i 's/"service_name"[[:space:]]*:[[:space:]]*"[^"]*"/"service_name": "%[2]s"/' `+"%[5]s/config.json && "+
+				"cp /etc/systemd/system/%[1]s.service %[6]s && "+
+				`sed -i 's/%[1]s/%[2]s/g' %[6]s && `+
+				`sed -i 's|%[7]s|%[5]s|g' %[6]s && `+
+				"rm /etc/systemd/system/%[1]s.service && "+
+				"systemctl daemon-reload && "+
+				"mv %[3]s %[4]s && "+
+				"sed -i 's/^StandardOutput=null$/StandardOutput=journal/' %[6]s && "+
+				"sed -i 's/^StandardError=null$/StandardError=journal/' %[6]s && "+
+				"systemctl daemon-reload && "+
+				"systemctl start %[2]s",
+			w.serviceName, newName, tmpPath, newBinaryPath, newConfigDir, newSvcFile, oldConfigDir,
+		)
+	} else {
+		script = fmt.Sprintf("sleep 1 && systemctl stop %s && mv %s %s && sed -i 's/^StandardOutput=null$/StandardOutput=journal/' %s && sed -i 's/^StandardError=null$/StandardError=journal/' %s && systemctl daemon-reload && systemctl start %s", binaryName, tmpPath, binaryPath, svcFile, svcFile, binaryName)
+	}
+
 	cmd := exec.Command("systemd-run", "--quiet", "/bin/sh", "-c", script)
 	if err := cmd.Start(); err != nil {
 		os.Remove(tmpPath)
