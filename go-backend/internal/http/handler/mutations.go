@@ -2670,13 +2670,16 @@ func (h *Handler) forwardUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var warnings []string
+
 	// 检测转发模式切换，清理旧模式规则
 	modeSwitched := mode != "" && mode != forward.Mode
 	if modeSwitched {
 		ports, _ := h.listForwardPorts(id)
-		// 从 nftables 切换到 gost：清理 nftables 规则
 		if strings.EqualFold(forward.Mode, "nftables") && !strings.EqualFold(mode, "nftables") {
-			_ = h.deleteNftablesRules(&forwardRecord{ID: id}, ports)
+			if err := h.deleteNftablesRules(&forwardRecord{ID: id}, ports); err != nil {
+				warnings = append(warnings, fmt.Sprintf("nftables规则清理失败: %v", err))
+			}
 		}
 		// 从 gost 切换到 nftables：清理 gost 服务
 		if !strings.EqualFold(forward.Mode, "nftables") && strings.EqualFold(mode, "nftables") {
@@ -2707,7 +2710,7 @@ func (h *Handler) forwardUpdate(w http.ResponseWriter, r *http.Request) {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return
 	}
-	warnings := make([]string, 0)
+
 	if tunnelChanged && len(keptNodeIDs) > 0 {
 		for _, nodeID := range keptNodeIDs {
 			if delErr := h.deleteForwardServicesOnNodeBatch(forward, nodeID); delErr != nil {
@@ -2763,11 +2766,14 @@ func (h *Handler) forwardDelete(w http.ResponseWriter, r *http.Request) {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return
 	}
-	// nftables mode delete
-	// nftables mode delete
 	if strings.EqualFold(forward.Mode, "nftables") {
 		ports, _ := h.listForwardPorts(forward.ID)
-		_ = h.deleteNftablesRules(forward, ports)
+		if err := h.deleteNftablesRules(forward, ports); err != nil {
+			fmt.Printf("️ nftables规则删除失败: %v, 尝试gost回退\n", err)
+			if svcErr := h.controlForwardServices(forward, "DeleteService", true); svcErr != nil {
+				fmt.Printf("️ gost回退也失败: %v\n", svcErr)
+			}
+		}
 	} else {
 		if err := h.controlForwardServices(forward, "DeleteService", true); err != nil {
 			response.WriteJSON(w, response.ErrDefault(err.Error()))
@@ -2775,7 +2781,6 @@ func (h *Handler) forwardDelete(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// ✅ 删除动态限速器
 	h.deleteForwardDynamicLimiter(forward)
 
 	if err := h.deleteForwardByID(id); err != nil {
@@ -2789,7 +2794,7 @@ func (h *Handler) forwardForceDelete(w http.ResponseWriter, r *http.Request) {
 	if id <= 0 {
 		return
 	}
-	_, _, _, err := h.resolveForwardAccess(r, id)
+	forward, _, _, err := h.resolveForwardAccess(r, id)
 	if err != nil {
 		if errors.Is(err, errForwardNotFound) {
 			response.WriteJSON(w, response.ErrDefault("转发不存在"))
@@ -2801,6 +2806,13 @@ func (h *Handler) forwardForceDelete(w http.ResponseWriter, r *http.Request) {
 
 	// Force delete: remove DB record without touching node services.
 	// This is used when nodes are offline or service deletion fails.
+	// Still try to clean up nftables rules as best-effort.
+	if forward != nil && strings.EqualFold(forward.Mode, "nftables") {
+		ports, _ := h.listForwardPorts(id)
+		if err := h.deleteNftablesRules(&forwardRecord{ID: id}, ports); err != nil {
+			fmt.Printf("️ forceDelete nftables规则清理异常: %v\n", err)
+		}
+	}
 	if err := h.deleteForwardByID(id); err != nil {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return
@@ -2823,10 +2835,12 @@ func (h *Handler) forwardPause(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// nftables mode: delete rules to pause traffic
 	if strings.EqualFold(forward.Mode, "nftables") {
 		ports, _ := h.listForwardPorts(forward.ID)
-		_ = h.deleteNftablesRules(forward, ports)
+		if err := h.deleteNftablesRules(forward, ports); err != nil {
+			response.WriteJSON(w, response.Err(-2, fmt.Sprintf("暂停nftables转发失败，规则清理异常: %v", err)))
+			return
+		}
 	} else {
 		if err := h.controlForwardServices(forward, "PauseService", false); err != nil {
 			response.WriteJSON(w, response.ErrDefault(err.Error()))
@@ -2949,10 +2963,19 @@ func (h *Handler) forwardBatchDelete(w http.ResponseWriter, r *http.Request) {
 			failures = appendBatchFailure(failures, id, "", accessErr)
 			continue
 		}
-		if err := h.controlForwardServices(forward, "DeleteService", true); err != nil {
-			f++
-			failures = appendBatchFailure(failures, id, forward.Name, err)
-			continue
+		if strings.EqualFold(forward.Mode, "nftables") {
+			ports, _ := h.listForwardPorts(id)
+			if err := h.deleteNftablesRules(forward, ports); err != nil {
+				f++
+				failures = appendBatchFailure(failures, id, forward.Name, err)
+				continue
+			}
+		} else {
+			if err := h.controlForwardServices(forward, "DeleteService", true); err != nil {
+				f++
+				failures = appendBatchFailure(failures, id, forward.Name, err)
+				continue
+			}
 		}
 		if err := h.deleteForwardByID(id); err != nil {
 			f++
@@ -2984,10 +3007,23 @@ func (h *Handler) forwardBatchPause(w http.ResponseWriter, r *http.Request) {
 			failures = appendBatchFailure(failures, id, "", accessErr)
 			continue
 		}
-		if err := h.controlForwardServices(forward, "PauseService", false); err != nil {
-			f++
-			failures = appendBatchFailure(failures, id, forward.Name, err)
-			continue
+		if strings.EqualFold(forward.Mode, "nftables") {
+			ports, _ := h.listForwardPorts(id)
+			if err := h.deleteNftablesRules(forward, ports); err != nil {
+				f++
+				failures = appendBatchFailure(failures, id, forward.Name, err)
+				continue
+			}
+		} else {
+			if err := h.controlForwardServices(forward, "PauseService", false); err != nil {
+				f++
+				failures = appendBatchFailure(failures, id, forward.Name, err)
+				continue
+			}
+			if err := h.controlForwardServices(forward, "TerminateConnections", false); err != nil {
+				f++
+				failures = appendBatchFailure(failures, id, forward.Name, err)
+			}
 		}
 		if err := h.repo.UpdateForwardStatus(id, 0, time.Now().UnixMilli()); err != nil {
 			f++
@@ -3025,10 +3061,18 @@ func (h *Handler) forwardBatchResume(w http.ResponseWriter, r *http.Request) {
 			failures = appendBatchFailure(failures, id, forward.Name, err)
 			continue
 		}
-		if err := h.controlForwardServices(forward, "ResumeService", false); err != nil {
-			f++
-			failures = appendBatchFailure(failures, id, forward.Name, err)
-			continue
+		if strings.EqualFold(forward.Mode, "nftables") {
+			if err := h.syncForwardServices(forward, "UpdateService", true); err != nil {
+				f++
+				failures = appendBatchFailure(failures, id, forward.Name, err)
+				continue
+			}
+		} else {
+			if err := h.controlForwardServices(forward, "ResumeService", false); err != nil {
+				f++
+				failures = appendBatchFailure(failures, id, forward.Name, err)
+				continue
+			}
 		}
 		if err := h.repo.UpdateForwardStatus(id, 1, now); err != nil {
 			f++
@@ -4961,7 +5005,12 @@ func (h *Handler) cleanupForwardsForUserTunnel(userID, tunnelID int64) {
 	for i := range forwards {
 		f := &forwards[i]
 		if f.Status == 1 {
-			_ = h.controlForwardServices(f, "DeleteService", true)
+			if strings.EqualFold(f.Mode, "nftables") {
+				ports, _ := h.listForwardPorts(f.ID)
+				_ = h.deleteNftablesRules(f, ports)
+			} else {
+				_ = h.controlForwardServices(f, "DeleteService", true)
+			}
 		}
 		_ = h.deleteForwardByID(f.ID)
 	}

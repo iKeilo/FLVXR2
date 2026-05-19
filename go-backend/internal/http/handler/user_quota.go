@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"go-backend/internal/http/response"
@@ -56,8 +57,13 @@ func (h *Handler) enforceUserQuotaIfNeeded(userID int64, quota *model.UserQuotaV
 		if forward.Status != 1 {
 			continue
 		}
-		if err := h.controlForwardServices(forward, "PauseService", false); err != nil {
-			continue
+		if strings.EqualFold(forward.Mode, "nftables") {
+			ports, _ := h.listForwardPorts(forward.ID)
+			_ = h.deleteNftablesRules(forward, ports)
+		} else {
+			if err := h.controlForwardServices(forward, "PauseService", false); err != nil {
+				continue
+			}
 		}
 		if err := h.repo.UpdateForwardStatus(forward.ID, 0, now); err != nil {
 			continue
@@ -79,8 +85,12 @@ func (h *Handler) applyUserQuotaRelease(release *repo.UserQuotaRelease, now int6
 		if err := h.ensureUserTunnelForwardAllowed(forward.UserID, forward.TunnelID, now); err != nil {
 			continue
 		}
-		if err := h.controlForwardServices(forward, "ResumeService", false); err != nil {
-			continue
+		if strings.EqualFold(forward.Mode, "nftables") {
+			_ = h.syncForwardServices(forward, "UpdateService", true)
+		} else {
+			if err := h.controlForwardServices(forward, "ResumeService", false); err != nil {
+				continue
+			}
 		}
 		_ = h.repo.UpdateForwardStatus(forwardID, 1, now)
 	}

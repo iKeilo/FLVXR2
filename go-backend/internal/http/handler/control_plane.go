@@ -380,8 +380,15 @@ func (h *Handler) syncForwardServicesWithWarnings(forward *forwardRecord, method
 	// Keep paused forwards paused after UpdateService/AddService, since agent-side UpdateService
 	// always restarts services.
 	if forward.Status != 1 {
-		if err := h.controlForwardServices(forward, "PauseService", false); err != nil {
-			return warnings, err
+		if strings.EqualFold(forward.Mode, "nftables") {
+			ports, _ := h.listForwardPorts(forward.ID)
+			if err := h.deleteNftablesRules(forward, ports); err != nil {
+				return warnings, fmt.Errorf("暂停nftables转发失败: %w", err)
+			}
+		} else {
+			if err := h.controlForwardServices(forward, "PauseService", false); err != nil {
+				return warnings, err
+			}
 		}
 	}
 	return warnings, nil
@@ -2177,20 +2184,26 @@ func (h *Handler) deleteNftablesRules(forward *forwardRecord, ports []forwardPor
 		Ports:      portNumbers,
 	}
 
+	var errs []string
 	for nodeID := range nodeIDs {
 		node, err := h.getNodeRecord(nodeID)
 		if err != nil {
+			errs = append(errs, fmt.Sprintf("node %d: %v", nodeID, err))
 			continue
 		}
 		if node.IsRemote == 1 && strings.TrimSpace(node.RemoteURL) != "" {
 			if err := h.sendRemoteNftablesCommand(node, payload); err != nil {
-				fmt.Printf("️ deleteNftablesRules remote error: %v\n", err)
+				errs = append(errs, fmt.Sprintf("remote node %s: %v", node.Name, err))
 			}
 		} else {
 			if _, err := h.sendNodeCommand(node.ID, "DeleteNftablesRules", payload, true, false); err != nil {
-				fmt.Printf("️ deleteNftablesRules node error: %v\n", err)
+				errs = append(errs, fmt.Sprintf("node %s: %v", node.Name, err))
 			}
 		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("nftables rule deletion errors: %s", strings.Join(errs, "; "))
 	}
 	return nil
 }

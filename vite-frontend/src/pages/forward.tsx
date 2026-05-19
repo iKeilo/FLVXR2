@@ -2253,7 +2253,7 @@ export default function ForwardPage() {
       expiryTime: null,
       speedLimitEnabled: false,
       speedLimit: 0,
-      mode: "gost",
+      mode: form.mode,
     });
     setErrors({});
     setModalOpen(true);
@@ -2302,7 +2302,7 @@ export default function ForwardPage() {
       expiryTime: forward.expiryTime ?? null,
       speedLimitEnabled: forward.speedLimitEnabled ?? false,
       speedLimit: forward.speedLimit ?? 0,
-      mode: "gost",
+      mode: forward.mode || "gost",
     });
     setErrors({});
     setModalOpen(true);
