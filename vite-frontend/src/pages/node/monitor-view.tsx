@@ -568,9 +568,31 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
   const [metricsLoading, setMetricsLoading] = useState(false);
   const [metricsTruncated, setMetricsTruncated] = useState(false);
   const [metricsError, setMetricsError] = useState<string | null>(null);
-  const [activeMetricType, setActiveMetricType] = useState<MetricType>("cpu");
+  const [activeMetricType, setActiveMetricType] = useState<MetricType>(() => {
+    try {
+      const saved = localStorage.getItem("monitor-metric-type");
+      if (saved) return saved as MetricType;
+    } catch {}
+    return "cpu";
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("monitor-metric-type", activeMetricType);
+    } catch {}
+  }, [activeMetricType]);
 
-  const [metricsRangeMs, setMetricsRangeMs] = useState(60 * 60 * 1000);
+  const [metricsRangeMs, setMetricsRangeMs] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem("monitor-metrics-range");
+      if (saved) return Number(saved);
+    } catch {}
+    return 60 * 60 * 1000;
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("monitor-metrics-range", String(metricsRangeMs));
+    } catch {}
+  }, [metricsRangeMs]);
 
   const [serviceMonitors, setServiceMonitors] = useState<
     ServiceMonitorApiItem[]
@@ -601,14 +623,34 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
   const [activeServiceMonitorId, setActiveServiceMonitorId] = useState<
     number | null
   >(null);
-  const [serviceMonitorRangeMs, setServiceMonitorRangeMs] = useState(
-    60 * 60 * 1000,
-  );
+  const [serviceMonitorRangeMs, setServiceMonitorRangeMs] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem("monitor-service-range");
+      if (saved) return Number(saved);
+    } catch {}
+    return 60 * 60 * 1000;
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("monitor-service-range", String(serviceMonitorRangeMs));
+    } catch {}
+  }, [serviceMonitorRangeMs]);
 
   const [accessDenied, setAccessDenied] = useState<string | null>(null);
   const [resultsModalOpen, setResultsModalOpen] = useState(false);
   const [resultsMonitorId, setResultsMonitorId] = useState<number | null>(null);
-  const [resultsLimit, setResultsLimit] = useState(20);
+  const [resultsLimit, setResultsLimit] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem("monitor-results-limit");
+      if (saved) return Number(saved);
+    } catch {}
+    return 20;
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("monitor-results-limit", String(resultsLimit));
+    } catch {}
+  }, [resultsLimit]);
   const [resultsLoading, setResultsLoading] = useState(false);
 
   const [realtimeNodeStatus, setRealtimeNodeStatus] = useState<
@@ -1356,10 +1398,10 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
             <div className="overflow-hidden rounded-xl border border-divider bg-content1 shadow-md">
               <div className="flex items-center justify-between border-b border-divider bg-default-100/40 px-4 py-3">
                 <span className="text-sm font-semibold text-foreground">
-                  节点数量
+                  节点监控数量
                 </span>
                 <span className="text-xs text-default-500 whitespace-nowrap">
-                  {nodes.length} 个节点
+                  {nodes.length} 个监控
                 </span>
               </div>
               <div className="p-4">
@@ -1402,7 +1444,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                   </TableColumn>
 
                   <TableColumn>
-                    节点名称
+                    节点监控名称
                     <span className="text-primary-600 font-bold text-[10px] ml-1">
                       ^{nodes.length}个
                     </span>
@@ -1617,65 +1659,63 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
       {/* ====== DETAIL VIEW ====== */}
       {!accessDenied && detailNodeId && (
         <>
-          {/* Header - 两行式布局 */}
-          <div className="flex flex-col gap-4 w-full">
-            {/* 第一行：返回按钮 + 实时状态（左右分布） */}
-            <div className="flex justify-between items-center w-full">
+          {/* 详情页头部 - 无下划线一体化布局 */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full">
+            <div className="flex items-center gap-3">
               <Button
                 size="sm"
                 variant="flat"
                 onPress={() => setDetailNodeId(null)}
               >
-                <ArrowLeft className="w-4 h-4 mr-1" />
-                返回节点列表
+                <ArrowLeft className="w-4 h-4" />
+                返回
               </Button>
-              <div className="flex items-center gap-2 text-xs text-default-500">
-                {wsConnected ? (
-                  <LiveDot />
-                ) : (
-                  <div
-                    className={`w-2 h-2 rounded-full ${wsConnecting ? "bg-warning" : "bg-default-300"}`}
-                  />
-                )}
-                <span>
-                  {wsConnected
-                    ? "实时已连接"
-                    : wsConnecting
-                      ? "实时连接中"
-                      : "实时未连接"}
-                </span>
+              <div className="h-4 w-[1px] bg-divider hidden sm:block"></div>
+              <div className="flex items-center gap-2">
+                <DistroIcon
+                  className="w-5 h-5"
+                  distro={parseDistroFromVersion(detailNode?.version)}
+                  style={{
+                    color:
+                      detailNode?.connectionStatus === "online"
+                        ? getDistroColor(
+                            parseDistroFromVersion(detailNode?.version),
+                          )
+                        : undefined,
+                  }}
+                />
+                <h3 className="text-lg font-semibold text-foreground">
+                  {detailNode?.name || `节点 #${detailNodeId}`}
+                </h3>
+                <Chip
+                  className="rounded-md"
+                  color={
+                    detailNode?.connectionStatus === "online"
+                      ? "success"
+                      : "danger"
+                  }
+                  size="sm"
+                  variant="flat"
+                >
+                  {detailNode?.connectionStatus === "online" ? "在线" : "离线"}
+                </Chip>
               </div>
             </div>
-
-            {/* 第二行：图标 + 名称（实现下移效果） */}
-            <div className="flex items-center gap-2">
-              <DistroIcon
-                className="w-5 h-5"
-                distro={parseDistroFromVersion(detailNode?.version)}
-                style={{
-                  color:
-                    detailNode?.connectionStatus === "online"
-                      ? getDistroColor(
-                          parseDistroFromVersion(detailNode?.version),
-                        )
-                      : undefined,
-                }}
-              />
-              <h3 className="text-md font-semibold">
-                {detailNode?.name || `节点 #${detailNodeId}`}
-              </h3>
-              <Chip
-                className="rounded-md"
-                color={
-                  detailNode?.connectionStatus === "online"
-                    ? "success"
-                    : "danger"
-                }
-                size="sm"
-                variant="flat"
-              >
-                {detailNode?.connectionStatus === "online" ? "在线" : "离线"}
-              </Chip>
+            <div className="flex items-center gap-2 text-xs text-default-500 bg-content1 px-3 py-1.5 rounded-full border border-divider shadow-sm mt-3 sm:mt-0">
+              {wsConnected ? (
+                <LiveDot />
+              ) : (
+                <div
+                  className={`w-2 h-2 rounded-full ${wsConnecting ? "bg-warning" : "bg-default-300"}`}
+                />
+              )}
+              <span className="font-medium">
+                {wsConnected
+                  ? "实时已连接"
+                  : wsConnecting
+                    ? "实时连接中"
+                    : "实时未连接"}
+              </span>
             </div>
           </div>
 

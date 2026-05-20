@@ -251,7 +251,7 @@ const QualityChartCard = React.memo(function QualityChartCard({
   onRefresh,
 }: QualityChartCardProps) {
   return (
-    <Card>
+    <Card className="overflow-hidden rounded-xl border border-divider bg-content1 shadow-md">
       <CardHeader className="flex flex-row items-center justify-between">
         <h3 className="text-lg font-semibold">质量趋势</h3>
         <div className="flex items-center gap-2">
@@ -379,7 +379,7 @@ const TrafficChartCard = React.memo(function TrafficChartCard({
   };
 
   return (
-    <Card>
+    <Card className="overflow-hidden rounded-xl border border-divider bg-content1 shadow-md">
       <CardHeader className="flex flex-row items-center justify-between">
         <h3 className="text-lg font-semibold">流量趋势</h3>
         <div className="flex items-center gap-2">
@@ -485,7 +485,18 @@ export function TunnelMonitorView({
   const [qualityHistoryError, setQualityHistoryError] = useState<string | null>(
     null,
   );
-  const [qualityRangeMs, setQualityRangeMs] = useState(60 * 60 * 1000);
+  const [qualityRangeMs, setQualityRangeMs] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem("tunnel-monitor-quality-range");
+      if (saved) return Number(saved);
+    } catch {}
+    return 60 * 60 * 1000;
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("tunnel-monitor-quality-range", String(qualityRangeMs));
+    } catch {}
+  }, [qualityRangeMs]);
 
   // Tunnel traffic metrics for chart
   const [tunnelMetrics, setTunnelMetrics] = useState<TunnelMetricApiItem[]>([]);
@@ -493,7 +504,18 @@ export function TunnelMonitorView({
   const [tunnelMetricsError, setTunnelMetricsError] = useState<string | null>(
     null,
   );
-  const [tunnelRangeMs, setTunnelRangeMs] = useState(60 * 60 * 1000);
+  const [tunnelRangeMs, setTunnelRangeMs] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem("tunnel-monitor-traffic-range");
+      if (saved) return Number(saved);
+    } catch {}
+    return 60 * 60 * 1000;
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("tunnel-monitor-traffic-range", String(tunnelRangeMs));
+    } catch {}
+  }, [tunnelRangeMs]);
 
   // --- Load tunnel list ---
   const loadTunnels = useCallback(async (options?: { silent?: boolean }) => {
@@ -813,97 +835,118 @@ export function TunnelMonitorView({
 
     return (
       <div className="space-y-6">
-        {/* Header - 两行式布局 */}
-        <div className="flex flex-col gap-3">
-          {/* 第一行：返回按钮 + 实时状态 */}
-          <div className="flex justify-between items-center w-full">
+        {/* 详情页头部 - 无下划线一体化布局 */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full">
+          <div className="flex items-center gap-3">
             <Button
-              className="bg-default-300 hover:bg-default-400 border-none"
               size="sm"
+              variant="flat"
               onPress={() => {
                 setDetailTunnelId(null);
                 setQualityHistory([]);
                 setTunnelMetrics([]);
               }}
             >
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              返回隧道列表
+              <ArrowLeft className="w-4 h-4" />
+              返回
             </Button>
-            <div className="flex items-center gap-2 text-xs text-default-500">
-              <LiveDot />
-              <span>实时已连接</span>
+            <div className="h-4 w-[1px] bg-divider hidden sm:block"></div>
+            <div className="flex items-center gap-2">
+              <ArrowRightLeft
+                className={`w-5 h-5 ${detailTunnel.status === 1 ? "text-success" : "text-default-400"}`}
+              />
+              <h3 className="text-lg font-semibold text-foreground">{detailTunnel.name}</h3>
+              <Chip
+                className="rounded-md"
+                color={detailTunnel.status === 1 ? "success" : "danger"}
+                size="sm"
+                variant="flat"
+              >
+                {detailTunnel.status === 1 ? "启用" : "禁用"}
+              </Chip>
             </div>
           </div>
-
-          {/* 第二行：名称与状态（即划线部分下移） */}
-          <div className="flex items-center gap-2">
-            <ArrowRightLeft
-              className={`w-5 h-5 ${detailTunnel.status === 1 ? "text-success" : "text-default-400"}`}
-            />
-            <h3 className="text-md font-semibold">{detailTunnel.name}</h3>
-            <Chip
-              color={detailTunnel.status === 1 ? "success" : "danger"}
-              size="sm"
-              variant="flat"
-            >
-              {detailTunnel.status === 1 ? "启用" : "禁用"}
-            </Chip>
+          <div className="flex items-center gap-2 text-xs text-default-500 bg-content1 px-3 py-1.5 rounded-full border border-divider shadow-sm mt-3 sm:mt-0">
+            <LiveDot />
+            <span className="font-medium">实时已连接</span>
           </div>
         </div>
 
         {/* Quality KPI Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Card className="border border-divider/60 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-background to-default-50/50">
-            <CardBody className="py-3 px-4 flex flex-col items-center justify-center min-h-[5rem]">
-              <span className="text-[11px] text-default-500 mb-1.5 flex items-center gap-1">
+          <Card
+            key="entry-exit-latency"
+            className="border border-divider bg-content1 shadow-sm hover:shadow-md transition-shadow h-full flex items-center justify-center p-4"
+          >
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-foreground text-xs font-bold text-default-500 uppercase tracking-wider flex items-center gap-1">
                 <Zap className="w-3 h-3" />
                 入口 → 出口 延迟
               </span>
-              <LatencyDisplay
-                loading={qualityLoading}
-                value={quality?.entryToExitLatency}
-              />
-            </CardBody>
+              {qualityLoading ? (
+                <RefreshCw className="w-4 h-4 animate-spin text-primary" />
+              ) : quality?.entryToExitLatency !== undefined && quality?.entryToExitLatency >= 0 ? (
+                <span className={`text-lg font-bold font-mono ${quality.entryToExitLatency > 200 ? "text-danger" : quality.entryToExitLatency > 100 ? "text-warning" : quality.entryToExitLatency > 50 ? "text-primary" : "text-success"}`}>
+                  {quality.entryToExitLatency.toFixed(0)}ms
+                </span>
+              ) : (
+                <span className="text-lg font-bold font-mono text-default-400">-</span>
+              )}
+            </div>
           </Card>
-          <Card className="border border-divider/60 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-background to-default-50/50">
-            <CardBody className="py-3 px-4 flex flex-col items-center justify-center min-h-[5rem]">
-              <span className="text-[11px] text-default-500 mb-1.5 flex items-center gap-1">
+          <Card
+            key="exit-bing-latency"
+            className="border border-divider bg-content1 shadow-sm hover:shadow-md transition-shadow h-full flex items-center justify-center p-4"
+          >
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-foreground text-xs font-bold text-default-500 uppercase tracking-wider flex items-center gap-1">
                 <Globe className="w-3 h-3" />
                 出口 → Bing 延迟
               </span>
-              <LatencyDisplay
-                loading={qualityLoading}
-                value={quality?.exitToBingLatency}
-              />
-            </CardBody>
+              {qualityLoading ? (
+                <RefreshCw className="w-4 h-4 animate-spin text-primary" />
+              ) : quality?.exitToBingLatency !== undefined && quality?.exitToBingLatency >= 0 ? (
+                <span className={`text-lg font-bold font-mono ${quality.exitToBingLatency > 200 ? "text-danger" : quality.exitToBingLatency > 100 ? "text-warning" : quality.exitToBingLatency > 50 ? "text-primary" : "text-success"}`}>
+                  {quality.exitToBingLatency.toFixed(0)}ms
+                </span>
+              ) : (
+                <span className="text-lg font-bold font-mono text-default-400">-</span>
+              )}
+            </div>
           </Card>
-          <Card className="border border-divider/60 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-background to-default-50/50">
-            <CardBody className="py-3 px-4 flex flex-col items-center justify-center min-h-[5rem]">
-              <span className="text-[11px] text-default-500 mb-1.5">
+          <Card
+            key="entry-exit-loss"
+            className="border border-divider bg-content1 shadow-sm hover:shadow-md transition-shadow h-full flex items-center justify-center p-4"
+          >
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-foreground text-xs font-bold text-default-500 uppercase tracking-wider">
                 入口 → 出口 丢包
               </span>
               <span
-                className={`text-sm font-semibold font-mono ${(quality?.entryToExitLoss ?? 0) > 0 ? "text-warning" : ""}`}
+                className={`text-lg font-bold font-mono ${(quality?.entryToExitLoss ?? 0) > 0 ? "text-warning" : "text-success"}`}
               >
                 {quality?.entryToExitLoss !== undefined
                   ? `${quality.entryToExitLoss.toFixed(1)}%`
                   : "-"}
               </span>
-            </CardBody>
+            </div>
           </Card>
-          <Card className="border border-divider/60 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-background to-default-50/50">
-            <CardBody className="py-3 px-4 flex flex-col items-center justify-center min-h-[5rem]">
-              <span className="text-[11px] text-default-500 mb-1.5">
+          <Card
+            key="exit-bing-loss"
+            className="border border-divider bg-content1 shadow-sm hover:shadow-md transition-shadow h-full flex items-center justify-center p-4"
+          >
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-foreground text-xs font-bold text-default-500 uppercase tracking-wider">
                 出口 → Bing 丢包
               </span>
               <span
-                className={`text-sm font-semibold font-mono ${(quality?.exitToBingLoss ?? 0) > 0 ? "text-warning" : ""}`}
+                className={`text-lg font-bold font-mono ${(quality?.exitToBingLoss ?? 0) > 0 ? "text-warning" : "text-success"}`}
               >
                 {quality?.exitToBingLoss !== undefined
                   ? `${quality.exitToBingLoss.toFixed(1)}%`
                   : "-"}
               </span>
-            </CardBody>
+            </div>
           </Card>
         </div>
 
@@ -923,26 +966,30 @@ export function TunnelMonitorView({
         </div>
 
         {/* ====== Quality History Chart — isolated with React.memo ====== */}
-        <QualityChartCard
-          data={qualityChartData}
-          error={qualityHistoryError}
-          loading={qualityHistoryLoading}
-          rangeMs={qualityRangeMs}
-          tunnelId={detailTunnelId}
-          onRangeChange={setQualityRangeMs}
-          onRefresh={loadQualityHistory}
-        />
+        <div className="overflow-hidden rounded-xl border border-divider bg-content1 shadow-md p-4">
+          <QualityChartCard
+            data={qualityChartData}
+            error={qualityHistoryError}
+            loading={qualityHistoryLoading}
+            rangeMs={qualityRangeMs}
+            tunnelId={detailTunnelId}
+            onRangeChange={setQualityRangeMs}
+            onRefresh={loadQualityHistory}
+          />
+        </div>
 
         {/* ====== Traffic Chart — isolated with React.memo ====== */}
-        <TrafficChartCard
-          data={tunnelChartData}
-          error={tunnelMetricsError}
-          loading={tunnelMetricsLoading}
-          rangeMs={tunnelRangeMs}
-          tunnelId={detailTunnelId}
-          onRangeChange={setTunnelRangeMs}
-          onRefresh={loadTunnelMetrics}
-        />
+        <div className="overflow-hidden rounded-xl border border-divider bg-content1 shadow-md p-4">
+          <TrafficChartCard
+            data={tunnelChartData}
+            error={tunnelMetricsError}
+            loading={tunnelMetricsLoading}
+            rangeMs={tunnelRangeMs}
+            tunnelId={detailTunnelId}
+            onRangeChange={setTunnelRangeMs}
+            onRefresh={loadTunnelMetrics}
+          />
+        </div>
       </div>
     );
   }
@@ -957,7 +1004,12 @@ export function TunnelMonitorView({
             <span>每秒探测 · 更新于 {lastQualityUpdate}</span>
           </div>
         )}
-        <Chip color="primary" size="sm" variant="flat">
+        <Chip
+          className="rounded-md"
+          color="primary"
+          size="sm"
+          variant="flat"
+        >
           隧道 {tunnelStats.enabled}/{tunnelStats.total}
         </Chip>
         {/* <div className="ml-auto">
@@ -976,97 +1028,124 @@ export function TunnelMonitorView({
       ) : null}
 
       {viewMode === "grid" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {tunnels.map((tunnel) => {
-            const quality = qualityMap[tunnel.id];
-            const isEnabled = tunnel.status === 1;
+        <div className="overflow-hidden rounded-xl border border-divider bg-content1 shadow-md">
+          <div className="flex items-center justify-between border-b border-divider bg-default-100/40 px-4 py-3">
+            <span className="text-sm font-semibold text-foreground">
+              隧道监控数量
+            </span>
+            <span className="text-xs text-default-500 whitespace-nowrap">
+              {tunnels.length} 个监控
+            </span>
+          </div>
+          <div className="p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+              {tunnels.map((tunnel) => {
+                const quality = qualityMap[tunnel.id];
+                const isEnabled = tunnel.status === 1;
 
-            return (
-              <Card
-                key={tunnel.id}
-                className="group relative overflow-hidden shadow-sm border border-divider dark:border-default-100 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 h-full flex flex-col cursor-pointer bg-background"
-                onClick={() => setDetailTunnelId(tunnel.id)}
-              >
-                <div
-                  className={`absolute top-0 left-0 right-0 h-1 ${isEnabled ? "bg-success" : "bg-danger"}`}
-                />
-                <div
-                  className={`absolute -right-8 -top-8 w-24 h-24 rounded-full blur-2xl opacity-10 transition-opacity group-hover:opacity-20 ${isEnabled ? "bg-success" : "bg-danger"}`}
-                />
+                return (
+                  <Card
+                    key={tunnel.id}
+                    className="group h-full flex flex-col overflow-hidden border border-divider bg-content1 shadow-sm transition-shadow duration-200 hover:shadow-md cursor-pointer"
+                    onClick={() => setDetailTunnelId(tunnel.id)}
+                  >
+                    <CardHeader className="pb-3 md:pb-3">
+                      <div className="flex flex-col gap-2 w-full">
+                        <div className="flex items-start justify-between w-full gap-3">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className="relative flex-shrink-0">
+                              <div className="w-10 h-10 rounded-xl bg-default-100/70 dark:bg-default-50/10 flex items-center justify-center border border-divider">
+                                <ArrowRightLeft
+                                  className={`w-5 h-5 ${isEnabled ? "text-success" : "text-danger"}`}
+                                />
+                              </div>
+                              <span
+                                className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background ${isEnabled ? "bg-success" : "bg-danger"}`}
+                              />
+                            </div>
+                            <div className="flex flex-col min-w-0 flex-1">
+                              <h3 className="font-semibold text-foreground text-sm truncate">
+                                {tunnel.name}
+                              </h3>
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <span
+                                  className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${isEnabled ? "bg-success-500/10 text-success-600 dark:text-success-400" : "bg-danger-500/10 text-danger-600 dark:text-danger-400"}`}
+                                >
+                                  {isEnabled ? "启用" : "禁用"}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="relative flex-shrink-0">
+                            <span
+                              className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${isEnabled ? "bg-primary-500/10 text-primary-500 dark:text-primary-400" : "bg-default-500/10 text-default-500"}`}
+                            >
+                              {isEnabled ? "活跃" : "静止"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardBody className="flex flex-1 flex-col pt-0 pb-3">
+                      <div className="space-y-2.5 flex-1 py-1">
+                        <div className="grid grid-cols-2 gap-3 w-full">
+                          <div className="space-y-1 min-w-0">
+                            <div className="flex items-center justify-between px-1 text-[11px] font-bold text-foreground uppercase tracking-wider">
+                              <div className="flex items-center gap-1">
+                                <Zap className="w-3 h-3 text-default-500" />
+                                <span className="text-default-500">入→出</span>
+                              </div>
+                              <LatencyDisplay
+                                loading={qualityLoading}
+                                value={quality?.entryToExitLatency}
+                              />
+                            </div>
+                            <UptimeHistoryBar
+                              history={qualityHistoryMap[tunnel.id]}
+                              latestValue={quality?.entryToExitLatency}
+                              type="entryToExit"
+                            />
+                          </div>
+                          <div className="space-y-1 min-w-0">
+                            <div className="flex items-center justify-between px-1 text-[11px] font-bold text-foreground uppercase tracking-wider">
+                              <div className="flex items-center gap-1">
+                                <Globe className="w-3 h-3 text-default-500" />
+                                <span className="text-default-500">出→Bing</span>
+                              </div>
+                              <LatencyDisplay
+                                loading={qualityLoading}
+                                value={quality?.exitToBingLatency}
+                              />
+                            </div>
+                            <UptimeHistoryBar
+                              history={qualityHistoryMap[tunnel.id]}
+                              latestValue={quality?.exitToBingLatency}
+                              type="exitToBing"
+                            />
+                          </div>
+                        </div>
+                      </div>
 
-                <CardHeader className="pb-2 pt-5 px-5 flex flex-row justify-between items-start gap-4">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="relative flex-shrink-0">
-                      <div className="w-10 h-10 rounded-xl bg-default-100 dark:bg-default-50/10 flex items-center justify-center border border-divider">
-                        <ArrowRightLeft
-                          className={`w-5 h-5 ${isEnabled ? "text-success" : "text-danger"}`}
-                        />
-                      </div>
-                      <span
-                        className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background ${isEnabled ? "bg-success" : "bg-danger"}`}
-                      />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <h3 className="font-semibold text-foreground text-sm truncate">
-                        {tunnel.name}
-                      </h3>
-                      <div className="flex items-center gap-1.5 text-[11px] text-default-500 mt-0.5">
-                        <span className="font-mono">
-                          {isEnabled ? "启用" : "禁用"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-
-                <CardBody className="py-3 px-5 flex-1 flex flex-col justify-end gap-3 z-10 w-full overflow-hidden">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <div className="text-[10px] text-default-500 flex items-center gap-1">
-                        <Zap className="w-3 h-3" />
-                        入口→出口
-                      </div>
-                      <UptimeHistoryBar
-                        history={qualityHistoryMap[tunnel.id]}
-                        latestValue={quality?.entryToExitLatency}
-                        type="entryToExit"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <div className="text-[10px] text-default-500 flex items-center gap-1">
-                        <Globe className="w-3 h-3" />
-                        出口→Bing
-                      </div>
-                      <UptimeHistoryBar
-                        history={qualityHistoryMap[tunnel.id]}
-                        latestValue={quality?.exitToBingLatency}
-                        type="exitToBing"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-center pt-2 border-t border-divider/50">
-                    {quality?.errorMessage ? (
-                      <span className="text-[11px] text-danger truncate">
-                        {quality.errorMessage}
-                      </span>
-                    ) : quality?.timestamp ? (
-                      <span className="text-[11px] text-default-500 flex items-center gap-1">
-                        <LiveDot />
-                        {new Date(quality.timestamp).toLocaleTimeString(
-                          "zh-CN",
+                      <div className="flex justify-between items-center pt-2 border-t border-divider mt-1">
+                        {quality?.errorMessage ? (
+                          <span className="text-[11px] text-danger truncate">
+                            {quality.errorMessage}
+                          </span>
+                        ) : quality?.timestamp ? (
+                          <span className="text-[11px] text-default-500 flex items-center gap-1">
+                            <LiveDot />
+                            {new Date(quality.timestamp).toLocaleTimeString("zh-CN")}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-default-400">等待探测...</span>
                         )}
-                      </span>
-                    ) : (
-                      <span className="text-[11px] text-default-400">
-                        等待探测...
-                      </span>
-                    )}
-                  </div>
-                </CardBody>
-              </Card>
-            );
-          })}
+                      </div>
+                    </CardBody>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
         </div>
       ) : (
         <Card className="w-full">
@@ -1074,7 +1153,7 @@ export function TunnelMonitorView({
             aria-label="隧道列表"
             className="overflow-x-auto min-w-full"
             classNames={{
-              th: "bg-default-100/50 text-default-600 font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider whitespace-nowrap",
+              th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider whitespace-nowrap",
               td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
               tr: "hover:bg-default-50/50 transition-colors",
             }}
@@ -1086,7 +1165,12 @@ export function TunnelMonitorView({
               <TableColumn align="center" className="w-[60px] text-center">
                 查看
               </TableColumn>
-              <TableColumn>名称</TableColumn>
+              <TableColumn>
+                隧道监控名称
+                <span className="text-primary-600 font-bold text-[10px] ml-1">
+                  ^{tunnels.length}个
+                </span>
+              </TableColumn>
               <TableColumn>入口→出口</TableColumn>
               <TableColumn>出口→Bing</TableColumn>
               <TableColumn>更新时间</TableColumn>

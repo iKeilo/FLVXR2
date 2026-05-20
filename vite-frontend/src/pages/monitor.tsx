@@ -30,7 +30,19 @@ export default function MonitorPage() {
     } catch { /* ignore */ }
     return "list";
   });
-  const [activeTab, setActiveTab] = useState<MonitorTab>("nodes");
+  const [activeTab, setActiveTab] = useState<MonitorTab>(() => {
+    try {
+      const saved = localStorage.getItem("monitor-active-tab");
+      if (saved === "nodes" || saved === "tunnels") return saved as MonitorTab;
+    } catch {}
+    return "nodes";
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("monitor-active-tab", activeTab);
+    } catch {}
+  }, [activeTab]);
   const [tunnelsLoading, setTunnelsLoading] = useState(false);
   const [tunnelRefreshTrigger, setTunnelRefreshTrigger] = useState(0);
 

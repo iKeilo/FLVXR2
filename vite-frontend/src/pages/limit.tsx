@@ -309,10 +309,11 @@ export default function LimitPage() {
                 {filteredRules.map((rule) => (
                   <TableRow
                     key={rule.id}
-                    className={`cursor-pointer transition-colors ${selectedRuleId === rule.id
+                    className={`cursor-pointer transition-colors ${
+                      selectedRuleId === rule.id
                         ? "bg-primary-50 dark:bg-primary-900/30"
                         : "hover:bg-default-50/50"
-                      }`}
+                    }`}
                     onClick={() => {
                       if (selectedRuleId !== rule.id) {
                         setSelectedRuleId(rule.id);
@@ -392,7 +393,7 @@ export default function LimitPage() {
                 限速规则数量
               </span>
               <span className="text-xs text-default-500">
-                {filteredRules.length} 个限速
+                {filteredRules.length} 个规则
               </span>
             </div>
             <div className="p-4">
