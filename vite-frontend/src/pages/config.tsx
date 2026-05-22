@@ -289,6 +289,26 @@ export default function ConfigPage() {
       setLicenseSaving(false);
     }
   };
+  const handleTransferLicense = async () => {
+    if (!licenseDomain.trim()) {
+      toast.error("请先配置域名");
+      return;
+    }
+    setLicenseSaving(true);
+    try {
+      const res = await transferLicense(licenseDomain.trim());
+      if (res.code === 0) {
+        toast.success("转让成功，正在重新验证...");
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        toast.error("转让失败: " + res.msg);
+      }
+    } catch {
+      toast.error("转让出错，请重试");
+    } finally {
+      setLicenseSaving(false);
+    }
+  };
   const loadAnnouncement = async () => {
     setAnnouncementLoading(true);
     try {
@@ -1132,6 +1152,26 @@ export default function ConfigPage() {
                 </p>
               </div>
             </div>
+          )}
+          {licenseStatus?.valid && licenseStatus?.has_license_key && !licenseStatus?.is_trial && (
+            <>
+              <Divider className="my-2" />
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">授权转让</h3>
+                <p className="text-xs text-gray-500">
+                  转让授权到新域名，旧域名将立即失效。每7天可转让一次。
+                </p>
+                <Button
+                  color="warning"
+                  size="sm"
+                  variant="flat"
+                  isLoading={licenseSaving}
+                  onPress={handleTransferLicense}
+                >
+                  转让到新域名
+                </Button>
+              </div>
+            </>
           )}
           <div className="flex justify-between items-center pt-4 border-t border-divider/50">
             <div className="flex items-center gap-2">
