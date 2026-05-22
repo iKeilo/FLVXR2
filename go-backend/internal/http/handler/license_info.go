@@ -3,6 +3,8 @@ package handler
 import (
 	"net/http"
 	"os"
+	"strings"
+	"time"
 
 	"go-backend/internal/http/response"
 	"go-backend/internal/middleware"
@@ -68,15 +70,26 @@ func (h *Handler) licenseInfo(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	isTrial := strings.HasPrefix(actualLicenseKey, "TRIAL-")
+	trialRemainingDays := 0
+	if isTrial && valid && expireTime > 0 {
+		remaining := expireTime - time.Now().UnixMilli()
+		if remaining > 0 {
+			trialRemainingDays = int(remaining / 86400000)
+		}
+	}
+
 	response.WriteJSON(w, response.OK(map[string]interface{}{
-		"valid":           valid,
-		"expire_time":     expireTime,
-		"reason":          reason,
-		"configured":      configured,
-		"has_license_key": hasLicenseKey,
-		"license_key":     actualLicenseKey,
-		"domain":          domain,
-		"tier":            string(tier),
-		"hmac_key":        hmacKey,
+		"valid":                valid,
+		"expire_time":          expireTime,
+		"reason":               reason,
+		"configured":           configured,
+		"has_license_key":      hasLicenseKey,
+		"license_key":          actualLicenseKey,
+		"domain":               domain,
+		"tier":                 string(tier),
+		"hmac_key":             hmacKey,
+		"is_trial":             isTrial,
+		"trial_remaining_days": trialRemainingDays,
 	}))
 }

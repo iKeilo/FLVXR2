@@ -270,10 +270,6 @@ export default function ConfigPage() {
     }
   };
   const handleLicenseSave = async () => {
-    if (!licenseKey.trim()) {
-      toast.error("授权码不能为空");
-      return;
-    }
     if (!licenseDomain.trim()) {
       toast.error("面板域名不能为空");
       return;
@@ -1075,7 +1071,7 @@ export default function ConfigPage() {
             <div>
 		<h2 className="text-xl font-semibold">授权配置</h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  输入面板域名、授权码和flvx密钥 激活授权服务
+                  输入域名和授权码激活授权服务，授权码留空自动生成7天体验授权
                 </p>
             </div>
           </div>
@@ -1102,7 +1098,7 @@ export default function ConfigPage() {
               </label>
               <Input
                 classNames={{ input: "text-sm" }}
-                placeholder="请输入授权码"
+                placeholder="留空自动生成7天体验授权"
                 size="md"
                 value={licenseKey}
                 variant="bordered"
@@ -1126,15 +1122,28 @@ export default function ConfigPage() {
               </p>
             </div>
           </div>
+          {licenseStatus?.is_trial && licenseStatus?.valid && (
+            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border border-yellow-200 dark:border-yellow-700/50 rounded-lg p-3 flex items-start gap-2">
+              <span className="text-yellow-600 dark:text-yellow-400 text-sm mt-0.5 shrink-0">🎯</span>
+              <div className="text-sm text-yellow-700 dark:text-yellow-300">
+                <p className="font-medium">7天体验版剩余 {licenseStatus.trial_remaining_days} 天</p>
+                <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-0.5">
+                  请前往设置 &gt; 授权配置输入授权信息解除限制
+                </p>
+              </div>
+            </div>
+          )}
           <div className="flex justify-between items-center pt-4 border-t border-divider/50">
             <div className="flex items-center gap-2">
               {licenseStatus && (
                 <span className={`text-xs font-medium ${licenseStatus.tier === 'premium' ? "text-green-600" : licenseStatus.tier === 'blocked' ? "text-red-600" : "text-yellow-600"}`}>
-                  {licenseStatus.tier === 'premium'
-                    ? `商业版，授权剩余 ${licenseStatus.expire_time ? Math.floor((licenseStatus.expire_time - Date.now()) / 86400000) : "？"} 天`
-                    : licenseStatus.tier === 'blocked'
-                      ? `授权已阻断：${licenseStatus.reason || "未知原因"}`
-                      : "免费版（5 节点 / 5 隧道 / 1 用户）"}
+                  {licenseStatus.is_trial && licenseStatus.valid
+                    ? `体验版，剩余 ${licenseStatus.trial_remaining_days} 天`
+                    : licenseStatus.tier === 'premium'
+                      ? `商业版，授权剩余 ${licenseStatus.expire_time ? Math.floor((licenseStatus.expire_time - Date.now()) / 86400000) : "？"} 天`
+                      : licenseStatus.tier === 'blocked'
+                        ? `授权已阻断：${licenseStatus.reason || "未知原因"}`
+                        : "免费版（5 节点 / 5 隧道 / 1 用户）"}
                 </span>
               )}
             </div>

@@ -576,6 +576,8 @@ export interface LicenseInfo {
   domain: string;
   tier?: 'free' | 'premium' | 'blocked';
   hmac_key?: string;
+  is_trial?: boolean;
+  trial_remaining_days?: number;
 }
 
 export const getLicenseInfo = () => Network.post<LicenseInfo>("/license/info");
