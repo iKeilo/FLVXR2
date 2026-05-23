@@ -425,6 +425,14 @@ get_config_params() {
   read -p "后端端口（默认 63665）: " BACKEND_PORT
   BACKEND_PORT=${BACKEND_PORT:-63665}
 
+  CADDY_DOMAIN=""
+  echo ""
+  read -p "启用 Caddy 反代？(输入 y 将自动安装并配置 HTTPS 证书): " enable_caddy
+  if [[ "$enable_caddy" == "y" || "$enable_caddy" == "Y" ]]; then
+    read -p "请输入绑定域名: " user_domain
+    CADDY_DOMAIN="$user_domain"
+  fi
+
   echo "请选择数据库类型："
   echo "1. SQLite（默认）"
   echo "2. PostgreSQL"
@@ -500,6 +508,15 @@ install_panel() {
   if check_ipv6_support; then
     echo "🚀 系统支持 IPv6，自动启用 IPv6 配置..."
     configure_docker_ipv6
+  fi
+
+  # 自动安装并配置 Caddy 反代
+  if [[ -n "$CADDY_DOMAIN" ]]; then
+    if setup_caddy "$CADDY_DOMAIN" "$FRONTEND_PORT"; then
+      FR="127.0.0.1"
+      FRONTEND_PORT="${FR}:${FRONTEND_PORT}"
+      echo "🔒 前端端口已转为本地监听: $FRONTEND_PORT"
+    fi
   fi
 
   cat > .env <<EOF
@@ -781,6 +798,50 @@ uninstall_panel() {
   echo "🧹 删除配置文件..."
   rm -f docker-compose.yml .env
   echo "✅ 卸载完成"
+}
+
+setup_caddy() {
+  local domain="$1"
+  local port="$2"
+
+  echo "🚀 正在安装并配置 Caddy 服务 (域名: $domain)..."
+
+  # 1. 检查环境
+  if ! command -v apt-get &> /dev/null; then
+    echo "❌ 当前系统不支持自动安装 Caddy (仅支持 Debian/Ubuntu)."
+    echo "⚠️ 请手动安装 Caddy 并反向代理至 http://127.0.0.1:$port"
+    return 1
+  fi
+
+  # 2. 安装 Caddy
+  if ! command -v caddy &> /dev/null; then
+    echo "📦 未检测到 Caddy，正在添加源并安装..."
+    sudo apt-get update
+    sudo apt-get install -y debian-keyring debian-archive-keyring apt-transport-https curl gnupg
+    curl -1sLf 'https://dl.cloudflare.com/content/v1/e2qwFJ2fRP2b2q/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+    curl -1sLf 'https://dl.cloudflare.com/content/v1/e2qwFJ2fRP2b2q/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+    sudo apt-get update
+    sudo apt-get install -y caddy
+  else
+    echo "✅ 检测到 Caddy 已安装"
+  fi
+
+  # 3. 配置 Caddyfile
+  echo "📝 正在写入 Caddyfile 配置..."
+  sudo tee /etc/caddy/Caddyfile > /dev/null <<CADDY_EOF
+${domain} {
+  reverse_proxy http://127.0.0.1:${port} {
+    header_up Host {host}
+  }
+}
+CADDY_EOF
+
+  # 4. 重启
+  echo "🔄 重启 Caddy 服务..."
+  sudo systemctl restart caddy
+  echo "🎉 Caddy 配置成功，请通过 https://$domain 访问面板。"
+  sleep 2
+  return 0
 }
 
 # 主逻辑
