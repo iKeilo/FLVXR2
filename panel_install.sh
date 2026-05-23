@@ -831,7 +831,7 @@ backup_panel_data() {
   echo "📊 备份大小：$backup_size"
   echo ""
   echo "📄 备份文件列表："
-  ls -lah "$backup_dir"
+  ls -lhA "$backup_dir"
   echo ""
   echo "⚠️  重要提示："
   echo "   请立即下载备份文件到本地电脑安全保存！"
