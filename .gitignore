@@ -280,4 +280,3 @@ go-backend/gost.db-wal
 docs/node_modules/
 docs/.vitepress/dist/
 docs/.vitepress/cache/
-docs/package-lock.json

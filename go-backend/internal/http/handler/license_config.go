@@ -59,12 +59,25 @@ func (h *Handler) licenseConfig(w http.ResponseWriter, r *http.Request) {
 	// 授权码为空时自动生成7天体验授权
 	actualLicenseKey := req.LicenseKey
 	if actualLicenseKey == "" {
-		trialKey, err := requestTrialLicense(url, req.Domain)
-		if err != nil {
-			response.WriteJSON(w, response.ErrDefault("获取体验授权失败: "+err.Error()))
-			return
+		// 优先检查本地数据库是否已有对应域名的授权，避免重复生成或覆盖
+		existingDomainCfg, _ := h.repo.GetConfigByName("server_domain")
+		existingKeyCfg, _ := h.repo.GetConfigByName("license_key")
+
+		if existingDomainCfg != nil && existingDomainCfg.Value == req.Domain {
+			if existingKeyCfg != nil && existingKeyCfg.Value != "" {
+				actualLicenseKey = existingKeyCfg.Value
+			}
 		}
-		actualLicenseKey = trialKey
+
+		// 如果没有本地缓存的授权，则向远程请求体验授权
+		if actualLicenseKey == "" {
+			trialKey, err := requestTrialLicense(url, req.Domain)
+			if err != nil {
+				response.WriteJSON(w, response.ErrDefault("获取体验授权失败: "+err.Error()))
+				return
+			}
+			actualLicenseKey = trialKey
+		}
 	}
 
 	if err := h.repo.UpsertConfig("license_key", actualLicenseKey, now); err != nil {

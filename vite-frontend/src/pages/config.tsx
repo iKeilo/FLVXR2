@@ -289,7 +289,18 @@ export default function ConfigPage() {
       );
       if (res.code === 0) {
         toast.success("授权配置已提交，正在后台验证...");
-        setTimeout(() => window.location.reload(), 1500);
+        
+        // 关键修复：保存成功后，延迟重新加载授权信息，获取最新的 license_key
+        setTimeout(async () => {
+            await loadLicenseInfo();
+            // 如果后端更新了授权码，同步更新输入框显示
+            if (licenseStatus?.license_key && licenseStatus.license_key !== licenseKey.trim()) {
+                setLicenseKey(licenseStatus.license_key);
+            }
+            // 最后刷新页面
+            setTimeout(() => window.location.reload(), 800);
+        }, 1000);
+        return;
       } else {
         toast.error("保存失败：" + res.msg);
       }
@@ -316,10 +327,21 @@ export default function ConfigPage() {
     try {
       const res = await transferLicense(transferDomain.trim());
       if (res.code === 0) {
-        toast.success("转让成功，正在重新验证...");
-        setTimeout(() => window.location.reload(), 1500);
+        toast.success("授权配置已提交，正在后台验证...");
+        
+        // 关键修复：保存成功后，延迟重新加载授权信息，获取最新的 license_key
+        setTimeout(async () => {
+            await loadLicenseInfo();
+            // 如果后端更新了授权码，同步更新输入框显示
+            if (licenseStatus?.license_key && licenseStatus.license_key !== licenseKey.trim()) {
+                setLicenseKey(licenseStatus.license_key);
+            }
+            // 最后刷新页面
+            setTimeout(() => window.location.reload(), 800);
+        }, 1000);
+        return;
       } else {
-        toast.error("转让失败: " + res.msg);
+        toast.error("保存失败：" + res.msg);
       }
     } catch {
       toast.error("转让出错，请重试");

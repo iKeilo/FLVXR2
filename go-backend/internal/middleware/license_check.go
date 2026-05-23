@@ -8,8 +8,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -30,6 +33,7 @@ type VerifyRequest struct {
 	Domain         string `json:"domain"`
 	AccessDomain   string `json:"access_domain,omitempty"`
 	AccessProtocol string `json:"access_protocol,omitempty"`
+	ServerIP       string `json:"server_ip,omitempty"` // 新增：面板服务端上报的 IP
 }
 
 // VerifyResponse is the response body for license verification
@@ -53,9 +57,6 @@ type licenseState struct {
 }
 
 // ObscuredHMACKey returns the HMAC secret key used to verify license server signatures.
-// Priority: HMAC_SECRET_KEY env var → empty string.
-// An empty secret disables signature verification, which is fine when the license server
-// also has no key configured (e.g. self-hosted without custom key).
 func ObscuredHMACKey() string {
 	return os.Getenv("HMAC_SECRET_KEY")
 }
@@ -97,6 +98,7 @@ func (v *LicenseVerifier) Verify(ctx context.Context) (*VerifyResponse, error) {
 		Domain:         v.domain,
 		AccessDomain:   v.accessDomain,
 		AccessProtocol: v.accessProtocol,
+		ServerIP:       GetServerIP(), // 自动附加服务器 IP
 	}
 
 	body, err := json.Marshal(reqBody)
@@ -121,7 +123,6 @@ func (v *LicenseVerifier) Verify(ctx context.Context) (*VerifyResponse, error) {
 		return nil, fmt.Errorf("decode response: %w", err)
 	}
 
-	// Verify HMAC signature to prevent fake license server attacks
 	if !VerifyResponseSignature(&result, ObscuredHMACKey()) {
 		return nil, fmt.Errorf("invalid response signature")
 	}
@@ -131,7 +132,6 @@ func (v *LicenseVerifier) Verify(ctx context.Context) (*VerifyResponse, error) {
 
 // GetServerDomain extracts domain from environment or hostname
 func GetServerDomain() string {
-	// Check if a domain was recovered from DB config at startup
 	checkParams.mu.RLock()
 	domainFromConfig := checkParams.domainFromConfig
 	checkParams.mu.RUnlock()
@@ -151,6 +151,40 @@ func GetServerDomain() string {
 	return hostname
 }
 
+// GetServerIP returns the public IP of the server.
+// Priority: 1. SERVER_IP env var 2. HTTP request to external API.
+func GetServerIP() string {
+	if ip := os.Getenv("SERVER_IP"); ip != "" {
+		return ip
+	}
+
+	client := &http.Client{Timeout: 3 * time.Second}
+	urls := []string{
+		"https://api.ipify.org",
+		"https://ifconfig.me/ip",
+		"https://icanhazip.com",
+		"https://ip.sb/ip",
+	}
+
+	for _, url := range urls {
+		resp, err := client.Get(url)
+		if err == nil {
+			defer resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				body, err := io.ReadAll(resp.Body)
+				if err == nil {
+					ip := strings.TrimSpace(string(body))
+					if net.ParseIP(ip) != nil {
+						return ip
+					}
+				}
+			}
+		}
+	}
+
+	return ""
+}
+
 var checkParams struct {
 	serverURL        string
 	licenseKey       string
@@ -167,7 +201,7 @@ func StartLicenseVerification(serverURL, licenseKey, domain, accessDomain, acces
 		globalLicenseState.mu.Lock()
 		globalLicenseState.valid = false
 		globalLicenseState.reason = "未配置授权服务"
-		globalLicenseState.LastCheck = time.Now() // 标记为已检查（无配置）
+		globalLicenseState.LastCheck = time.Now()
 		globalLicenseState.mu.Unlock()
 		return nil
 	}
@@ -180,27 +214,23 @@ func StartLicenseVerification(serverURL, licenseKey, domain, accessDomain, acces
 	checkParams.accessProtocol = accessProtocol
 	checkParams.mu.Unlock()
 
-	// 立即执行一次验证
 	if err := doVerify(); err != nil {
 		return err
 	}
 
-	// 启动后台定时验证任务
 	go func() {
 		ticker := time.NewTicker(10 * time.Minute)
 		defer ticker.Stop()
 
 		for range ticker.C {
 			lockedReason := getLockedReason()
-			// 如果当前是锁定状态，提高验证频率（3 分钟）
 			if lockedReason != "" {
 				ticker.Reset(3 * time.Minute)
 			} else {
 				ticker.Reset(10 * time.Minute)
 			}
-			
+
 			if err := doVerify(); err != nil {
-				// log.Printf("⚠️ 后台验证失败：%v", err)
 			}
 		}
 	}()
@@ -210,17 +240,13 @@ func StartLicenseVerification(serverURL, licenseKey, domain, accessDomain, acces
 
 // TriggerAsyncCheck triggers a background verification immediately
 func TriggerAsyncCheck() {
-	// 异步执行，避免阻塞当前请求
 	go func() {
-		// log.Println("🔄 触发异步授权验证...")
 		doVerify()
 	}()
 }
 
 // ForceSyncCheck performs synchronous verification and updates global state
-// This is used during page refresh to ensure state is strictly up-to-date.
 func ForceSyncCheck() {
-	
 	checkParams.mu.Lock()
 	serverURL := checkParams.serverURL
 	licenseKey := checkParams.licenseKey
@@ -240,23 +266,20 @@ func ForceSyncCheck() {
 
 	verifier := NewLicenseVerifier(serverURL, licenseKey, domain, accessDomain, accessProtocol)
 
-	// Use a shorter timeout for page refresh to avoid long UI blocking (3 seconds)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	resp, err := verifier.Verify(ctx)
-	
+
 	globalLicenseState.mu.Lock()
 	if err != nil {
 		globalLicenseState.valid = false
 		globalLicenseState.reason = fmt.Sprintf("同步验证失败: %v", err)
-		// log.Printf("⚠️ 授权同步验证失败: %v", err)
 	} else {
 		globalLicenseState.valid = resp.Valid
 		globalLicenseState.expireTime = resp.ExpireTime
 		globalLicenseState.reason = resp.Reason
 		globalLicenseState.isTrial = resp.IsTrial
-		// log.Printf("✅ 授权同步验证成功: valid=%v", resp.Valid)
 	}
 	globalLicenseState.LastCheck = time.Now()
 	globalLicenseState.mu.Unlock()
@@ -346,7 +369,6 @@ func GetLicenseTier() (TierType, string) {
 	return TierPremium, ""
 }
 
-// freeLimits 免费版资源限制
 var freeLimits = map[string]int{
 	"node":    5,
 	"tunnel":  5,
@@ -380,18 +402,7 @@ func GetLicenseState() (valid bool, expireTime int64, reason string, isTrial boo
 	return globalLicenseState.valid, globalLicenseState.expireTime, globalLicenseState.reason, globalLicenseState.isTrial
 }
 
-// SetLicenseState sets the license state (for testing)
-func SetLicenseState(valid bool, expireTime int64, reason string) {
-	globalLicenseState.mu.Lock()
-	defer globalLicenseState.mu.Unlock()
-	globalLicenseState.valid = valid
-	globalLicenseState.expireTime = expireTime
-	globalLicenseState.reason = reason
-}
-
 // UpdateServerDomainFromConfig sets the domain recovered from DB config.
-// This is used by main.go to override the domain before verification starts
-// if it was missing from environment variables but present in the database.
 func UpdateServerDomainFromConfig(domain string) {
 	checkParams.mu.Lock()
 	checkParams.domainFromConfig = domain
@@ -408,4 +419,3 @@ func UpdateCheckParams(serverURL, licenseKey, domain, accessDomain, accessProtoc
 	checkParams.accessDomain = accessDomain
 	checkParams.accessProtocol = accessProtocol
 }
-
