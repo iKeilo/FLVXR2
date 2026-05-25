@@ -1117,6 +1117,7 @@ export default function UserPage() {
         }
         toast.success(response.msg || "分配成功");
         setBatchTunnelSelections(new Map());
+        setIsTunnelListExpanded(false);
         await loadUserTunnels(currentUser.id);
       } else {
         toast.error(response.msg || "分配失败");
@@ -2876,15 +2877,6 @@ export default function UserPage() {
                       </svg>
                     </div>
                     {/* 分配按钮归位 */}
-                    <Button
-                      className="whitespace-nowrap px-4 sm:px-6 h-10 text-xs sm:text-sm font-semibold shadow-sm shrink-0 min-w-0"
-                      color="primary"
-                      isDisabled={batchTunnelSelections.size === 0}
-                      isLoading={assignLoading}
-                      onPress={handleBatchAssignTunnel}
-                    >
-                      分配
-                    </Button>
                   </div>
                   {/* 列表悬浮层 */}
                   {isTunnelListExpanded && (
@@ -2943,9 +2935,6 @@ export default function UserPage() {
                             </TableColumn>
                             <TableColumn className="w-[120px] sm:w-[150px]">
                               限速
-                            </TableColumn>
-                            <TableColumn className="w-[60px] sm:w-[80px]">
-                              状态
                             </TableColumn>
                           </TableHeader>
                           <TableBody>
@@ -3024,17 +3013,6 @@ export default function UserPage() {
                                           ))}
                                         </Select>
                                       </div>
-                                    ) : (
-                                      <span className="text-xs sm:text-sm text-default-400">
-                                        -
-                                      </span>
-                                    )}
-                                  </TableCell>
-                                  <TableCell>
-                                    {isAssigned ? (
-                                      <span className="text-[10px] sm:text-xs text-default-500 italic bg-default-200/50 px-1.5 py-0.5 rounded">
-                                        已分配
-                                      </span>
                                     ) : (
                                       <span className="text-xs sm:text-sm text-default-400">
                                         -
@@ -3287,6 +3265,14 @@ export default function UserPage() {
           <ModalFooter className="justify-end">
             <Button variant="flat" onPress={onTunnelModalClose}>
               关闭
+            </Button>
+            <Button
+              color="primary"
+              isDisabled={batchTunnelSelections.size === 0}
+              isLoading={assignLoading}
+              onPress={handleBatchAssignTunnel}
+            >
+              分配
             </Button>
           </ModalFooter>
         </ModalContent>
