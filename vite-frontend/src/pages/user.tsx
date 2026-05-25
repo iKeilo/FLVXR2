@@ -360,7 +360,7 @@ export default function UserPage() {
           response = await assignMonitorPermission(userId, level === 2 ? 1 : undefined);
         }
         if (response.code === 0) {
-          toast.success(level === 0 ? "已撤销监控" : level === 2 ? "已授权全开监控" : "已授权监控（限定范围）");
+          toast.success(level === 0 ? "已撤销监控" : level === 2 ? "已授权全开监控" : "已授权监控（同步）");
         } else {
           throw new Error();
         }
@@ -1880,7 +1880,7 @@ export default function UserPage() {
                             {monitorPermissionLevelMap.has(user.id) ? (
                               <>
                                 <EyeIcon className="w-3 h-3" />
-                                {monitorPermissionLevelMap.get(user.id) === 1 ? "全开" : "范围"}
+                                {monitorPermissionLevelMap.get(user.id) === 1 ? "全开" : "同步"}
                               </>
                             ) : (
                               <>
@@ -2342,7 +2342,7 @@ export default function UserPage() {
                                 {monitorPermissionLevelMap.has(user.id) ? (
                                   <>
                                     <EyeIcon className="w-3 h-3" />
-                                    {monitorPermissionLevelMap.get(user.id) === 1 ? "全开" : "范围"}
+                                    {monitorPermissionLevelMap.get(user.id) === 1 ? "全开" : "同步"}
                                   </>
                                 ) : (
                                   <>
@@ -3313,16 +3313,16 @@ export default function UserPage() {
                 允许访问监控功能
               </div>
               <div className="text-xs text-default-500 mb-4">
-                <p className="mb-1"><strong>限定范围</strong>：用户只能看到已授权隧道的监控数据（节点、隧道、服务监控均按权限过滤）。</p>
+                <p className="mb-1"><strong>同步</strong>：用户只能看到已授权隧道的监控数据。</p>
                 <p><strong>全开</strong>：用户可以看到所有监控数据，不受隧道权限限制。</p>
               </div>
               <RadioGroup
-                orientation="vertical"
+                orientation="horizontal"
                 value={monitorModalValue}
                 onValueChange={(value: string) => setMonitorModalValue(value)}
               >
                 <Radio value="0">禁用</Radio>
-                <Radio value="1">限定范围</Radio>
+                <Radio value="1">同步</Radio>
                 <Radio value="2">全开</Radio>
               </RadioGroup>
             </div>

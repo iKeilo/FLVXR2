@@ -444,11 +444,39 @@ func (r *Repository) ListNodeIDsByTunnelIDs(tunnelIDs []int64) ([]int64, error) 
 	if len(tunnelIDs) == 0 {
 		return nil, nil
 	}
-	var nodeIDs []int64
-	err := r.db.Model(&model.ForwardPort{}).
+
+	// Entry nodes (via forward_port → forward)
+	var entryIDs []int64
+	if err := r.db.Model(&model.ForwardPort{}).
 		Select("DISTINCT forward_port.node_id").
 		Joins("JOIN forward ON forward.id = forward_port.forward_id").
 		Where("forward.tunnel_id IN ?", tunnelIDs).
-		Pluck("forward_port.node_id", &nodeIDs).Error
-	return nodeIDs, err
+		Pluck("forward_port.node_id", &entryIDs).Error; err != nil {
+		return nil, err
+	}
+
+	// Middle and exit nodes (via chain_tunnel)
+	var chainIDs []int64
+	if err := r.db.Model(&model.ChainTunnel{}).
+		Where("tunnel_id IN ? AND chain_type IN ?", tunnelIDs, []string{"2", "3"}).
+		Pluck("node_id", &chainIDs).Error; err != nil {
+		return nil, err
+	}
+
+	// Merge and deduplicate
+	seen := make(map[int64]struct{}, len(entryIDs)+len(chainIDs))
+	result := make([]int64, 0, len(entryIDs)+len(chainIDs))
+	for _, id := range entryIDs {
+		if _, ok := seen[id]; !ok {
+			seen[id] = struct{}{}
+			result = append(result, id)
+		}
+	}
+	for _, id := range chainIDs {
+		if _, ok := seen[id]; !ok {
+			seen[id] = struct{}{}
+			result = append(result, id)
+		}
+	}
+	return result, nil
 }
