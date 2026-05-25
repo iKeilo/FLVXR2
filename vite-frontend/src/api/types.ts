@@ -558,11 +558,13 @@ export interface MonitorTunnelApiItem {
 export interface MonitorPermissionApiItem {
   id: number;
   userId: number;
+  fullAccess: number;
   createdTime: number;
 }
 
 export interface MonitorAccessApiData {
   allowed: boolean;
+  fullAccess?: boolean;
   reason?: string;
 }
 

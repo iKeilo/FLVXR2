@@ -436,3 +436,19 @@ func (r *Repository) DeleteNodeTrafficResetLog(id int64) error {
 	}
 	return r.db.Delete(&model.NodeTrafficResetLog{}, id).Error
 }
+
+func (r *Repository) ListNodeIDsByTunnelIDs(tunnelIDs []int64) ([]int64, error) {
+	if r == nil || r.db == nil {
+		return nil, errors.New("repository not initialized")
+	}
+	if len(tunnelIDs) == 0 {
+		return nil, nil
+	}
+	var nodeIDs []int64
+	err := r.db.Model(&model.ForwardPort{}).
+		Select("DISTINCT forward_port.node_id").
+		Joins("JOIN forward ON forward.id = forward_port.forward_id").
+		Where("forward.tunnel_id IN ?", tunnelIDs).
+		Pluck("forward_port.node_id", &nodeIDs).Error
+	return nodeIDs, err
+}

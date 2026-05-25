@@ -334,6 +334,7 @@ func (GroupPermissionGrant) TableName() string { return "group_permission_grant"
 type MonitorPermission struct {
 	ID          int64 `gorm:"primaryKey;autoIncrement" json:"id"`
 	UserID      int64 `gorm:"column:user_id;not null;uniqueIndex:idx_monitor_permission_user" json:"userId"`
+	FullAccess  int   `gorm:"column:full_access;not null;default:0" json:"fullAccess"`
 	CreatedTime int64 `gorm:"column:created_time;not null" json:"createdTime"`
 }
 

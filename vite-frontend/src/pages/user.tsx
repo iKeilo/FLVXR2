@@ -304,9 +304,10 @@ export default function UserPage() {
   const [renewalLogs, setRenewalLogs] = useState<UserRenewalLog[]>([]);
   const [renewalLogLoading, setRenewalLogLoading] = useState(false);
   // --- 监控权限相关状态 (来自 user 新) ---
-  const [monitorPermissionUserIds, setMonitorPermissionUserIds] = useState<
-    Set<number>
-  >(new Set());
+  // Map<userId, fullAccess> where 0=scoped, 1=fullAccess; absent = no permission
+  const [monitorPermissionLevelMap, setMonitorPermissionLevelMap] = useState<
+    Map<number, number>
+  >(new Map());
   const [, setMonitorPermissionLoading] =
     useState(false);
   const [monitorPermissionMutatingUserId, setMonitorPermissionMutatingUserId] =
@@ -317,16 +318,17 @@ export default function UserPage() {
       const response = await getMonitorPermissionList();
 
       if (response.code === 0) {
-        const ids = new Set<number>();
+        const m = new Map<number, number>();
 
         if (Array.isArray(response.data)) {
           response.data.forEach((item: any) => {
             const id = Number(item?.userId ?? 0);
+            const fa = Number(item?.fullAccess ?? 0);
 
-            if (id > 0) ids.add(id);
+            if (id > 0) m.set(id, fa === 1 ? 1 : 0);
           });
         }
-        setMonitorPermissionUserIds(ids);
+        setMonitorPermissionLevelMap(m);
       }
     } catch {
     } finally {
@@ -334,35 +336,43 @@ export default function UserPage() {
     }
   }, []);
   const setUserMonitorPermission = useCallback(
-    async (userId: number, enabled: boolean) => {
+    async (userId: number, level: number) => {
       if (userId <= 0 || monitorPermissionMutatingUserId === userId) return;
-      const prevEnabled = monitorPermissionUserIds.has(userId);
+      const prevLevel = monitorPermissionLevelMap.has(userId) ? (monitorPermissionLevelMap.get(userId) === 1 ? 2 : 1) : 0;
 
-      if (prevEnabled === enabled) return;
+      if (prevLevel === level) return;
       setMonitorPermissionMutatingUserId(userId);
-      setMonitorPermissionUserIds((prev) => {
-        const next = new Set(prev);
+      setMonitorPermissionLevelMap((prev) => {
+        const next = new Map(prev);
 
-        enabled ? next.add(userId) : next.delete(userId);
-
+        if (level === 0) {
+          next.delete(userId);
+        } else {
+          next.set(userId, level === 2 ? 1 : 0);
+        }
         return next;
       });
       try {
-        const response = enabled
-          ? await assignMonitorPermission(userId)
-          : await removeMonitorPermission(userId);
-
+        let response;
+        if (level === 0) {
+          response = await removeMonitorPermission(userId);
+        } else {
+          response = await assignMonitorPermission(userId, level === 2 ? 1 : undefined);
+        }
         if (response.code === 0) {
-          toast.success(enabled ? "已授权监控" : "已撤销监控");
+          toast.success(level === 0 ? "已撤销监控" : level === 2 ? "已授权全开监控" : "已授权监控（限定范围）");
         } else {
           throw new Error();
         }
       } catch {
-        setMonitorPermissionUserIds((prev) => {
-          const next = new Set(prev);
+        setMonitorPermissionLevelMap((prev) => {
+          const next = new Map(prev);
 
-          prevEnabled ? next.add(userId) : next.delete(userId);
-
+          if (prevLevel === 0) {
+            next.delete(userId);
+          } else {
+            next.set(userId, prevLevel === 2 ? 1 : 0);
+          }
           return next;
         });
         toast.error("操作失败");
@@ -370,7 +380,7 @@ export default function UserPage() {
         setMonitorPermissionMutatingUserId(null);
       }
     },
-    [monitorPermissionMutatingUserId, monitorPermissionUserIds],
+    [monitorPermissionMutatingUserId, monitorPermissionLevelMap],
   );
   const [userTunnels, setUserTunnels] = useState<UserTunnel[]>([]);
   const [tunnelListLoading, setTunnelListLoading] = useState(false);
@@ -1025,20 +1035,21 @@ export default function UserPage() {
   // 打开监控权限弹窗
   const handleOpenMonitorModal = (user: User) => {
     setMonitorModalUser(user);
-    setMonitorModalValue(monitorPermissionUserIds.has(user.id) ? "1" : "0");
+    const level = monitorPermissionLevelMap.has(user.id) ? (monitorPermissionLevelMap.get(user.id) === 1 ? "2" : "1") : "0";
+    setMonitorModalValue(level);
     onMonitorModalOpen();
   };
   const handleSaveMonitorPermission = useCallback(async () => {
     if (!monitorModalUser) return;
-    const currentlyEnabled = monitorPermissionUserIds.has(monitorModalUser.id);
-    const newEnabled = monitorModalValue === "1";
-    if (currentlyEnabled === newEnabled) {
+    const prevLevel = monitorPermissionLevelMap.has(monitorModalUser.id) ? (monitorPermissionLevelMap.get(monitorModalUser.id) === 1 ? 2 : 1) : 0;
+    const newLevel = Number(monitorModalValue);
+    if (prevLevel === newLevel) {
       onMonitorModalClose();
       return;
     }
-    await setUserMonitorPermission(monitorModalUser.id, newEnabled);
+    await setUserMonitorPermission(monitorModalUser.id, newLevel);
     onMonitorModalClose();
-  }, [monitorModalUser, monitorModalValue, monitorPermissionUserIds, setUserMonitorPermission, onMonitorModalClose]);
+  }, [monitorModalUser, monitorModalValue, monitorPermissionLevelMap, setUserMonitorPermission, onMonitorModalClose]);
   const handleOpenRenewalLogModal = async (user: User) => {
     setSelectedRenewalLogUser(user);
     setIsRenewalLogModalOpen(true);
@@ -1861,15 +1872,15 @@ export default function UserPage() {
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           <div
-                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${monitorPermissionUserIds.has(user.id)
+                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${monitorPermissionLevelMap.has(user.id)
                               ? "bg-success-500/10 text-success-600 dark:text-success-400"
                               : "bg-default-500/10 text-default-500"
                               }`}
                           >
-                            {monitorPermissionUserIds.has(user.id) ? (
+                            {monitorPermissionLevelMap.has(user.id) ? (
                               <>
                                 <EyeIcon className="w-3 h-3" />
-                                已打开
+                                {monitorPermissionLevelMap.get(user.id) === 1 ? "全开" : "范围"}
                               </>
                             ) : (
                               <>
@@ -2067,7 +2078,7 @@ export default function UserPage() {
                             <Button
                               className="min-h-7 px-2"
                               color={
-                                monitorPermissionUserIds.has(user.id)
+                                monitorPermissionLevelMap.has(user.id)
                                   ? "success"
                                   : "default"
                               }
@@ -2075,9 +2086,7 @@ export default function UserPage() {
                               variant="flat"
                               onPress={() => handleOpenMonitorModal(user)}
                             >
-                              {monitorPermissionUserIds.has(user.id)
-                                ? "监控"
-                                : "监控"}
+                              监控
                             </Button>
                             <Button
                               className="min-h-7 px-2"
@@ -2325,15 +2334,15 @@ export default function UserPage() {
                             <div className="col-span-2 flex justify-between text-sm items-center pt-1.5 border-t border-divider">
                               <span className="text-default-600 text-xs">监控权限</span>
                               <div
-                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${monitorPermissionUserIds.has(user.id)
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${monitorPermissionLevelMap.has(user.id)
                                   ? "bg-success-500/10 text-success-600 dark:text-success-400"
                                   : "bg-default-500/10 text-default-500"
                                   }`}
                               >
-                                {monitorPermissionUserIds.has(user.id) ? (
+                                {monitorPermissionLevelMap.has(user.id) ? (
                                   <>
                                     <EyeIcon className="w-3 h-3" />
-                                    已打开
+                                    {monitorPermissionLevelMap.get(user.id) === 1 ? "全开" : "范围"}
                                   </>
                                 ) : (
                                   <>
@@ -2372,7 +2381,7 @@ export default function UserPage() {
                             <Button
                               className="flex-1 min-h-8"
                               color={
-                                monitorPermissionUserIds.has(user.id)
+                                monitorPermissionLevelMap.has(user.id)
                                   ? "success"
                                   : "default"
                               }
@@ -2383,9 +2392,7 @@ export default function UserPage() {
                                 handleOpenMonitorModal(user);
                               }}
                             >
-                              {monitorPermissionUserIds.has(user.id)
-                                ? "监控"
-                                : "监控"}
+                              监控
                             </Button>
                             <Button
                               className="flex-1 min-h-8"
@@ -3306,15 +3313,17 @@ export default function UserPage() {
                 允许访问监控功能
               </div>
               <div className="text-xs text-default-500 mb-4">
-                授予后，该用户可以访问监控页面并管理服务监控（TCP/ICMP）。
+                <p className="mb-1"><strong>限定范围</strong>：用户只能看到已授权隧道的监控数据（节点、隧道、服务监控均按权限过滤）。</p>
+                <p><strong>全开</strong>：用户可以看到所有监控数据，不受隧道权限限制。</p>
               </div>
               <RadioGroup
-                orientation="horizontal"
+                orientation="vertical"
                 value={monitorModalValue}
                 onValueChange={(value: string) => setMonitorModalValue(value)}
               >
-                <Radio value="1">启用</Radio>
                 <Radio value="0">禁用</Radio>
+                <Radio value="1">限定范围</Radio>
+                <Radio value="2">全开</Radio>
               </RadioGroup>
             </div>
           </ModalBody>

@@ -96,3 +96,45 @@ func (r *Repository) ListEnabledTunnelIDs() ([]int64, error) {
 	err := r.db.Model(&model.Tunnel{}).Where("status = ?", 1).Pluck("id", &ids).Error
 	return ids, err
 }
+
+func (r *Repository) GetLatestTunnelQualitiesByTunnelIDs(tunnelIDs []int64) ([]model.TunnelQuality, error) {
+	if r == nil || r.db == nil {
+		return nil, nil
+	}
+	if len(tunnelIDs) == 0 {
+		return nil, nil
+	}
+	var results []model.TunnelQuality
+	q := `
+		SELECT id, tunnel_id, entry_to_exit_latency, exit_to_bing_latency,
+		       entry_to_exit_loss, exit_to_bing_loss, success, error_message, timestamp
+		FROM (
+			SELECT *, ROW_NUMBER() OVER (PARTITION BY tunnel_id ORDER BY timestamp DESC, id DESC) AS rn
+			FROM tunnel_quality
+			WHERE tunnel_id IN ?
+		) t
+		WHERE rn = 1
+		ORDER BY tunnel_id ASC
+	`
+	if err := r.db.Raw(q, tunnelIDs).Scan(&results).Error; err == nil {
+		return results, nil
+	}
+	results = nil
+	err := r.db.Where("tunnel_id IN ?", tunnelIDs).Order("timestamp DESC, id DESC").Limit(5000).Find(&results).Error
+	if err != nil {
+		return nil, err
+	}
+	seen := make(map[int64]struct{}, len(results))
+	out := make([]model.TunnelQuality, 0, len(results))
+	for _, row := range results {
+		if row.TunnelID <= 0 {
+			continue
+		}
+		if _, ok := seen[row.TunnelID]; ok {
+			continue
+		}
+		seen[row.TunnelID] = struct{}{}
+		out = append(out, row)
+	}
+	return out, nil
+}

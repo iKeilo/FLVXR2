@@ -4186,6 +4186,107 @@ func (r *Repository) GetLatestServiceMonitorResults() ([]model.ServiceMonitorRes
 	return out, nil
 }
 
+func (r *Repository) ListServiceMonitorsByNodeIDs(nodeIDs []int64) ([]model.ServiceMonitor, error) {
+	if r == nil || r.db == nil {
+		return nil, nil
+	}
+	if len(nodeIDs) == 0 {
+		return nil, nil
+	}
+	var monitors []model.ServiceMonitor
+	err := r.db.Where("node_id IN ?", nodeIDs).Order("id ASC").Find(&monitors).Error
+	return monitors, err
+}
+
+func (r *Repository) GetLatestServiceMonitorResultsByNodeIDs(nodeIDs []int64) ([]model.ServiceMonitorResult, error) {
+	if r == nil || r.db == nil {
+		return nil, nil
+	}
+	if len(nodeIDs) == 0 {
+		return nil, nil
+	}
+	var results []model.ServiceMonitorResult
+	q1 := `
+		SELECT smr.id, smr.monitor_id, smr.node_id, smr.timestamp, smr.success, smr.latency_ms, smr.status_code, smr.error_message
+		FROM (
+			SELECT *, ROW_NUMBER() OVER (PARTITION BY smr.monitor_id ORDER BY smr.timestamp DESC, smr.id DESC) AS rn
+			FROM service_monitor_result smr
+			JOIN service_monitor sm ON sm.id = smr.monitor_id
+			WHERE sm.node_id IN ?
+		) smr
+		WHERE smr.rn = 1
+		ORDER BY smr.monitor_id ASC
+	`
+	if err := r.db.Raw(q1, nodeIDs).Scan(&results).Error; err == nil {
+		return results, nil
+	}
+	results = nil
+	q2 := `
+		SELECT smr.id, smr.monitor_id, smr.node_id, smr.timestamp, smr.success, smr.latency_ms, smr.status_code, smr.error_message
+		FROM service_monitor_result smr
+		JOIN service_monitor sm ON sm.id = smr.monitor_id
+		WHERE sm.node_id IN ?
+		ORDER BY smr.timestamp DESC, smr.id DESC
+		LIMIT 5000
+	`
+	err := r.db.Raw(q2, nodeIDs).Scan(&results).Error
+	if err != nil {
+		return nil, err
+	}
+	seen := make(map[int64]struct{}, len(results))
+	out := make([]model.ServiceMonitorResult, 0, len(results))
+	for _, row := range results {
+		if row.MonitorID <= 0 {
+			continue
+		}
+		if _, ok := seen[row.MonitorID]; ok {
+			continue
+		}
+		seen[row.MonitorID] = struct{}{}
+		out = append(out, row)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].MonitorID < out[j].MonitorID })
+	return out, nil
+}
+
+func (r *Repository) GetServiceMonitorResultsByMonitorIDs(monitorIDs []int64, limit int) ([]model.ServiceMonitorResult, error) {
+	if r == nil || r.db == nil {
+		return nil, nil
+	}
+	if len(monitorIDs) == 0 {
+		return nil, nil
+	}
+	if limit <= 0 {
+		limit = 100
+	}
+	var results []model.ServiceMonitorResult
+	err := r.db.Where("monitor_id IN ?", monitorIDs).
+		Order("timestamp DESC").
+		Limit(limit).
+		Find(&results).Error
+	return results, err
+}
+
+func (r *Repository) GetServiceMonitorResultsByTimeRangeByMonitorIDs(monitorIDs []int64, startMs, endMs int64) ([]model.ServiceMonitorResult, error) {
+	if r == nil || r.db == nil {
+		return nil, nil
+	}
+	if len(monitorIDs) == 0 {
+		return nil, nil
+	}
+	var results []model.ServiceMonitorResult
+	err := r.db.Where("monitor_id IN ? AND timestamp >= ? AND timestamp <= ?", monitorIDs, startMs, endMs).
+		Order("timestamp DESC").
+		Limit(5000).
+		Find(&results).Error
+	if len(results) > 1 {
+		for i, j := 0, len(results)-1; i < j; i, j = i+1, j-1 {
+			results[i], results[j] = results[j], results[i]
+		}
+	}
+	return results, err
+}
+
 func (r *Repository) PruneServiceMonitorResults(olderThanMs int64) error {
 	if r == nil || r.db == nil {
 		return nil

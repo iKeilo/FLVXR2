@@ -5,6 +5,7 @@ import (
 
 	"go-backend/internal/store/model"
 
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -42,6 +43,34 @@ func (r *Repository) HasMonitorPermission(userID int64) (bool, error) {
 		return false, err
 	}
 	return count > 0, nil
+}
+
+func (r *Repository) GetMonitorPermission(userID int64) (*model.MonitorPermission, error) {
+	if r == nil || r.db == nil {
+		return nil, errors.New("repository not initialized")
+	}
+	if userID <= 0 {
+		return nil, nil
+	}
+	var p model.MonitorPermission
+	err := r.db.Where("user_id = ?", userID).First(&p).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &p, nil
+}
+
+func (r *Repository) UpdateMonitorPermissionFullAccess(userID int64, fullAccess int) error {
+	if r == nil || r.db == nil {
+		return errors.New("repository not initialized")
+	}
+	if userID <= 0 {
+		return nil
+	}
+	return r.db.Model(&model.MonitorPermission{}).Where("user_id = ?", userID).Update("full_access", fullAccess).Error
 }
 
 func (r *Repository) ListMonitorPermissions() ([]model.MonitorPermission, error) {

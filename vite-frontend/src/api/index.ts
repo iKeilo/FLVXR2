@@ -693,8 +693,8 @@ export const getMonitorAccess = () =>
 export const getMonitorPermissionList = () =>
   Network.get<MonitorPermissionApiItem[]>("/monitor/permission/list");
 
-export const assignMonitorPermission = (userId: number) =>
-  Network.post("/monitor/permission/assign", { userId });
+export const assignMonitorPermission = (userId: number, fullAccess?: number) =>
+  Network.post("/monitor/permission/assign", { userId, fullAccess });
 
 export const removeMonitorPermission = (userId: number) =>
   Network.post("/monitor/permission/remove", { userId });
