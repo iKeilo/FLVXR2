@@ -47,6 +47,9 @@ type Handler struct {
 	qualityProber *tunnelQualityProber
 	nodeGroupHandler *NodeGroupHandler
 	nodeTagHandler   *NodeTagHandler
+
+	nftablesDomainMu    sync.Mutex
+	nftablesDomainCache map[int64]string
 }
 
 // GetForwardConnections 获取指定转发的当前连接数
@@ -109,7 +112,8 @@ func New(repo *repo.Repository, jwtSecret string, fluxVersion string) *Handler {
 		healthCheck:            nil,
 		bestExit:               newBestExitManager(),
 		fluxVersion:            fluxVersion,
-		captchaTokens: make(map[string]int64),
+		captchaTokens:        make(map[string]int64),
+		nftablesDomainCache:  make(map[int64]string),
 	}
 	h.healthCheck = health.NewChecker(repo, h.wsServer)
 	h.qualityProber = newTunnelQualityProber(h)

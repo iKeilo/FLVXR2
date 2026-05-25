@@ -1834,6 +1834,28 @@ func processServerAddress(serverAddr string) string {
 	return serverAddr
 }
 
+// resolveTargetIP resolves domain name in target host:port to IP address.
+// If host is already an IP, returns target unchanged.
+func resolveTargetIP(target string) string {
+	host, port, err := net.SplitHostPort(target)
+	if err != nil {
+		return target
+	}
+	host = strings.TrimSpace(host)
+	port = strings.TrimSpace(port)
+	if net.ParseIP(host) != nil {
+		return target
+	}
+	ips, err := net.LookupHost(host)
+	if err != nil || len(ips) == 0 {
+		return target
+	}
+	if strings.Contains(ips[0], ":") {
+		return "[" + ips[0] + "]:" + port
+	}
+	return ips[0] + ":" + port
+}
+
 func normalizeServerAddressInput(serverAddr string) string {
 	serverAddr = strings.TrimSpace(serverAddr)
 	if serverAddr == "" {
@@ -2120,6 +2142,9 @@ func buildNftablesRulePayloads(forward *forwardRecord, tunnel *tunnelRecord, por
 	var rules []NftablesRulePayload
 	protocols := []string{"tcp", "udp"}
 	targets := splitRemoteTargets(forward.RemoteAddr)
+	for i, t := range targets {
+		targets[i] = resolveTargetIP(t)
+	}
 
 	spdLimit := 0
 	if forward.SpeedLimitEnabled && forward.SpeedLimit > 0 {

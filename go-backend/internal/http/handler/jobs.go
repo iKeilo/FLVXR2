@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"log"
+	"strings"
 	"time"
 
 	"go-backend/internal/store/repo"
@@ -21,7 +22,7 @@ func (h *Handler) StartBackgroundJobs() {
 	ctx, cancel := context.WithCancel(context.Background())
 	h.jobsCancel = cancel
 	h.jobsStarted = true
-	h.jobsWG.Add(6)
+	h.jobsWG.Add(7)
 	h.jobsMu.Unlock()
 
 	go h.runHourlyStatsLoop(ctx)
@@ -30,6 +31,7 @@ func (h *Handler) StartBackgroundJobs() {
 	go h.runMetricsIngestion(ctx)
 	go h.runHealthChecks(ctx)
 	go h.runTunnelQualityProber(ctx)
+	go h.runNftablesDomainRefreshLoop(ctx)
 }
 
 func (h *Handler) StopBackgroundJobs() {
@@ -406,5 +408,102 @@ func (h *Handler) runNodeRenewalCycleJob(now time.Time) {
 	_, err := h.repo.AdvanceNodeRenewalCycles(now.UnixMilli())
 	if err != nil {
 		return
+	}
+}
+
+func (h *Handler) runNftablesDomainRefreshLoop(ctx context.Context) {
+	defer h.jobsWG.Done()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(10 * time.Minute):
+			h.runNftablesDomainRefreshJob()
+		}
+	}
+}
+
+func (h *Handler) runNftablesDomainRefreshJob() {
+	if h == nil || h.repo == nil {
+		return
+	}
+
+	forwards, err := h.repo.ListActiveNftablesForwards()
+	if err != nil {
+		log.Printf("[nftables-dns] 查询活跃 nftables 转发失败: %v", err)
+		return
+	}
+	if len(forwards) == 0 {
+		return
+	}
+
+	h.nftablesDomainMu.Lock()
+	defer h.nftablesDomainMu.Unlock()
+
+	seen := make(map[int64]struct{}, len(forwards))
+
+	for _, f := range forwards {
+		seen[f.ID] = struct{}{}
+
+		targets := splitRemoteTargets(f.RemoteAddr)
+		resolvedTargets := make([]string, len(targets))
+		hasDomain := false
+		for i, t := range targets {
+			resolved := resolveTargetIP(t)
+			resolvedTargets[i] = resolved
+			if resolved != t {
+				hasDomain = true
+			}
+		}
+
+		if !hasDomain {
+			delete(h.nftablesDomainCache, f.ID)
+			continue
+		}
+
+		joined := strings.Join(resolvedTargets, ",")
+		cached, exists := h.nftablesDomainCache[f.ID]
+		if exists && cached == joined {
+			continue
+		}
+
+		forwardRec, err := h.getForwardRecord(f.ID)
+		if err != nil {
+			log.Printf("[nftables-dns] getForwardRecord(%d) 失败: %v", f.ID, err)
+			continue
+		}
+		tunnel, err := h.getTunnelRecord(f.TunnelID)
+		if err != nil {
+			log.Printf("[nftables-dns] getTunnelRecord(%d) 失败: %v", f.TunnelID, err)
+			continue
+		}
+		ports, err := h.listForwardPorts(f.ID)
+		if err != nil {
+			log.Printf("[nftables-dns] listForwardPorts(%d) 失败: %v", f.ID, err)
+			continue
+		}
+		if len(ports) == 0 {
+			continue
+		}
+		userTunnelID, _, speedLimit, err := h.resolveUserTunnelAndLimiter(f.UserID, f.TunnelID)
+		if err != nil {
+			log.Printf("[nftables-dns] resolveUserTunnelAndLimiter(%d,%d) 失败: %v", f.UserID, f.TunnelID, err)
+			continue
+		}
+
+		if err := h.syncNftablesRules(forwardRec, tunnel, ports, userTunnelID, speedLimit); err != nil {
+			log.Printf("[nftables-dns] forward %d 更新失败: %v", f.ID, err)
+			continue
+		}
+
+		h.nftablesDomainCache[f.ID] = joined
+		log.Printf("[nftables-dns] forward %d 域名IP已更新: %s", f.ID, joined)
+	}
+
+	for fid := range h.nftablesDomainCache {
+		if _, ok := seen[fid]; !ok {
+			delete(h.nftablesDomainCache, fid)
+		}
 	}
 }

@@ -401,3 +401,17 @@ func (r *Repository) ListChainNodesForTunnel(tunnelID int64) ([]model.ChainNodeR
 	}
 	return result, nil
 }
+
+func (r *Repository) ListActiveNftablesForwards() ([]model.ForwardRecord, error) {
+	if r == nil || r.db == nil {
+		return nil, errors.New("repository not initialized")
+	}
+	var forwards []model.ForwardRecord
+	err := r.db.
+		Where("status = 1 AND mode = 'nftables'").
+		Find(&forwards).Error
+	if err != nil {
+		return nil, err
+	}
+	return forwards, nil
+}
