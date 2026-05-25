@@ -46,7 +46,9 @@ export default function DashboardPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [historyToDelete, setHistoryToDelete] = useState<number | null>(null);
   const [autoRenewSwitchLoading, setAutoRenewSwitchLoading] = useState(false);
-  const [autoRenewOverride, setAutoRenewOverride] = useState<number | null>(null);
+  const [autoRenewOverride, setAutoRenewOverride] = useState<number | null>(
+    null,
+  );
 
   const handleToggleAutoRenew = async (enabled: boolean) => {
     if (!userInfo.id || autoRenewSwitchLoading) return;
@@ -54,6 +56,7 @@ export default function DashboardPage() {
     try {
       const newValue = enabled ? 1 : 0;
       const res = await toggleUserAutoRenew(userInfo.id, newValue);
+
       if (res.code === 0) {
         toast.success(enabled ? "自动续费已启用" : "自动续费已禁用");
         setAutoRenewOverride(newValue);
@@ -386,6 +389,7 @@ export default function DashboardPage() {
       return `${daysUntilReset}天后归零`;
     }
   };
+
   if (loading) {
     return (
       <div className="px-3 lg:px-6 flex-grow pt-2 lg:pt-4">
@@ -472,14 +476,22 @@ export default function DashboardPage() {
             iconClassName="bg-green-100 dark:bg-green-500/20"
             title={
               <button
-                type="button"
                 className="inline-flex items-center cursor-pointer hover:text-primary transition-colors"
-                onClick={() => setQuotaHistoryModalOpen(true)}
                 title="流量历史记录"
+                type="button"
+                onClick={() => setQuotaHistoryModalOpen(true)}
               >
                 <span>已用流量</span>
-                <svg className="ml-0.5 w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                  <path clipRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" fillRule="evenodd" />
+                <svg
+                  className="ml-0.5 w-3.5 h-3.5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    clipRule="evenodd"
+                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                    fillRule="evenodd"
+                  />
                 </svg>
               </button>
             }
@@ -549,6 +561,14 @@ export default function DashboardPage() {
             {/* 5. 续费与余额 */}
             <div className="order-5 flex flex-col [&>*]:flex-1">
               <MetricCard
+                bottomContent={
+                  <div className="mt-1 flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-success" />
+                    <span className="text-xs text-success">
+                      请联系管理员手动充值余额
+                    </span>
+                  </div>
+                }
                 icon={
                   <svg
                     aria-hidden="true"
@@ -575,48 +595,145 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 }
-                bottomContent={
-                  <div className="mt-1 flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 rounded-full bg-success"></div>
-                    <span className="text-xs text-success">请联系管理员手动充值余额</span>
-                  </div>
-                }
               />
             </div>
             {/* 6. 到期时间 */}
             <div className="order-7 flex flex-col [&>*]:flex-1">
               <MetricCard
-                icon={<svg aria-hidden="true" className="w-4 h-4 lg:w-5 lg:h-5 text-purple-600 dark:text-purple-400" fill="currentColor" viewBox="0 0 20 20"><path clipRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" fillRule="evenodd" /></svg>}
+                bottomContent={
+                  userInfo.expTime &&
+                  typeof userInfo.expTime === "number" &&
+                  Number(userInfo.expTime) > 0 ? (
+                    <div className="mt-1 flex items-center gap-1">
+                      <div
+                        className={`w-1.5 h-1.5 rounded-full ${(Number(userInfo.expTime) - Date.now()) / (1000 * 60 * 60 * 24) > 7 ? "bg-success" : "bg-warning"}`}
+                      />
+                      <span
+                        className={`text-xs ${(Number(userInfo.expTime) - Date.now()) / (1000 * 60 * 60 * 24) > 7 ? "text-success" : "text-warning"}`}
+                      >
+                        {Math.ceil(
+                          (Number(userInfo.expTime) - Date.now()) /
+                            (1000 * 60 * 60 * 24),
+                        )}{" "}
+                        天后到期
+                      </span>
+                    </div>
+                  ) : null
+                }
+                icon={
+                  <svg
+                    aria-hidden="true"
+                    className="w-4 h-4 lg:w-5 lg:h-5 text-purple-600 dark:text-purple-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      clipRule="evenodd"
+                      d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                      fillRule="evenodd"
+                    />
+                  </svg>
+                }
                 iconClassName="bg-purple-100 dark:bg-purple-500/20"
                 title="到期时间"
-                value={userInfo.expTime ? new Date(userInfo.expTime).toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\//g, "-") : "永久"}
-                bottomContent={userInfo.expTime && typeof userInfo.expTime === "number" && Number(userInfo.expTime) > 0 ? (<div className="mt-1 flex items-center gap-1"><div className={`w-1.5 h-1.5 rounded-full ${(Number(userInfo.expTime) - Date.now()) / (1000 * 60 * 60 * 24) > 7 ? "bg-success" : "bg-warning"}`}></div><span className={`text-xs ${(Number(userInfo.expTime) - Date.now()) / (1000 * 60 * 60 * 24) > 7 ? "text-success" : "text-warning"}`}>{Math.ceil((Number(userInfo.expTime) - Date.now()) / (1000 * 60 * 60 * 24))} 天后到期</span></div>) : null}
+                value={
+                  userInfo.expTime
+                    ? new Date(userInfo.expTime)
+                        .toLocaleDateString("zh-CN", {
+                          year: "numeric",
+                          month: "2-digit",
+                          day: "2-digit",
+                        })
+                        .replace(/\//g, "-")
+                    : "永久"
+                }
               />
             </div>
             {/* 7. 自动续费 */}
             <div className="order-8 flex flex-col [&>*]:flex-1">
               <MetricCard
-                icon={<svg aria-hidden="true" className="w-4 h-4 lg:w-5 lg:h-5 text-cyan-600 dark:text-cyan-400" fill="currentColor" viewBox="0 0 20 20"><path clipRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" fillRule="evenodd" /></svg>}
+                bottomContent={
+                  (autoRenewOverride ?? userInfo.autoRenew) === 1 ? (
+                    <div className="mt-1 flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-success" />
+                      <span className="text-xs text-success">
+                        自动续费运行中
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="mt-1 flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-default-400" />
+                      <span className="text-xs text-default-500">
+                        到期后账户将停用
+                      </span>
+                    </div>
+                  )
+                }
+                icon={
+                  <svg
+                    aria-hidden="true"
+                    className="w-4 h-4 lg:w-5 lg:h-5 text-cyan-600 dark:text-cyan-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      clipRule="evenodd"
+                      d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                      fillRule="evenodd"
+                    />
+                  </svg>
+                }
                 iconClassName="bg-cyan-100 dark:bg-cyan-500/20"
                 title={
                   <div className="flex items-center gap-2">
                     <span>自动续费</span>
                     <Switch
-                      size="sm"
-                      isSelected={(autoRenewOverride ?? userInfo.autoRenew) === 1}
                       isDisabled={autoRenewSwitchLoading}
+                      isSelected={
+                        (autoRenewOverride ?? userInfo.autoRenew) === 1
+                      }
+                      size="sm"
                       onValueChange={handleToggleAutoRenew}
                     />
                   </div>
                 }
-                value={(autoRenewOverride ?? userInfo.autoRenew) === 1 ? `${userInfo.renewalAmount ?? 0}元/月` : "禁用"}
-                bottomContent={(autoRenewOverride ?? userInfo.autoRenew) === 1 ? (<div className="mt-1 flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-success"></div><span className="text-xs text-success">自动续费运行中</span></div>) : (<div className="mt-1 flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-default-400"></div><span className="text-xs text-default-500">到期后账户将停用</span></div>)}
+                value={
+                  (autoRenewOverride ?? userInfo.autoRenew) === 1
+                    ? `${userInfo.renewalAmount ?? 0}元/月`
+                    : "禁用"
+                }
               />
             </div>
             {/* 8. 自动购买流量 */}
             <div className="order-9 flex flex-col [&>*]:flex-1">
               <MetricCard
-                icon={<svg aria-hidden="true" className="w-4 h-4 lg:w-5 lg:h-5 text-teal-600 dark:text-teal-400" fill="currentColor" viewBox="0 0 20 20"><path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" /></svg>}
+                bottomContent={
+                  userInfo.autoBuyTraffic === 1 ? (
+                    <div className="mt-1 flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-success" />
+                      <span className="text-xs text-success">
+                        自动购买流量运行中
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="mt-1 flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-default-400" />
+                      <span className="text-xs text-default-500">
+                        用完流量后将停用
+                      </span>
+                    </div>
+                  )
+                }
+                icon={
+                  <svg
+                    aria-hidden="true"
+                    className="w-4 h-4 lg:w-5 lg:h-5 text-teal-600 dark:text-teal-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
+                  </svg>
+                }
                 iconClassName="bg-teal-100 dark:bg-teal-500/20"
                 title="自动购流"
                 value={
@@ -624,7 +741,6 @@ export default function DashboardPage() {
                     ? `${userInfo.buyTrafficAmount ?? 0}G/${userInfo.buyTrafficPrice ?? 0}元`
                     : "禁用"
                 }
-                bottomContent={userInfo.autoBuyTraffic === 1 ? (<div className="mt-1 flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-success"></div><span className="text-xs text-success">自动购买流量运行中</span></div>) : (<div className="mt-1 flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-default-400"></div><span className="text-xs text-default-500">用完流量后将停用</span></div>)}
               />
             </div>
           </>
@@ -849,13 +965,16 @@ export default function DashboardPage() {
                   >
                     <div className="flex items-center justify-between w-full mb-2">
                       <span className="text-sm font-medium text-default-600">
-                        {item.resetReason === "管理员手动归零" || item.resetReason === "管理员手动重置"
+                        {item.resetReason === "管理员手动归零" ||
+                        item.resetReason === "管理员手动重置"
                           ? "admin"
                           : "系统自动"}
                       </span>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-default-500">
-                          {new Date(item.resetTime).toLocaleString("zh-CN", { hour12: false }).replace(/\//g, "-")}
+                          {new Date(item.resetTime)
+                            .toLocaleString("zh-CN", { hour12: false })
+                            .replace(/\//g, "-")}
                         </span>
                         <Button
                           isIconOnly
@@ -888,13 +1007,23 @@ export default function DashboardPage() {
                         </span>
                         <div className="flex items-center justify-end gap-2 flex-wrap">
                           <span className="text-primary-600 text-sm whitespace-nowrap dark:text-primary-400">
-                            ↑{(item.inFlowBefore / 1024 / 1024 / 1024).toFixed(2)} GB
+                            ↑
+                            {(item.inFlowBefore / 1024 / 1024 / 1024).toFixed(
+                              2,
+                            )}{" "}
+                            GB
                           </span>
                           <span className="text-success-600 text-sm whitespace-nowrap dark:text-success-400">
-                            ↓{(item.outFlowBefore / 1024 / 1024 / 1024).toFixed(2)} GB
+                            ↓
+                            {(item.outFlowBefore / 1024 / 1024 / 1024).toFixed(
+                              2,
+                            )}{" "}
+                            GB
                           </span>
                           <span className="text-default-600 text-sm whitespace-nowrap font-medium">
-                            总 {(item.usedBytes / 1024 / 1024 / 1024).toFixed(2)} GB
+                            总{" "}
+                            {(item.usedBytes / 1024 / 1024 / 1024).toFixed(2)}{" "}
+                            GB
                           </span>
                         </div>
                       </div>
@@ -919,7 +1048,9 @@ export default function DashboardPage() {
             )}
           </ModalBody>
           <ModalFooter>
-            <Button onPress={() => setQuotaHistoryModalOpen(false)}>关闭</Button>
+            <Button onPress={() => setQuotaHistoryModalOpen(false)}>
+              关闭
+            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>

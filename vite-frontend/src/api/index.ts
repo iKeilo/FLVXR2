@@ -246,7 +246,10 @@ export const userTunnel = () =>
 export const createForward = (data: ForwardMutationPayload) =>
   Network.post("/forward/create", data);
 export const getForwardList = (params?: { current?: number; size?: number }) =>
-  Network.post<{ items: ForwardApiItem[]; total: number }>("/forward/list", params || {});
+  Network.post<{ items: ForwardApiItem[]; total: number }>(
+    "/forward/list",
+    params || {},
+  );
 export const updateForward = (data: ForwardMutationPayload) =>
   Network.post("/forward/update", data);
 export const deleteForward = (id: number) =>
@@ -586,15 +589,27 @@ export interface LicenseInfo {
   has_license_key: boolean;
   license_key: string;
   domain: string;
-  tier?: 'free' | 'premium' | 'blocked';
+  tier?: "free" | "premium" | "blocked";
   hmac_key?: string;
   is_trial?: boolean;
   trial_remaining_days?: number;
 }
 
 export const getLicenseInfo = () => Network.post<LicenseInfo>("/license/info");
-export const updateLicenseConfig = (licenseKey: string, domain: string, hmacKey?: string, actualDomain?: string, actualProtocol?: string) =>
-  Network.post("/license/config", { license_key: licenseKey, domain, hmac_key: hmacKey, actual_domain: actualDomain, actual_protocol: actualProtocol });
+export const updateLicenseConfig = (
+  licenseKey: string,
+  domain: string,
+  hmacKey?: string,
+  actualDomain?: string,
+  actualProtocol?: string,
+) =>
+  Network.post("/license/config", {
+    license_key: licenseKey,
+    domain,
+    hmac_key: hmacKey,
+    actual_domain: actualDomain,
+    actual_protocol: actualProtocol,
+  });
 export const transferLicense = (newDomain: string) =>
   Network.post("/license/transfer", { new_domain: newDomain });
 
@@ -786,61 +801,61 @@ export const assignNodeToGroup = (nodeId: number, groupId: number | null) =>
   Network.post("/node-group/assign", { nodeId, groupId });
 
 export const getNodeTagList = () =>
-	Network.post<NodeTagApiItem[]>("/node-tag/list");
+  Network.post<NodeTagApiItem[]>("/node-tag/list");
 
 export const createNodeTag = (data: NodeTagMutationPayload) =>
-	Network.post("/node-tag/create", data);
+  Network.post("/node-tag/create", data);
 
 export const updateNodeTag = (data: NodeTagMutationPayload) =>
-	Network.post("/node-tag/update", data);
+  Network.post("/node-tag/update", data);
 
 export const deleteNodeTag = (id: number) =>
-	Network.post("/node-tag/delete", { id });
+  Network.post("/node-tag/delete", { id });
 
 export const assignNodeToTag = (nodeId: number, tagId: number | null) =>
-	Network.post("/node-tag/assign", { nodeId, tagId });
+  Network.post("/node-tag/assign", { nodeId, tagId });
 
 // ─── Panel Upgrade ────────────────────────────────────────────────────
 
 export interface PanelUpgradeCheckResponse {
-	currentVersion: string;
-	latestVersion: string;
-	hasUpdate: boolean;
+  currentVersion: string;
+  latestVersion: string;
+  hasUpdate: boolean;
 }
 
 export interface PanelReleaseItem {
-	version: string;
-	name: string;
-	publishedAt: string;
-	prerelease: boolean;
-	channel: string;
+  version: string;
+  name: string;
+  publishedAt: string;
+  prerelease: boolean;
+  channel: string;
 }
 
 export const checkPanelUpgrade = (channel?: string) =>
-	Network.post<PanelUpgradeCheckResponse>("/panel/upgrade/check", { channel });
+  Network.post<PanelUpgradeCheckResponse>("/panel/upgrade/check", { channel });
 
 export const getPanelReleases = (channel?: string) =>
-	Network.post<PanelReleaseItem[]>("/panel/upgrade/releases", { channel });
+  Network.post<PanelReleaseItem[]>("/panel/upgrade/releases", { channel });
 
 export const upgradePanel = (version?: string, channel?: string) =>
-	Network.post("/panel/upgrade", { version, channel });
+  Network.post("/panel/upgrade", { version, channel });
 
 // ─── System Upgrade ────────────────────────────────────────────────────
 
 export const getSystemUpgradeVersion = () =>
-	Network.post<SystemUpgradeVersionApiData>("/system/version");
+  Network.post<SystemUpgradeVersionApiData>("/system/version");
 
 export const checkSystemUpgrade = (channel: ReleaseChannel = "stable") =>
-	Network.post<SystemUpgradeCheckApiData>("/system/check-updates", {
-		channel,
-	});
+  Network.post<SystemUpgradeCheckApiData>("/system/check-updates", {
+    channel,
+  });
 
 export const runSystemUpgrade = (
-	version?: string,
-	channel: ReleaseChannel = "stable",
+  version?: string,
+  channel: ReleaseChannel = "stable",
 ) =>
-	Network.post<SystemUpgradeRunApiData>(
-		"/system/upgrade",
-		{ version: version || "", channel },
-		{ timeout: 60 * 1000 },
-	);
+  Network.post<SystemUpgradeRunApiData>(
+    "/system/upgrade",
+    { version: version || "", channel },
+    { timeout: 60 * 1000 },
+  );

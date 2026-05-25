@@ -488,14 +488,20 @@ export function TunnelMonitorView({
   const [qualityRangeMs, setQualityRangeMs] = useState<number>(() => {
     try {
       const saved = localStorage.getItem("tunnel-monitor-quality-range");
+
       if (saved) return Number(saved);
-    } catch { }
+    } catch {}
+
     return 60 * 60 * 1000;
   });
+
   useEffect(() => {
     try {
-      localStorage.setItem("tunnel-monitor-quality-range", String(qualityRangeMs));
-    } catch { }
+      localStorage.setItem(
+        "tunnel-monitor-quality-range",
+        String(qualityRangeMs),
+      );
+    } catch {}
   }, [qualityRangeMs]);
 
   // Tunnel traffic metrics for chart
@@ -507,14 +513,20 @@ export function TunnelMonitorView({
   const [tunnelRangeMs, setTunnelRangeMs] = useState<number>(() => {
     try {
       const saved = localStorage.getItem("tunnel-monitor-traffic-range");
+
       if (saved) return Number(saved);
-    } catch { }
+    } catch {}
+
     return 60 * 60 * 1000;
   });
+
   useEffect(() => {
     try {
-      localStorage.setItem("tunnel-monitor-traffic-range", String(tunnelRangeMs));
-    } catch { }
+      localStorage.setItem(
+        "tunnel-monitor-traffic-range",
+        String(tunnelRangeMs),
+      );
+    } catch {}
   }, [tunnelRangeMs]);
 
   // --- Load tunnel list ---
@@ -850,12 +862,14 @@ export function TunnelMonitorView({
               <ArrowLeft className="w-4 h-4" />
               返回
             </Button>
-            <div className="h-4 w-[1px] bg-divider hidden sm:block"></div>
+            <div className="h-4 w-[1px] bg-divider hidden sm:block" />
             <div className="flex items-center gap-2">
               <ArrowRightLeft
                 className={`w-5 h-5 ${detailTunnel.status === 1 ? "text-success" : "text-default-400"}`}
               />
-              <h3 className="text-lg font-semibold text-foreground">{detailTunnel.name}</h3>
+              <h3 className="text-lg font-semibold text-foreground">
+                {detailTunnel.name}
+              </h3>
               <Chip
                 className="rounded-md"
                 color={detailTunnel.status === 1 ? "success" : "danger"}
@@ -885,12 +899,17 @@ export function TunnelMonitorView({
               </span>
               {qualityLoading ? (
                 <RefreshCw className="w-4 h-4 animate-spin text-primary" />
-              ) : quality?.entryToExitLatency !== undefined && quality?.entryToExitLatency >= 0 ? (
-                <span className={`text-lg font-bold font-mono ${quality.entryToExitLatency > 200 ? "text-danger" : quality.entryToExitLatency > 100 ? "text-warning" : quality.entryToExitLatency > 50 ? "text-primary" : "text-success"}`}>
+              ) : quality?.entryToExitLatency !== undefined &&
+                quality?.entryToExitLatency >= 0 ? (
+                <span
+                  className={`text-lg font-bold font-mono ${quality.entryToExitLatency > 200 ? "text-danger" : quality.entryToExitLatency > 100 ? "text-warning" : quality.entryToExitLatency > 50 ? "text-primary" : "text-success"}`}
+                >
                   {quality.entryToExitLatency.toFixed(0)}ms
                 </span>
               ) : (
-                <span className="text-lg font-bold font-mono text-default-400">-</span>
+                <span className="text-lg font-bold font-mono text-default-400">
+                  -
+                </span>
               )}
             </div>
           </Card>
@@ -905,12 +924,17 @@ export function TunnelMonitorView({
               </span>
               {qualityLoading ? (
                 <RefreshCw className="w-4 h-4 animate-spin text-primary" />
-              ) : quality?.exitToBingLatency !== undefined && quality?.exitToBingLatency >= 0 ? (
-                <span className={`text-lg font-bold font-mono ${quality.exitToBingLatency > 200 ? "text-danger" : quality.exitToBingLatency > 100 ? "text-warning" : quality.exitToBingLatency > 50 ? "text-primary" : "text-success"}`}>
+              ) : quality?.exitToBingLatency !== undefined &&
+                quality?.exitToBingLatency >= 0 ? (
+                <span
+                  className={`text-lg font-bold font-mono ${quality.exitToBingLatency > 200 ? "text-danger" : quality.exitToBingLatency > 100 ? "text-warning" : quality.exitToBingLatency > 50 ? "text-primary" : "text-success"}`}
+                >
                   {quality.exitToBingLatency.toFixed(0)}ms
                 </span>
               ) : (
-                <span className="text-lg font-bold font-mono text-default-400">-</span>
+                <span className="text-lg font-bold font-mono text-default-400">
+                  -
+                </span>
               )}
             </div>
           </Card>
@@ -1004,12 +1028,7 @@ export function TunnelMonitorView({
             <span>每秒探测 · 更新于 {lastQualityUpdate}</span>
           </div>
         )}
-        <Chip
-          className="rounded-md"
-          color="primary"
-          size="sm"
-          variant="flat"
-        >
+        <Chip className="rounded-md" color="primary" size="sm" variant="flat">
           隧道 {tunnelStats.enabled}/{tunnelStats.total}
         </Chip>
         {/* <div className="ml-auto">
@@ -1113,7 +1132,9 @@ export function TunnelMonitorView({
                             <div className="flex items-center justify-between px-1 text-[11px] font-bold text-foreground uppercase tracking-wider">
                               <div className="flex items-center gap-1">
                                 <Globe className="w-3 h-3 text-default-500" />
-                                <span className="text-default-500">出→Bing</span>
+                                <span className="text-default-500">
+                                  出→Bing
+                                </span>
                               </div>
                               <LatencyDisplay
                                 loading={qualityLoading}
@@ -1142,10 +1163,14 @@ export function TunnelMonitorView({
                         ) : quality?.timestamp ? (
                           <span className="text-[11px] text-default-500 flex items-center gap-1">
                             <LiveDot />
-                            {new Date(quality.timestamp).toLocaleTimeString("zh-CN")}
+                            {new Date(quality.timestamp).toLocaleTimeString(
+                              "zh-CN",
+                            )}
                           </span>
                         ) : (
-                          <span className="text-[11px] text-default-400">等待探测...</span>
+                          <span className="text-[11px] text-default-400">
+                            等待探测...
+                          </span>
                         )}
                       </div>
                     </CardBody>

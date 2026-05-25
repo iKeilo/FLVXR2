@@ -129,6 +129,7 @@ export function activateTheme(id: string): void {
 
   // Temporarily disable transitions to prevent color flashing
   const root = document.documentElement;
+
   root.classList.add("no-flvx-transition");
 
   // Inject tokens
@@ -184,6 +185,7 @@ export function deactivateTheme(): void {
 export function reapplyActiveTheme(): void {
   // Temporarily disable transitions to prevent color flashing
   const root = document.documentElement;
+
   root.classList.add("no-flvx-transition");
 
   if (activeId) {

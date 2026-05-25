@@ -127,15 +127,17 @@ export function GlobalPullToRefresh() {
         <div className="w-10 h-10 bg-white dark:bg-neutral-800 rounded-full flex items-center justify-center shadow-md ring-1 ring-gray-100 dark:ring-neutral-700">
           <svg
             className={`w-8 h-8 text-[#3b5998] dark:text-slate-400 ${refreshing ? "animate-spin" : ""}`}
-            viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
+            strokeWidth="2"
             style={{
-              transform: !refreshing ? `rotate(${pullDistance * 4}deg)` : undefined, 
+              transform: !refreshing
+                ? `rotate(${pullDistance * 4}deg)`
+                : undefined,
             }}
+            viewBox="0 0 24 24"
           >
             <path d="M 16.5 4.21 A 9 9 0 1 1 7.5 4.21" />
           </svg>

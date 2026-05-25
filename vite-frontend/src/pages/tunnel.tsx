@@ -200,10 +200,10 @@ const SortableListRowItem = ({
   const style: React.CSSProperties = {
     transform: transform
       ? CSS.Transform.toString({
-        ...transform,
-        x: 0,
-        y: Math.round(transform.y),
-      })
+          ...transform,
+          x: 0,
+          y: Math.round(transform.y),
+        })
       : undefined,
     transition: isDragging ? undefined : transition || undefined,
     opacity: isDragging ? 0.9 : 1,
@@ -233,10 +233,10 @@ const SortableItem = ({
   const style: React.CSSProperties = {
     transform: transform
       ? CSS.Transform.toString({
-        ...transform,
-        x: Math.round(transform.x),
-        y: Math.round(transform.y),
-      })
+          ...transform,
+          x: Math.round(transform.x),
+          y: Math.round(transform.y),
+        })
       : undefined,
     transition: isDragging ? undefined : transition || undefined,
     opacity: isDragging ? 0.5 : 1,
@@ -299,11 +299,11 @@ const mapTunnelApiItems = (items: any[]): Tunnel[] => {
     bestExitState:
       tunnel.bestExitState && typeof tunnel.bestExitState === "object"
         ? {
-          ...tunnel.bestExitState,
-          items: Array.isArray(tunnel.bestExitState.items)
-            ? tunnel.bestExitState.items
-            : [],
-        }
+            ...tunnel.bestExitState,
+            items: Array.isArray(tunnel.bestExitState.items)
+              ? tunnel.bestExitState.items
+              : [],
+          }
         : null,
   }));
 };
@@ -338,10 +338,11 @@ const renderBestExitState = (state?: BestExitState | null) => {
 
   return (
     <div
-      className={`mt-1 text-[11px] leading-4 ${isWaiting
-        ? "text-default-500"
-        : "text-emerald-700 dark:text-emerald-300"
-        }`}
+      className={`mt-1 text-[11px] leading-4 ${
+        isWaiting
+          ? "text-default-500"
+          : "text-emerald-700 dark:text-emerald-300"
+      }`}
       title={title || undefined}
     >
       最优出口：{state.summary || "等待探测"}
@@ -529,7 +530,7 @@ export default function TunnelPage() {
       if (nodesRes.code === 0) {
         setNodes(nodesRes.data || []);
       }
-    } catch { }
+    } catch {}
   }, []);
   // 加载隧道分组
   const loadTunnelGroupsNew = useCallback(async () => {
@@ -690,9 +691,9 @@ export default function TunnelPage() {
       trafficRatio: tunnel.trafficRatio,
       inIp: tunnel.inIp
         ? tunnel.inIp
-          .split(",")
-          .map((ip: string) => ip.trim())
-          .join("\n")
+            .split(",")
+            .map((ip: string) => ip.trim())
+            .join("\n")
         : "",
       ipPreference: tunnel.ipPreference || "",
       status: tunnel.status,
@@ -1345,12 +1346,12 @@ export default function TunnelPage() {
           onStart: (payload) => {
             const startTunnelName =
               typeof payload.tunnelName === "string" &&
-                payload.tunnelName.trim() !== ""
+              payload.tunnelName.trim() !== ""
                 ? payload.tunnelName
                 : tunnel.name;
             const startTunnelType =
               typeof payload.tunnelType === "string" &&
-                payload.tunnelType.trim() !== ""
+              payload.tunnelType.trim() !== ""
                 ? payload.tunnelType
                 : tunnel.type === 1
                   ? "端口转发"
@@ -2005,7 +2006,7 @@ export default function TunnelPage() {
           />
         </div>
         {(viewMode === "list" && selectedTunnelIds.size > 0) ||
-          (viewMode === "card" && selectedIds.size > 0) ? (
+        (viewMode === "card" && selectedIds.size > 0) ? (
           <>
             <Button
               color="primary"
@@ -2166,10 +2167,10 @@ export default function TunnelPage() {
                             filterGroupId === null
                               ? []
                               : [
-                                filterGroupId === -1
-                                  ? "-1"
-                                  : String(filterGroupId),
-                              ]
+                                  filterGroupId === -1
+                                    ? "-1"
+                                    : String(filterGroupId),
+                                ]
                           }
                           size="sm"
                           variant="flat"
@@ -2232,9 +2233,7 @@ export default function TunnelPage() {
                         偏好
                       </th>
                       <th className="py-3 px-4 w-[150px] align-middle">备注</th>
-                      <th className="py-3 px-4 w-[280px] align-middle">
-                        操作
-                      </th>
+                      <th className="py-3 px-4 w-[280px] align-middle">操作</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2333,7 +2332,7 @@ export default function TunnelPage() {
                                 </td>
                                 <td className="py-3 px-4 align-middle">
                                   {tunnel.tunnelGroupId &&
-                                    tunnel.tunnelGroupId > 0 ? (
+                                  tunnel.tunnelGroupId > 0 ? (
                                     (() => {
                                       const group = tunnelGroupsNew.find(
                                         (g) => g.id === tunnel.tunnelGroupId,
@@ -2505,7 +2504,9 @@ export default function TunnelPage() {
                                     <Checkbox
                                       aria-label="选择"
                                       isSelected={selectedIds.has(tunnel.id)}
-                                      onValueChange={() => toggleSelect(tunnel.id)}
+                                      onValueChange={() =>
+                                        toggleSelect(tunnel.id)
+                                      }
                                     />
                                     <div
                                       className="cursor-grab active:cursor-grabbing p-1 text-default-400 hover:text-default-600 transition-colors touch-manipulation flex-shrink-0"
@@ -2530,7 +2531,10 @@ export default function TunnelPage() {
                                       title={tunnel.name}
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        copyToClipboard(tunnel.name, "隧道名称");
+                                        copyToClipboard(
+                                          tunnel.name,
+                                          "隧道名称",
+                                        );
                                       }}
                                     >
                                       {tunnel.name}
@@ -2540,24 +2544,25 @@ export default function TunnelPage() {
                                         {typeDisplay.text}
                                       </div>
                                       {tunnel.tunnelGroupId &&
-                                        tunnel.tunnelGroupId > 0
+                                      tunnel.tunnelGroupId > 0
                                         ? (() => {
-                                          const group = tunnelGroupsNew.find(
-                                            (g) => g.id === tunnel.tunnelGroupId,
-                                          );
+                                            const group = tunnelGroupsNew.find(
+                                              (g) =>
+                                                g.id === tunnel.tunnelGroupId,
+                                            );
 
-                                          return group ? (
-                                            <div
-                                              className="inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium"
-                                              style={{
-                                                backgroundColor: `${group.color}1A`,
-                                                color: group.color,
-                                              }}
-                                            >
-                                              {group.name}
-                                            </div>
-                                          ) : null;
-                                        })()
+                                            return group ? (
+                                              <div
+                                                className="inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium"
+                                                style={{
+                                                  backgroundColor: `${group.color}1A`,
+                                                  color: group.color,
+                                                }}
+                                              >
+                                                {group.name}
+                                              </div>
+                                            ) : null;
+                                          })()
                                         : null}
                                     </div>
                                   </div>
@@ -2660,7 +2665,9 @@ export default function TunnelPage() {
                                       </div>
                                     </div>
                                     <div className="text-center">
-                                      {renderBestExitState(tunnel.bestExitState)}
+                                      {renderBestExitState(
+                                        tunnel.bestExitState,
+                                      )}
                                     </div>
                                     {/* 流量配置 */}
                                     <div
@@ -2682,18 +2689,19 @@ export default function TunnelPage() {
                                           {tunnel.trafficRatio}x
                                         </div>
                                       </div>
-                                      {tunnel.type === 2 && tunnel.ipPreference && (
-                                        <div className="text-center p-1.5 bg-default-50 dark:bg-default-100/30 rounded">
-                                          <div className="text-xs text-default-500">
-                                            连接偏好
+                                      {tunnel.type === 2 &&
+                                        tunnel.ipPreference && (
+                                          <div className="text-center p-1.5 bg-default-50 dark:bg-default-100/30 rounded">
+                                            <div className="text-xs text-default-500">
+                                              连接偏好
+                                            </div>
+                                            <div className="text-sm font-semibold text-foreground mt-0.5">
+                                              {tunnel.ipPreference === "v4"
+                                                ? "IPv4"
+                                                : "IPv6"}
+                                            </div>
                                           </div>
-                                          <div className="text-sm font-semibold text-foreground mt-0.5">
-                                            {tunnel.ipPreference === "v4"
-                                              ? "IPv4"
-                                              : "IPv6"}
-                                          </div>
-                                        </div>
-                                      )}
+                                        )}
                                     </div>
                                   </div>
                                   <div className="flex gap-1.5 mt-3">
@@ -2737,7 +2745,10 @@ export default function TunnelPage() {
                                           title={tunnel.remark}
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            copyToClipboard(tunnel.remark!, "备注");
+                                            copyToClipboard(
+                                              tunnel.remark!,
+                                              "备注",
+                                            );
                                           }}
                                         >
                                           {tunnel.remark}
@@ -2933,25 +2944,25 @@ export default function TunnelPage() {
                         disabledKeys={
                           isEdit
                             ? (() => {
-                              console.log(
-                                "编辑模式，disabledKeys 应该为空数组:",
-                                [],
-                              );
+                                console.log(
+                                  "编辑模式，disabledKeys 应该为空数组:",
+                                  [],
+                                );
 
-                              return [];
-                            })()
+                                return [];
+                              })()
                             : [
-                              // 新建时禁用离线节点
-                              ...nodes
-                                .filter((node) => node.status !== 1)
-                                .map((node) => node.id.toString()),
-                              ...(form.outNodeId || []).map((ct) =>
-                                ct.nodeId.toString(),
-                              ),
-                              ...getSelectedChainNodeIds().map((id) =>
-                                id.toString(),
-                              ),
-                            ]
+                                // 新建时禁用离线节点
+                                ...nodes
+                                  .filter((node) => node.status !== 1)
+                                  .map((node) => node.id.toString()),
+                                ...(form.outNodeId || []).map((ct) =>
+                                  ct.nodeId.toString(),
+                                ),
+                                ...getSelectedChainNodeIds().map((id) =>
+                                  id.toString(),
+                                ),
+                              ]
                         }
                         dropdownPlacement="top"
                         errorMessage={errors.inNodeId}
@@ -3040,10 +3051,10 @@ export default function TunnelPage() {
                                 {getSelectedChainNodeIds().includes(
                                   node.id,
                                 ) && (
-                                    <div className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-primary-500/10 text-primary-600 dark:text-primary-400">
-                                      已选为转发链
-                                    </div>
-                                  )}
+                                  <div className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-primary-500/10 text-primary-600 dark:text-primary-400">
+                                    已选为转发链
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </SelectItem>
@@ -3179,48 +3190,48 @@ export default function TunnelPage() {
                                       disabledKeys={
                                         isEdit
                                           ? [
-                                            ...form.inNodeId.map((ct) =>
-                                              ct.nodeId.toString(),
-                                            ),
-                                            ...(form.outNodeId || []).map(
-                                              (ct) => ct.nodeId.toString(),
-                                            ),
-                                            ...(form.chainNodes || [])
-                                              .flatMap((group, idx) =>
-                                                idx !== groupIndex
-                                                  ? group.map(
-                                                    (ct) => ct.nodeId,
-                                                  )
-                                                  : [],
-                                              )
-                                              .filter((id) => id !== -1)
-                                              .map((id) => id.toString()),
-                                          ]
-                                          : [
-                                            ...nodes
-                                              .filter(
-                                                (node) => node.status !== 1,
-                                              )
-                                              .map((node) =>
-                                                node.id.toString(),
+                                              ...form.inNodeId.map((ct) =>
+                                                ct.nodeId.toString(),
                                               ),
-                                            ...form.inNodeId.map((ct) =>
-                                              ct.nodeId.toString(),
-                                            ),
-                                            ...(form.outNodeId || []).map(
-                                              (ct) => ct.nodeId.toString(),
-                                            ),
-                                            ...(form.chainNodes || [])
-                                              .flatMap((group, idx) =>
-                                                idx !== groupIndex
-                                                  ? group.map(
-                                                    (ct) => ct.nodeId,
-                                                  )
-                                                  : [],
-                                              )
-                                              .filter((id) => id !== -1)
-                                              .map((id) => id.toString()),
-                                          ]
+                                              ...(form.outNodeId || []).map(
+                                                (ct) => ct.nodeId.toString(),
+                                              ),
+                                              ...(form.chainNodes || [])
+                                                .flatMap((group, idx) =>
+                                                  idx !== groupIndex
+                                                    ? group.map(
+                                                        (ct) => ct.nodeId,
+                                                      )
+                                                    : [],
+                                                )
+                                                .filter((id) => id !== -1)
+                                                .map((id) => id.toString()),
+                                            ]
+                                          : [
+                                              ...nodes
+                                                .filter(
+                                                  (node) => node.status !== 1,
+                                                )
+                                                .map((node) =>
+                                                  node.id.toString(),
+                                                ),
+                                              ...form.inNodeId.map((ct) =>
+                                                ct.nodeId.toString(),
+                                              ),
+                                              ...(form.outNodeId || []).map(
+                                                (ct) => ct.nodeId.toString(),
+                                              ),
+                                              ...(form.chainNodes || [])
+                                                .flatMap((group, idx) =>
+                                                  idx !== groupIndex
+                                                    ? group.map(
+                                                        (ct) => ct.nodeId,
+                                                      )
+                                                    : [],
+                                                )
+                                                .filter((id) => id !== -1)
+                                                .map((id) => id.toString()),
+                                            ]
                                       }
                                       dropdownPlacement="top"
                                       label={`节点选择${groupNodes.filter((ct) => ct.nodeId !== -1).length > 0 ? ` (已选 ${groupNodes.filter((ct) => ct.nodeId !== -1).length} 个)` : ""}`}
@@ -3273,10 +3284,10 @@ export default function TunnelPage() {
                                               {form.inNodeId.some(
                                                 (ct) => ct.nodeId === node.id,
                                               ) && (
-                                                  <div className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-warning-500/10 text-warning-600 dark:text-warning-400">
-                                                    已选为入口
-                                                  </div>
-                                                )}
+                                                <div className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-warning-500/10 text-warning-600 dark:text-warning-400">
+                                                  已选为入口
+                                                </div>
+                                              )}
                                               {form.outNodeId &&
                                                 form.outNodeId.some(
                                                   (ct) => ct.nodeId === node.id,
@@ -3294,10 +3305,10 @@ export default function TunnelPage() {
                                                       ct.nodeId !== -1,
                                                   ),
                                               ) && (
-                                                  <div className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-primary-500/10 text-primary-600 dark:text-primary-400">
-                                                    已选为其他跳
-                                                  </div>
-                                                )}
+                                                <div className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-primary-500/10 text-primary-600 dark:text-primary-400">
+                                                  已选为其他跳
+                                                </div>
+                                              )}
                                             </div>
                                           </div>
                                         </SelectItem>
@@ -3384,14 +3395,14 @@ export default function TunnelPage() {
                                     type="text"
                                     value={
                                       focusedInputs[
-                                      `chain_port_${groupIndex}`
+                                        `chain_port_${groupIndex}`
                                       ] ?? formatChainPortsToDisplay(groupNodes)
                                     }
                                     variant="bordered"
                                     onBlur={() => {
                                       const finalValue =
                                         focusedInputs[
-                                        `chain_port_${groupIndex}`
+                                          `chain_port_${groupIndex}`
                                         ] ??
                                         formatChainPortsToDisplay(groupNodes);
 
@@ -3439,7 +3450,7 @@ export default function TunnelPage() {
                                     type="text"
                                     value={
                                       focusedInputs[
-                                      `chain_ipType_${groupIndex}`
+                                        `chain_ipType_${groupIndex}`
                                       ] ??
                                       formatConnectIpTypesToDisplay(groupNodes)
                                     }
@@ -3570,26 +3581,26 @@ export default function TunnelPage() {
                                   disabledKeys={
                                     isEdit
                                       ? [
-                                        // 编辑时【不禁用】离线节点，仅排除入口和转发链冲突节点
-                                        ...form.inNodeId.map((ct) =>
-                                          ct.nodeId.toString(),
-                                        ),
-                                        ...getSelectedChainNodeIds().map(
-                                          (id) => id.toString(),
-                                        ),
-                                      ]
+                                          // 编辑时【不禁用】离线节点，仅排除入口和转发链冲突节点
+                                          ...form.inNodeId.map((ct) =>
+                                            ct.nodeId.toString(),
+                                          ),
+                                          ...getSelectedChainNodeIds().map(
+                                            (id) => id.toString(),
+                                          ),
+                                        ]
                                       : [
-                                        // 新建时【禁用】离线节点，并排除冲突节点
-                                        ...nodes
-                                          .filter((node) => node.status !== 1)
-                                          .map((node) => node.id.toString()),
-                                        ...form.inNodeId.map((ct) =>
-                                          ct.nodeId.toString(),
-                                        ),
-                                        ...getSelectedChainNodeIds().map(
-                                          (id) => id.toString(),
-                                        ),
-                                      ]
+                                          // 新建时【禁用】离线节点，并排除冲突节点
+                                          ...nodes
+                                            .filter((node) => node.status !== 1)
+                                            .map((node) => node.id.toString()),
+                                          ...form.inNodeId.map((ct) =>
+                                            ct.nodeId.toString(),
+                                          ),
+                                          ...getSelectedChainNodeIds().map(
+                                            (id) => id.toString(),
+                                          ),
+                                        ]
                                   }
                                   dropdownPlacement="top"
                                   errorMessage={errors.outNodeId}
@@ -3599,8 +3610,8 @@ export default function TunnelPage() {
                                   selectedKeys={
                                     form.outNodeId
                                       ? form.outNodeId
-                                        .filter((ct) => ct.nodeId !== -1)
-                                        .map((ct) => ct.nodeId.toString())
+                                          .filter((ct) => ct.nodeId !== -1)
+                                          .map((ct) => ct.nodeId.toString())
                                       : []
                                   }
                                   selectionMode="multiple"
@@ -3670,17 +3681,17 @@ export default function TunnelPage() {
                                           {form.inNodeId.some(
                                             (ct) => ct.nodeId === node.id,
                                           ) && (
-                                              <div className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-warning-500/10 text-warning-600 dark:text-warning-400">
-                                                已选为入口
-                                              </div>
-                                            )}
+                                            <div className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-warning-500/10 text-warning-600 dark:text-warning-400">
+                                              已选为入口
+                                            </div>
+                                          )}
                                           {getSelectedChainNodeIds().includes(
                                             node.id,
                                           ) && (
-                                              <div className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-primary-500/10 text-primary-600 dark:text-primary-400">
-                                                已选为转发链
-                                              </div>
-                                            )}
+                                            <div className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-primary-500/10 text-primary-600 dark:text-primary-400">
+                                              已选为转发链
+                                            </div>
+                                          )}
                                         </div>
                                       </div>
                                     </SelectItem>
@@ -3725,7 +3736,7 @@ export default function TunnelPage() {
                                       const currentStrategy =
                                         currentOutNodes.length > 0
                                           ? currentOutNodes[0].strategy ||
-                                          "round"
+                                            "round"
                                           : "round";
 
                                       if (currentOutNodes.length === 0) {
@@ -3964,7 +3975,10 @@ export default function TunnelPage() {
                       <Checkbox
                         isSelected={form.blockOther === 1}
                         onValueChange={(v) =>
-                          setForm((prev) => ({ ...prev, blockOther: v ? 1 : 0 }))
+                          setForm((prev) => ({
+                            ...prev,
+                            blockOther: v ? 1 : 0,
+                          }))
                         }
                       >
                         屏蔽其它协议
@@ -4077,7 +4091,7 @@ export default function TunnelPage() {
                           )}
                         </div>
                         {deletePreviewForwardCount >
-                          (tunnelDeletePreview?.sampleForwards?.length ?? 0) ? (
+                        (tunnelDeletePreview?.sampleForwards?.length ?? 0) ? (
                           <p className="text-xs text-default-500">
                             还有{" "}
                             {deletePreviewForwardCount -
@@ -4271,10 +4285,10 @@ export default function TunnelPage() {
                       <div className="text-center p-3 bg-success-50 dark:bg-success-900/20 rounded-lg border border-success-200 dark:border-success-700">
                         <div className="text-2xl font-bold text-success-600 dark:text-success-400">
                           {diagnosisProgress.completed > 0 ||
-                            diagnosisProgress.total > 0
+                          diagnosisProgress.total > 0
                             ? diagnosisProgress.success
                             : diagnosisResult.results.filter((r) => r.success)
-                              .length}
+                                .length}
                         </div>
                         <div className="text-xs text-success-600 dark:text-success-400/80 mt-1">
                           成功
@@ -4283,10 +4297,10 @@ export default function TunnelPage() {
                       <div className="text-center p-3 bg-danger-50 dark:bg-danger-900/20 rounded-lg border border-danger-200 dark:border-danger-700">
                         <div className="text-2xl font-bold text-danger-600 dark:text-danger-400">
                           {diagnosisProgress.completed > 0 ||
-                            diagnosisProgress.total > 0
+                          diagnosisProgress.total > 0
                             ? diagnosisProgress.failed
                             : diagnosisResult.results.filter((r) => !r.success)
-                              .length}
+                                .length}
                         </div>
                         <div className="text-xs text-danger-600 dark:text-danger-400/80 mt-1">
                           失败
@@ -4369,12 +4383,13 @@ export default function TunnelPage() {
                                     return (
                                       <tr
                                         key={index}
-                                        className={`hover:bg-default-50 dark:hover:bg-gray-700/50 ${isDiagnosing
-                                          ? "bg-warning-50 dark:bg-warning-900/20"
-                                          : isSuccess
-                                            ? "bg-white dark:bg-gray-800"
-                                            : "bg-danger-50 dark:bg-danger-900/30"
-                                          }`}
+                                        className={`hover:bg-default-50 dark:hover:bg-gray-700/50 ${
+                                          isDiagnosing
+                                            ? "bg-warning-50 dark:bg-warning-900/20"
+                                            : isSuccess
+                                              ? "bg-white dark:bg-gray-800"
+                                              : "bg-danger-50 dark:bg-danger-900/30"
+                                        }`}
                                       >
                                         <td className="px-3 py-2">
                                           <div className="flex items-center gap-2">
@@ -4382,10 +4397,11 @@ export default function TunnelPage() {
                                               <Spinner size="sm" />
                                             ) : (
                                               <span
-                                                className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${isSuccess
-                                                  ? "bg-success text-white"
-                                                  : "bg-danger text-white"
-                                                  }`}
+                                                className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${
+                                                  isSuccess
+                                                    ? "bg-success text-white"
+                                                    : "bg-danger text-white"
+                                                }`}
                                               >
                                                 {isSuccess ? "✓" : "✗"}
                                               </span>
@@ -4395,7 +4411,9 @@ export default function TunnelPage() {
                                                 {result.description}
                                               </div>
                                               <div className="text-xs text-default-500 truncate">
-                                                {result.actualTarget ? `${result.actualTarget}:${result.targetPort}` : `${result.targetIp}:${result.targetPort}`}
+                                                {result.actualTarget
+                                                  ? `${result.actualTarget}:${result.targetPort}`
+                                                  : `${result.targetIp}:${result.targetPort}`}
                                               </div>
                                             </div>
                                           </div>
@@ -4425,10 +4443,11 @@ export default function TunnelPage() {
                                         <td className="px-3 py-2 text-center">
                                           {isSuccess ? (
                                             <span
-                                              className={`font-semibold ${(result.packetLoss || 0) > 0
-                                                ? "text-warning"
-                                                : "text-success"
-                                                }`}
+                                              className={`font-semibold ${
+                                                (result.packetLoss || 0) > 0
+                                                  ? "text-warning"
+                                                  : "text-success"
+                                              }`}
                                             >
                                               {result.packetLoss?.toFixed(1)}%
                                             </span>
@@ -4536,22 +4555,24 @@ export default function TunnelPage() {
                                 return (
                                   <div
                                     key={index}
-                                    className={`border rounded-lg p-3 ${isDiagnosing
-                                      ? "border-warning-200 dark:border-warning-300/30 bg-warning-50 dark:bg-warning-900/20"
-                                      : isSuccess
-                                        ? "border-divider bg-white dark:bg-gray-800"
-                                        : "border-danger-200 dark:border-danger-300/30 bg-danger-50 dark:bg-danger-900/30"
-                                      }`}
+                                    className={`border rounded-lg p-3 ${
+                                      isDiagnosing
+                                        ? "border-warning-200 dark:border-warning-300/30 bg-warning-50 dark:bg-warning-900/20"
+                                        : isSuccess
+                                          ? "border-divider bg-white dark:bg-gray-800"
+                                          : "border-danger-200 dark:border-danger-300/30 bg-danger-50 dark:bg-danger-900/30"
+                                    }`}
                                   >
                                     <div className="flex items-start gap-2 mb-2">
                                       {isDiagnosing ? (
                                         <Spinner size="sm" />
                                       ) : (
                                         <span
-                                          className={`w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0 ${isSuccess
-                                            ? "bg-success text-white"
-                                            : "bg-danger text-white"
-                                            }`}
+                                          className={`w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0 ${
+                                            isSuccess
+                                              ? "bg-success text-white"
+                                              : "bg-danger text-white"
+                                          }`}
                                         >
                                           {isSuccess ? "✓" : "✗"}
                                         </span>
@@ -4561,7 +4582,9 @@ export default function TunnelPage() {
                                           {result.description}
                                         </div>
                                         <div className="text-xs text-default-500 mt-0.5 break-all">
-                                          {result.actualTarget ? `${result.actualTarget}:${result.targetPort}` : `${result.targetIp}:${result.targetPort}`}
+                                          {result.actualTarget
+                                            ? `${result.actualTarget}:${result.targetPort}`
+                                            : `${result.targetIp}:${result.targetPort}`}
                                         </div>
                                       </div>
                                       <div
@@ -4586,10 +4609,11 @@ export default function TunnelPage() {
                                         </div>
                                         <div className="text-center">
                                           <div
-                                            className={`text-lg font-bold ${(result.packetLoss || 0) > 0
-                                              ? "text-warning"
-                                              : "text-success"
-                                              }`}
+                                            className={`text-lg font-bold ${
+                                              (result.packetLoss || 0) > 0
+                                                ? "text-warning"
+                                                : "text-success"
+                                            }`}
                                           >
                                             {result.packetLoss?.toFixed(1)}%
                                           </div>
@@ -4615,10 +4639,11 @@ export default function TunnelPage() {
                                     ) : (
                                       <div className="mt-2 pt-2 border-t border-divider">
                                         <div
-                                          className={`text-xs ${isDiagnosing
-                                            ? "text-warning"
-                                            : "text-danger"
-                                            }`}
+                                          className={`text-xs ${
+                                            isDiagnosing
+                                              ? "text-warning"
+                                              : "text-danger"
+                                          }`}
                                         >
                                           {isDiagnosing
                                             ? result.message || "诊断中..."
@@ -4663,26 +4688,26 @@ export default function TunnelPage() {
                     {diagnosisResult.results.some(
                       (r) => r.success === false && !r.diagnosing,
                     ) && (
-                        <div className="space-y-2 hidden md:block">
-                          <h4 className="text-sm font-semibold text-danger">
-                            失败详情
-                          </h4>
-                          <div className="space-y-2">
-                            {diagnosisResult.results
-                              .filter((r) => r.success === false && !r.diagnosing)
-                              .map((result, index) => (
-                                <Alert
-                                  key={index}
-                                  className="text-xs"
-                                  color="danger"
-                                  description={result.message || "连接失败"}
-                                  title={result.description}
-                                  variant="flat"
-                                />
-                              ))}
-                          </div>
+                      <div className="space-y-2 hidden md:block">
+                        <h4 className="text-sm font-semibold text-danger">
+                          失败详情
+                        </h4>
+                        <div className="space-y-2">
+                          {diagnosisResult.results
+                            .filter((r) => r.success === false && !r.diagnosing)
+                            .map((result, index) => (
+                              <Alert
+                                key={index}
+                                className="text-xs"
+                                color="danger"
+                                description={result.message || "连接失败"}
+                                title={result.description}
+                                variant="flat"
+                              />
+                            ))}
                         </div>
-                      )}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="text-center py-16">
@@ -4799,7 +4824,7 @@ export default function TunnelPage() {
                                 </div>
                               ))}
                               {item.forwardCount >
-                                item.sampleForwards.length ? (
+                              item.sampleForwards.length ? (
                                 <p className="text-[11px] text-default-500">
                                   还有{" "}
                                   {item.forwardCount -
@@ -4847,7 +4872,7 @@ export default function TunnelPage() {
                       />
                     ) : null}
                     {batchDeleteAction === "replace" &&
-                      !batchDeleteReplaceUnavailable ? (
+                    !batchDeleteReplaceUnavailable ? (
                       <div className="space-y-2">
                         <Select
                           label="目标隧道"

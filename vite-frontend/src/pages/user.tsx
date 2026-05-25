@@ -1,4 +1,5 @@
 import type { UserQuotaHistoryItem } from "@/api/types";
+import type { UserRenewalLog } from "@/types";
 
 import React, {
   useState,
@@ -97,7 +98,6 @@ import {
 } from "@/api";
 import { EditIcon, DeleteIcon, EyeIcon, EyeOffIcon } from "@/components/icons";
 import { PageLoadingState } from "@/components/page-state";
-import type { UserRenewalLog } from "@/types";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { removeItemsById, replaceItemById } from "@/utils/list-state";
@@ -300,7 +300,8 @@ export default function UserPage() {
   const [monitorModalUser, setMonitorModalUser] = useState<User | null>(null);
   const [monitorModalValue, setMonitorModalValue] = useState<string>("0");
   const [isRenewalLogModalOpen, setIsRenewalLogModalOpen] = useState(false);
-  const [selectedRenewalLogUser, setSelectedRenewalLogUser] = useState<User | null>(null);
+  const [selectedRenewalLogUser, setSelectedRenewalLogUser] =
+    useState<User | null>(null);
   const [renewalLogs, setRenewalLogs] = useState<UserRenewalLog[]>([]);
   const [renewalLogLoading, setRenewalLogLoading] = useState(false);
   // --- 监控权限相关状态 (来自 user 新) ---
@@ -308,8 +309,7 @@ export default function UserPage() {
   const [monitorPermissionLevelMap, setMonitorPermissionLevelMap] = useState<
     Map<number, number>
   >(new Map());
-  const [, setMonitorPermissionLoading] =
-    useState(false);
+  const [, setMonitorPermissionLoading] = useState(false);
   const [monitorPermissionMutatingUserId, setMonitorPermissionMutatingUserId] =
     useState<number | null>(null);
   const loadMonitorPermissions = useCallback(async () => {
@@ -338,7 +338,11 @@ export default function UserPage() {
   const setUserMonitorPermission = useCallback(
     async (userId: number, level: number) => {
       if (userId <= 0 || monitorPermissionMutatingUserId === userId) return;
-      const prevLevel = monitorPermissionLevelMap.has(userId) ? (monitorPermissionLevelMap.get(userId) === 1 ? 2 : 1) : 0;
+      const prevLevel = monitorPermissionLevelMap.has(userId)
+        ? monitorPermissionLevelMap.get(userId) === 1
+          ? 2
+          : 1
+        : 0;
 
       if (prevLevel === level) return;
       setMonitorPermissionMutatingUserId(userId);
@@ -350,17 +354,28 @@ export default function UserPage() {
         } else {
           next.set(userId, level === 2 ? 1 : 0);
         }
+
         return next;
       });
       try {
         let response;
+
         if (level === 0) {
           response = await removeMonitorPermission(userId);
         } else {
-          response = await assignMonitorPermission(userId, level === 2 ? 1 : undefined);
+          response = await assignMonitorPermission(
+            userId,
+            level === 2 ? 1 : undefined,
+          );
         }
         if (response.code === 0) {
-          toast.success(level === 0 ? "已撤销监控" : level === 2 ? "已授权全开监控" : "已授权监控（同步）");
+          toast.success(
+            level === 0
+              ? "已撤销监控"
+              : level === 2
+                ? "已授权全开监控"
+                : "已授权监控（同步）",
+          );
         } else {
           throw new Error();
         }
@@ -373,6 +388,7 @@ export default function UserPage() {
           } else {
             next.set(userId, prevLevel === 2 ? 1 : 0);
           }
+
           return next;
         });
         toast.error("操作失败");
@@ -722,7 +738,7 @@ export default function UserPage() {
       if (response.code === 0) {
         setTunnels(Array.isArray(response.data) ? response.data : []);
       }
-    } catch { }
+    } catch {}
   }, []);
   const loadSpeedLimits = useCallback(async () => {
     try {
@@ -731,15 +747,15 @@ export default function UserPage() {
       if (response.code === 0) {
         const speedLimitList = Array.isArray(response.data)
           ? response.data.map((item) => ({
-            ...item,
-            uploadSpeed: item.uploadSpeed ?? item.speed ?? 0,
-            downloadSpeed: item.downloadSpeed ?? item.speed ?? 0,
-          }))
+              ...item,
+              uploadSpeed: item.uploadSpeed ?? item.speed ?? 0,
+              downloadSpeed: item.downloadSpeed ?? item.speed ?? 0,
+            }))
           : [];
 
         setSpeedLimits(speedLimitList);
       }
-    } catch { }
+    } catch {}
   }, []);
   const loadUserGroups = useCallback(async () => {
     try {
@@ -748,7 +764,7 @@ export default function UserPage() {
       if (response.code === 0) {
         setUserGroups(Array.isArray(response.data) ? response.data : []);
       }
-    } catch { }
+    } catch {}
   }, []);
   const loadUserTunnels = useCallback(async (userId: number) => {
     setTunnelListLoading(true);
@@ -919,7 +935,7 @@ export default function UserPage() {
       if (groupRes.code === 0) {
         currentGroupIds = groupRes.data || [];
       }
-    } catch { }
+    } catch {}
     setUserForm({
       id: user.id,
       name: user.name || "",
@@ -1035,21 +1051,38 @@ export default function UserPage() {
   // 打开监控权限弹窗
   const handleOpenMonitorModal = (user: User) => {
     setMonitorModalUser(user);
-    const level = monitorPermissionLevelMap.has(user.id) ? (monitorPermissionLevelMap.get(user.id) === 1 ? "2" : "1") : "0";
+    const level = monitorPermissionLevelMap.has(user.id)
+      ? monitorPermissionLevelMap.get(user.id) === 1
+        ? "2"
+        : "1"
+      : "0";
+
     setMonitorModalValue(level);
     onMonitorModalOpen();
   };
   const handleSaveMonitorPermission = useCallback(async () => {
     if (!monitorModalUser) return;
-    const prevLevel = monitorPermissionLevelMap.has(monitorModalUser.id) ? (monitorPermissionLevelMap.get(monitorModalUser.id) === 1 ? 2 : 1) : 0;
+    const prevLevel = monitorPermissionLevelMap.has(monitorModalUser.id)
+      ? monitorPermissionLevelMap.get(monitorModalUser.id) === 1
+        ? 2
+        : 1
+      : 0;
     const newLevel = Number(monitorModalValue);
+
     if (prevLevel === newLevel) {
       onMonitorModalClose();
+
       return;
     }
     await setUserMonitorPermission(monitorModalUser.id, newLevel);
     onMonitorModalClose();
-  }, [monitorModalUser, monitorModalValue, monitorPermissionLevelMap, setUserMonitorPermission, onMonitorModalClose]);
+  }, [
+    monitorModalUser,
+    monitorModalValue,
+    monitorPermissionLevelMap,
+    setUserMonitorPermission,
+    onMonitorModalClose,
+  ]);
   const handleOpenRenewalLogModal = async (user: User) => {
     setSelectedRenewalLogUser(user);
     setIsRenewalLogModalOpen(true);
@@ -1070,6 +1103,7 @@ export default function UserPage() {
       });
 
       const data = await response.json();
+
       if (data.code === 0) {
         setRenewalLogs(data.data || []);
       }
@@ -1167,10 +1201,10 @@ export default function UserPage() {
             speedLimitName:
               normalizeSpeedId(editTunnelForm.speedId) !== null
                 ? speedLimits.find(
-                  (speedLimit) =>
-                    speedLimit.id ===
-                    normalizeSpeedId(editTunnelForm.speedId),
-                )?.name
+                    (speedLimit) =>
+                      speedLimit.id ===
+                      normalizeSpeedId(editTunnelForm.speedId),
+                  )?.name
                 : undefined,
           });
 
@@ -1333,6 +1367,7 @@ export default function UserPage() {
 
         try {
           const historyRes = await getUserQuotaHistory(targetUserId, 50);
+
           if (historyRes.code === 0) {
             setUsers((prev) =>
               prev.map((u) =>
@@ -1341,17 +1376,14 @@ export default function UserPage() {
                   : u,
               ),
             );
-            if (
-              historyModalUser &&
-              historyModalUser.id === targetUserId
-            ) {
+            if (historyModalUser && historyModalUser.id === targetUserId) {
               setHistoryModalUser({
                 ...historyModalUser,
                 quotaHistory: historyRes.data,
               });
             }
           }
-        } catch { }
+        } catch {}
 
         setUserToReset(null);
       } else {
@@ -1418,6 +1450,7 @@ export default function UserPage() {
 
         try {
           const historyRes = await getUserQuotaHistory(targetUserId, 50);
+
           if (historyRes.code === 0) {
             setUsers((prev) =>
               prev.map((u) =>
@@ -1426,17 +1459,14 @@ export default function UserPage() {
                   : u,
               ),
             );
-            if (
-              historyModalUser &&
-              historyModalUser.id === targetUserId
-            ) {
+            if (historyModalUser && historyModalUser.id === targetUserId) {
               setHistoryModalUser({
                 ...historyModalUser,
                 quotaHistory: historyRes.data,
               });
             }
           }
-        } catch { }
+        } catch {}
 
         setTunnelToReset(null);
       } else {
@@ -1570,12 +1600,13 @@ export default function UserPage() {
     return (
       <TableRow
         ref={setNodeRef}
-        className={`cursor-default transition-colors ${selectedUserIds.has(user.id)
-          ? "bg-primary-50 dark:bg-primary-900/30"
-          : selectedUserId === user.id
+        className={`cursor-default transition-colors ${
+          selectedUserIds.has(user.id)
             ? "bg-primary-50 dark:bg-primary-900/30"
-            : "hover:bg-default-50/50"
-          }`}
+            : selectedUserId === user.id
+              ? "bg-primary-50 dark:bg-primary-900/30"
+              : "hover:bg-default-50/50"
+        }`}
         style={style}
         onClick={() => {
           if (!batchMode) {
@@ -1873,15 +1904,18 @@ export default function UserPage() {
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           <div
-                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${monitorPermissionLevelMap.has(user.id)
-                              ? "bg-success-500/10 text-success-600 dark:text-success-400"
-                              : "bg-default-500/10 text-default-500"
-                              }`}
+                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${
+                              monitorPermissionLevelMap.has(user.id)
+                                ? "bg-success-500/10 text-success-600 dark:text-success-400"
+                                : "bg-default-500/10 text-default-500"
+                            }`}
                           >
                             {monitorPermissionLevelMap.has(user.id) ? (
                               <>
                                 <EyeIcon className="w-3 h-3" />
-                                {monitorPermissionLevelMap.get(user.id) === 1 ? "全开" : "同步"}
+                                {monitorPermissionLevelMap.get(user.id) === 1
+                                  ? "全开"
+                                  : "同步"}
                               </>
                             ) : (
                               <>
@@ -1936,14 +1970,14 @@ export default function UserPage() {
                               className="w-24 mt-1"
                               color={
                                 usedFlow / (user.flow * 1024 * 1024 * 1024) >
-                                  0.8
+                                0.8
                                   ? "danger"
                                   : "primary"
                               }
                               size="sm"
                               value={Math.min(
                                 (usedFlow / (user.flow * 1024 * 1024 * 1024)) *
-                                100,
+                                  100,
                                 100,
                               )}
                             />
@@ -1969,9 +2003,7 @@ export default function UserPage() {
                                 className="w-6 h-6 min-w-6"
                                 size="sm"
                                 variant="flat"
-                                onPress={() =>
-                                  handleOpenRenewalLogModal(user)
-                                }
+                                onPress={() => handleOpenRenewalLogModal(user)}
                               >
                                 <svg
                                   aria-hidden="true"
@@ -1990,33 +2022,35 @@ export default function UserPage() {
                               </Button>
                               {expStatus?.color === "success" ? (
                                 <span className="text-sm text-primary">
-                                  {new Date(user.expTime).toLocaleDateString(
-                                    "zh-CN",
-                                    {
+                                  {new Date(user.expTime)
+                                    .toLocaleDateString("zh-CN", {
                                       year: "numeric",
                                       month: "2-digit",
                                       day: "2-digit",
-                                    },
-                                  ).replace(/\//g, "-")}
+                                    })
+                                    .replace(/\//g, "-")}
                                 </span>
                               ) : (
                                 <div
-                                  className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${((expStatus?.color as string) || "") ===
+                                  className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${
+                                    ((expStatus?.color as string) || "") ===
                                     "success"
-                                    ? "bg-success-500/10 text-success-600 dark:text-success-400"
-                                    : expStatus?.color === "warning"
-                                      ? "bg-warning-500/10 text-warning-600 dark:text-warning-400"
-                                      : expStatus?.color === "danger"
-                                        ? "bg-danger-500/10 text-danger-600 dark:text-danger-400"
-                                        : "bg-default-500/10 text-default-500"
-                                    }`}
+                                      ? "bg-success-500/10 text-success-600 dark:text-success-400"
+                                      : expStatus?.color === "warning"
+                                        ? "bg-warning-500/10 text-warning-600 dark:text-warning-400"
+                                        : expStatus?.color === "danger"
+                                          ? "bg-danger-500/10 text-danger-600 dark:text-danger-400"
+                                          : "bg-default-500/10 text-default-500"
+                                  }`}
                                 >
                                   {expStatus?.text || "未知"}
                                 </div>
                               )}
                             </div>
                           ) : (
-                            <span className="text-sm text-default-600">永久</span>
+                            <span className="text-sm text-default-600">
+                              永久
+                            </span>
                           )}
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
@@ -2028,30 +2062,33 @@ export default function UserPage() {
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           <span
-                            className={`text-sm font-medium ${user.balance && user.balance > 0
-                              ? "text-success"
-                              : "text-default-400"
-                              }`}
+                            className={`text-sm font-medium ${
+                              user.balance && user.balance > 0
+                                ? "text-success"
+                                : "text-default-400"
+                            }`}
                           >
                             {user.balance != null ? `${user.balance}元` : "-"}
                           </span>
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           <div
-                            className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${user.autoRenew === 1
-                              ? "bg-success-500/10 text-success-600 dark:text-success-400"
-                              : "bg-danger-500/10 text-danger-600 dark:text-danger-400"
-                              }`}
+                            className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${
+                              user.autoRenew === 1
+                                ? "bg-success-500/10 text-success-600 dark:text-success-400"
+                                : "bg-danger-500/10 text-danger-600 dark:text-danger-400"
+                            }`}
                           >
                             {user.autoRenew === 1 ? "启用" : "禁用"}
                           </div>
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           <div
-                            className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${user.autoBuyTraffic === 1
-                              ? "bg-success-500/10 text-success-600 dark:text-success-400"
-                              : "bg-danger-500/10 text-danger-600 dark:text-danger-400"
-                              }`}
+                            className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${
+                              user.autoBuyTraffic === 1
+                                ? "bg-success-500/10 text-success-600 dark:text-success-400"
+                                : "bg-danger-500/10 text-danger-600 dark:text-danger-400"
+                            }`}
                           >
                             {user.autoBuyTraffic === 1 ? "启用" : "禁用"}
                           </div>
@@ -2139,10 +2176,11 @@ export default function UserPage() {
                 return (
                   <StaggerItem key={user.id}>
                     <div
-                      className={`shadow-sm border border-divider hover:shadow-md transition-shadow duration-200 overflow-hidden h-full rounded-xl cursor-default ${selectedUserIds.has(user.id)
-                        ? "bg-primary-50 dark:bg-primary-900/30 border-primary-300 dark:border-primary-700"
-                        : ""
-                        }`}
+                      className={`shadow-sm border border-divider hover:shadow-md transition-shadow duration-200 overflow-hidden h-full rounded-xl cursor-default ${
+                        selectedUserIds.has(user.id)
+                          ? "bg-primary-50 dark:bg-primary-900/30 border-primary-300 dark:border-primary-700"
+                          : ""
+                      }`}
                     >
                       <Card className="shadow-none border-0">
                         <CardHeader className="pb-2 md:pb-2">
@@ -2150,7 +2188,9 @@ export default function UserPage() {
                             <div onClick={(e) => e.stopPropagation()}>
                               <Checkbox
                                 isSelected={selectedUserIds.has(user.id)}
-                                onValueChange={() => toggleUserSelection(user.id)}
+                                onValueChange={() =>
+                                  toggleUserSelection(user.id)
+                                }
                               />
                             </div>
                             <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -2192,7 +2232,9 @@ export default function UserPage() {
                         <CardBody className="pt-0 pb-3 md:pt-0 md:pb-3">
                           <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
                             <div className="flex justify-between text-sm items-center">
-                              <span className="text-default-600 text-xs">已用流量</span>
+                              <span className="text-default-600 text-xs">
+                                已用流量
+                              </span>
                               <div className="flex items-center gap-1">
                                 <span className="font-medium text-xs text-primary">
                                   {formatFlow(usedFlow)}
@@ -2222,20 +2264,22 @@ export default function UserPage() {
                               </div>
                             </div>
                             <div className="flex justify-between text-sm items-center">
-                              <span className="text-default-600 text-xs">到期时间</span>
+                              <span className="text-default-600 text-xs">
+                                到期时间
+                              </span>
                               <div className="flex items-center gap-1">
                                 {user.expTime && user.expTime > 0 ? (
                                   <>
-                                    {expStatus && expStatus.color === "success" ? (
+                                    {expStatus &&
+                                    expStatus.color === "success" ? (
                                       <span className="text-xs">
-                                        {new Date(user.expTime).toLocaleDateString(
-                                          "zh-CN",
-                                          {
+                                        {new Date(user.expTime)
+                                          .toLocaleDateString("zh-CN", {
                                             year: "numeric",
                                             month: "2-digit",
                                             day: "2-digit",
-                                          },
-                                        ).replace(/\//g, "-")}
+                                          })
+                                          .replace(/\//g, "-")}
                                       </span>
                                     ) : (
                                       <span
@@ -2271,12 +2315,16 @@ export default function UserPage() {
                                     </Button>
                                   </>
                                 ) : (
-                                  <span className="text-xs text-default-600">永久</span>
+                                  <span className="text-xs text-default-600">
+                                    永久
+                                  </span>
                                 )}
                               </div>
                             </div>
                             <div className="flex justify-between text-sm items-center">
-                              <span className="text-default-600 text-xs">流量限制</span>
+                              <span className="text-default-600 text-xs">
+                                流量限制
+                              </span>
                               <span
                                 className={`font-medium text-xs ${user.flow === 99999 ? "text-success" : ""}`}
                               >
@@ -2286,13 +2334,17 @@ export default function UserPage() {
                               </span>
                             </div>
                             <div className="flex justify-between text-sm items-center">
-                              <span className="text-default-600 text-xs">规则数量</span>
+                              <span className="text-default-600 text-xs">
+                                规则数量
+                              </span>
                               <span className="font-medium text-xs">
                                 {user.num}个
                               </span>
                             </div>
                             <div className="flex justify-between text-sm items-center">
-                              <span className="text-default-600 text-xs">续费金额</span>
+                              <span className="text-default-600 text-xs">
+                                续费金额
+                              </span>
                               <span className="text-xs font-medium text-default-700">
                                 {user.renewalAmount && user.renewalAmount > 0
                                   ? `${user.renewalAmount}元`
@@ -2300,50 +2352,67 @@ export default function UserPage() {
                               </span>
                             </div>
                             <div className="flex justify-between text-sm items-center">
-                              <span className="text-default-600 text-xs">可用余额</span>
+                              <span className="text-default-600 text-xs">
+                                可用余额
+                              </span>
                               <span
-                                className={`text-xs font-medium ${user.balance && user.balance > 0
-                                  ? "text-success"
-                                  : "text-default-400"
-                                  }`}
+                                className={`text-xs font-medium ${
+                                  user.balance && user.balance > 0
+                                    ? "text-success"
+                                    : "text-default-400"
+                                }`}
                               >
-                                {user.balance != null ? `${user.balance}元` : "-"}
+                                {user.balance != null
+                                  ? `${user.balance}元`
+                                  : "-"}
                               </span>
                             </div>
                             <div className="flex justify-between text-sm items-center">
-                              <span className="text-default-600 text-xs">自动续费</span>
+                              <span className="text-default-600 text-xs">
+                                自动续费
+                              </span>
                               <div
-                                className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded text-xs font-medium ${user.autoRenew === 1
-                                  ? "bg-success-500/10 text-success-600 dark:text-success-400"
-                                  : "bg-danger-500/10 text-danger-600 dark:text-danger-400"
-                                  }`}
+                                className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded text-xs font-medium ${
+                                  user.autoRenew === 1
+                                    ? "bg-success-500/10 text-success-600 dark:text-success-400"
+                                    : "bg-danger-500/10 text-danger-600 dark:text-danger-400"
+                                }`}
                               >
                                 {user.autoRenew === 1 ? "启用" : "禁用"}
                               </div>
                             </div>
                             <div className="flex justify-between text-sm items-center">
-                              <span className="text-default-600 text-xs">自动购流</span>
+                              <span className="text-default-600 text-xs">
+                                自动购流
+                              </span>
                               <div
-                                className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded text-xs font-medium ${user.autoBuyTraffic === 1
-                                  ? "bg-success-500/10 text-success-600 dark:text-success-400"
-                                  : "bg-danger-500/10 text-danger-600 dark:text-danger-400"
-                                  }`}
+                                className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded text-xs font-medium ${
+                                  user.autoBuyTraffic === 1
+                                    ? "bg-success-500/10 text-success-600 dark:text-success-400"
+                                    : "bg-danger-500/10 text-danger-600 dark:text-danger-400"
+                                }`}
                               >
                                 {user.autoBuyTraffic === 1 ? "启用" : "禁用"}
                               </div>
                             </div>
                             <div className="col-span-2 flex justify-between text-sm items-center pt-1.5 border-t border-divider">
-                              <span className="text-default-600 text-xs">监控权限</span>
+                              <span className="text-default-600 text-xs">
+                                监控权限
+                              </span>
                               <div
-                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${monitorPermissionLevelMap.has(user.id)
-                                  ? "bg-success-500/10 text-success-600 dark:text-success-400"
-                                  : "bg-default-500/10 text-default-500"
-                                  }`}
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                                  monitorPermissionLevelMap.has(user.id)
+                                    ? "bg-success-500/10 text-success-600 dark:text-success-400"
+                                    : "bg-default-500/10 text-default-500"
+                                }`}
                               >
                                 {monitorPermissionLevelMap.has(user.id) ? (
                                   <>
                                     <EyeIcon className="w-3 h-3" />
-                                    {monitorPermissionLevelMap.get(user.id) === 1 ? "全开" : "同步"}
+                                    {monitorPermissionLevelMap.get(user.id) ===
+                                    1
+                                      ? "全开"
+                                      : "同步"}
                                   </>
                                 ) : (
                                   <>
@@ -2594,13 +2663,18 @@ export default function UserPage() {
               <div className="grid grid-cols-2 gap-4">
                 <Input
                   label="续费金额 (元)"
-                  placeholder="选填"
-                  type="number"
                   min="0"
+                  placeholder="选填"
                   step="1"
-                  value={userForm.renewalAmount > 0 ? userForm.renewalAmount.toString() : ""}
+                  type="number"
+                  value={
+                    userForm.renewalAmount > 0
+                      ? userForm.renewalAmount.toString()
+                      : ""
+                  }
                   onChange={(e) => {
                     const value = Number(e.target.value);
+
                     setUserForm((prev) => ({
                       ...prev,
                       renewalAmount: Math.round(value),
@@ -2609,13 +2683,16 @@ export default function UserPage() {
                 />
                 <Input
                   label="可用余额 (元)"
-                  placeholder="选填"
-                  type="number"
                   min="0"
+                  placeholder="选填"
                   step="1"
-                  value={userForm.balance > 0 ? userForm.balance.toString() : ""}
+                  type="number"
+                  value={
+                    userForm.balance > 0 ? userForm.balance.toString() : ""
+                  }
                   onChange={(e) => {
                     const value = Number(e.target.value);
+
                     setUserForm((prev) => ({
                       ...prev,
                       balance: Math.round(value),
@@ -2627,13 +2704,18 @@ export default function UserPage() {
                 <div className="grid grid-cols-2 gap-4 mb-3">
                   <Input
                     label="每次购买量 (GB)"
-                    placeholder="选填"
-                    type="number"
                     min="0"
+                    placeholder="选填"
                     step="1"
-                    value={userForm.buyTrafficAmount > 0 ? userForm.buyTrafficAmount.toString() : ""}
+                    type="number"
+                    value={
+                      userForm.buyTrafficAmount > 0
+                        ? userForm.buyTrafficAmount.toString()
+                        : ""
+                    }
                     onChange={(e) => {
                       const value = Number(e.target.value);
+
                       setUserForm((prev) => ({
                         ...prev,
                         buyTrafficAmount: Math.round(value),
@@ -2642,13 +2724,18 @@ export default function UserPage() {
                   />
                   <Input
                     label="每次购买价格 (元)"
-                    placeholder="选填"
-                    type="number"
                     min="0"
+                    placeholder="选填"
                     step="1"
-                    value={userForm.buyTrafficPrice > 0 ? userForm.buyTrafficPrice.toString() : ""}
+                    type="number"
+                    value={
+                      userForm.buyTrafficPrice > 0
+                        ? userForm.buyTrafficPrice.toString()
+                        : ""
+                    }
                     onChange={(e) => {
                       const value = Number(e.target.value);
+
                       setUserForm((prev) => ({
                         ...prev,
                         buyTrafficPrice: Math.round(value),
@@ -2767,43 +2854,46 @@ export default function UserPage() {
                   {renewalLogs.map((log) => (
                     <TableRow key={log.id}>
                       <TableCell>
-                        {new Date(log.renewalTime).toLocaleString("zh-CN", {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }).replace(/\//g, "-")}
+                        {new Date(log.renewalTime)
+                          .toLocaleString("zh-CN", {
+                            year: "numeric",
+                            month: "2-digit",
+                            day: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                          .replace(/\//g, "-")}
                       </TableCell>
                       <TableCell className="text-success font-medium">
                         {log.renewalAmount}
                       </TableCell>
+                      <TableCell>{log.balanceBefore}</TableCell>
+                      <TableCell>{log.balanceAfter}</TableCell>
                       <TableCell>
-                        {log.balanceBefore}
-                      </TableCell>
-                      <TableCell>
-                        {log.balanceAfter}
-                      </TableCell>
-                      <TableCell>
-                        {new Date(log.expTimeBefore).toLocaleDateString("zh-CN", {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                        }).replace(/\//g, "-")}
+                        {new Date(log.expTimeBefore)
+                          .toLocaleDateString("zh-CN", {
+                            year: "numeric",
+                            month: "2-digit",
+                            day: "2-digit",
+                          })
+                          .replace(/\//g, "-")}
                       </TableCell>
                       <TableCell className="text-primary font-medium">
-                        {new Date(log.expTimeAfter).toLocaleDateString("zh-CN", {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                        }).replace(/\//g, "-")}
+                        {new Date(log.expTimeAfter)
+                          .toLocaleDateString("zh-CN", {
+                            year: "numeric",
+                            month: "2-digit",
+                            day: "2-digit",
+                          })
+                          .replace(/\//g, "-")}
                       </TableCell>
                       <TableCell>
                         <span
-                          className={`text-xs px-2 py-0.5 rounded ${log.reason === "自动续费"
-                            ? "bg-success-500/10 text-success-600"
-                            : "bg-default-500/10 text-default-600"
-                            }`}
+                          className={`text-xs px-2 py-0.5 rounded ${
+                            log.reason === "自动续费"
+                              ? "bg-success-500/10 text-success-600"
+                              : "bg-default-500/10 text-default-600"
+                          }`}
                         >
                           {log.reason}
                         </span>
@@ -2846,10 +2936,11 @@ export default function UserPage() {
                   {/* 👇 核心修复 2：分配按钮必须和选择框放在同一行！用 flex-1 min-w-0 压制选择框宽度 */}
                   <div className="flex flex-row items-center gap-2 sm:gap-3 w-full">
                     <div
-                      className={`group flex items-center px-3 sm:px-4 h-10 rounded-xl border-2 transition-all cursor-pointer shadow-sm overflow-hidden flex-1 min-w-0 ${isTunnelListExpanded
-                        ? "border-primary bg-primary-50/20 ring-4 ring-primary/10"
-                        : "border-default-200 bg-default-50 hover:border-primary-300"
-                        }`}
+                      className={`group flex items-center px-3 sm:px-4 h-10 rounded-xl border-2 transition-all cursor-pointer shadow-sm overflow-hidden flex-1 min-w-0 ${
+                        isTunnelListExpanded
+                          ? "border-primary bg-primary-50/20 ring-4 ring-primary/10"
+                          : "border-default-200 bg-default-50 hover:border-primary-300"
+                      }`}
                       onClick={() =>
                         setIsTunnelListExpanded(!isTunnelListExpanded)
                       }
@@ -2859,12 +2950,12 @@ export default function UserPage() {
                       >
                         {batchTunnelSelections.size > 0
                           ? `已选 ${batchTunnelSelections.size} 项：` +
-                          Array.from(batchTunnelSelections.keys())
-                            .map(
-                              (id) => tunnels.find((t) => t.id === id)?.name,
-                            )
-                            .filter(Boolean)
-                            .join("、")
+                            Array.from(batchTunnelSelections.keys())
+                              .map(
+                                (id) => tunnels.find((t) => t.id === id)?.name,
+                              )
+                              .filter(Boolean)
+                              .join("、")
                           : "请选择隧道（勾选后配置）"}
                       </span>
                       <svg
@@ -2903,9 +2994,9 @@ export default function UserPage() {
                                   tunnels.filter((t) => !isTunnelAssigned(t.id))
                                     .length > 0 &&
                                   batchTunnelSelections.size ===
-                                  tunnels.filter(
-                                    (t) => !isTunnelAssigned(t.id),
-                                  ).length
+                                    tunnels.filter(
+                                      (t) => !isTunnelAssigned(t.id),
+                                    ).length
                                 }
                                 size="sm"
                                 onValueChange={(isSelected) => {
@@ -3166,9 +3257,9 @@ export default function UserPage() {
                               <span className="text-xs sm:text-sm text-default-600 bg-default-100 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded">
                                 {userTunnel.speedLimitName
                                   ? userTunnel.speedLimitName.replace(
-                                    /^限速\s*/,
-                                    "",
-                                  )
+                                      /^限速\s*/,
+                                      "",
+                                    )
                                   : "不限速"}
                               </span>
                             </TableCell>
@@ -3299,8 +3390,13 @@ export default function UserPage() {
                 允许访问监控功能
               </div>
               <div className="text-xs text-default-500 mb-4">
-                <p className="mb-1"><strong>同步</strong>：用户只能看到已授权隧道的监控数据。</p>
-                <p><strong>全开</strong>：用户可以看到所有监控数据，不受隧道权限限制。</p>
+                <p className="mb-1">
+                  <strong>同步</strong>：用户只能看到已授权隧道的监控数据。
+                </p>
+                <p>
+                  <strong>全开</strong>
+                  ：用户可以看到所有监控数据，不受隧道权限限制。
+                </p>
               </div>
               <RadioGroup
                 orientation="horizontal"
@@ -3319,7 +3415,9 @@ export default function UserPage() {
             </Button>
             <Button
               color="primary"
-              isLoading={monitorPermissionMutatingUserId === monitorModalUser?.id}
+              isLoading={
+                monitorPermissionMutatingUserId === monitorModalUser?.id
+              }
               onPress={handleSaveMonitorPermission}
             >
               保存
@@ -3361,9 +3459,9 @@ export default function UserPage() {
                     setEditTunnelForm((prev) =>
                       prev
                         ? {
-                          ...prev,
-                          speedId: selectedKey ? Number(selectedKey) : null,
-                        }
+                            ...prev,
+                            speedId: selectedKey ? Number(selectedKey) : null,
+                          }
                         : null,
                     );
                   }}
@@ -3752,10 +3850,11 @@ export default function UserPage() {
                     </span>
                   </div>
                   <div
-                    className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${user.status === 1
-                      ? "bg-success-500/10 text-success-600 dark:text-success-400"
-                      : "bg-danger-500/10 text-danger-600 dark:text-danger-400"
-                      }`}
+                    className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${
+                      user.status === 1
+                        ? "bg-success-500/10 text-success-600 dark:text-success-400"
+                        : "bg-danger-500/10 text-danger-600 dark:text-danger-400"
+                    }`}
                   >
                     {user.status === 1 ? "启用" : "禁用"}
                   </div>
@@ -3802,8 +3901,7 @@ export default function UserPage() {
           </ModalHeader>
           <ModalBody>
             <p className="text-sm text-default-600 mb-3">
-              确认要归零以下 {batchResetUserList.length}{" "}
-              个用户的流量吗？
+              确认要归零以下 {batchResetUserList.length} 个用户的流量吗？
             </p>
             <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
               {batchResetUserList.map((user) => (
@@ -3820,10 +3918,11 @@ export default function UserPage() {
                     </span>
                   </div>
                   <div
-                    className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${user.status === 1
-                      ? "bg-success-500/10 text-success-600 dark:text-success-400"
-                      : "bg-danger-500/10 text-danger-600 dark:text-danger-400"
-                      }`}
+                    className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${
+                      user.status === 1
+                        ? "bg-success-500/10 text-success-600 dark:text-success-400"
+                        : "bg-danger-500/10 text-danger-600 dark:text-danger-400"
+                    }`}
                   >
                     {user.status === 1 ? "启用" : "禁用"}
                   </div>
@@ -3892,8 +3991,8 @@ export default function UserPage() {
           </ModalHeader>
           <ModalBody className="py-6">
             {historyModalUser &&
-              historyModalUser.quotaHistory &&
-              historyModalUser.quotaHistory.length > 0 ? (
+            historyModalUser.quotaHistory &&
+            historyModalUser.quotaHistory.length > 0 ? (
               <div className="space-y-3 max-h-80 overflow-y-auto">
                 {historyModalUser.quotaHistory.map((item) => (
                   <div

@@ -63,12 +63,17 @@ export function Radio({ children, value, color = "primary" }: RadioProps) {
   const id = `${context.name}-${value}`;
 
   // 只改变文字颜色，圆圈保持默认样式（符合多数管理系统惯例）
-  const labelColor = color === "success" ? "text-success" : color === "danger" ? "text-danger" : "text-primary";
+  const labelColor =
+    color === "success"
+      ? "text-success"
+      : color === "danger"
+        ? "text-danger"
+        : "text-primary";
 
   return (
     <div className="flex items-center gap-2">
       <RadioGroupItem id={id} value={value} />
-      <Label htmlFor={id} className={`font-medium ${labelColor}`}>
+      <Label className={`font-medium ${labelColor}`} htmlFor={id}>
         {children}
       </Label>
     </div>
