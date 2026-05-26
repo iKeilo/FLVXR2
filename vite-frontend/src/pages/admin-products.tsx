@@ -68,7 +68,7 @@ const defaultForm: ProductForm = {
 };
 
 const typeUnit: Record<string, string> = {
-  recharge: "分",
+  recharge: "元",
   traffic: "GB",
   time: "天",
 };
