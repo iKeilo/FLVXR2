@@ -595,7 +595,7 @@ func (m *Manager) GetCounters() []CounterResult {
 // RefreshCounters fetches latest counter values from kernel via conn.GetRules().
 // It matches kernel rules to stored rules by protocol + port, and returns fresh counter data.
 func (m *Manager) RefreshCounters() []CounterResult {
-	rules, err := m.getPreroutingRules()
+	rules, err := m.GetAllKernelRules()
 	if err != nil {
 		return m.GetCounters()
 	}
