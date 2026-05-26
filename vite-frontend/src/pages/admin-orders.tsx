@@ -156,7 +156,7 @@ export default function AdminOrdersPage() {
         <div className="ml-auto">
           <Select variant="bordered" size="sm" className="w-36"
             selectedKeys={userFilter === "all" ? ["all"] : [userFilter]}
-            placeholder="全部用户"
+            //placeholder="全部用户"
             onSelectionChange={(keys) => {
               const val = Array.from(keys)[0] as string;
               setUserFilter(val || "all");

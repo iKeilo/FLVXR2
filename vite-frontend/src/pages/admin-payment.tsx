@@ -147,7 +147,6 @@ export default function AdminPaymentPage() {
   const [billingLoading, setBillingLoading] = useState(true);
   const [refreshingLogs, setRefreshingLogs] = useState(false);
   const billingIsFirstLoad = useRef(true);
-  const [billingTabKey, setBillingTabKey] = useState("balance");
 
   const [redemptionEnabled, setRedemptionEnabled] = useState(true);
   const [discountEnabled, setDiscountEnabled] = useState(true);
@@ -426,7 +425,7 @@ export default function AdminPaymentPage() {
         ))}
       </div>
 
-      {/* ── Payment Channel ── */}
+      {/* ── Payment Channels ── */}
       {mainTabKey === "payment" && (
         <>
           {/* Stats */}
@@ -628,7 +627,7 @@ export default function AdminPaymentPage() {
         </>
       )}
 
-      {/* ── Billing ── */}
+      {/* ── 账单流水 ── */}
       {mainTabKey === "billing" && (
         <>
           {/* Stats */}
@@ -683,10 +682,10 @@ export default function AdminPaymentPage() {
               </svg>
               <h2 className="font-semibold text-foreground">余额流水</h2>
             </div>
-            <div className="flex items-center gap-2">
-              <Select variant="bordered" size="sm" className="w-44"
+            <div className="w-44 flex-shrink-0">
+              <Select variant="bordered" size="sm" className="w-full"
                 selectedKeys={logUserId === "all" ? ["all"] : [logUserId]}
-                placeholder="全部用户"
+                //placeholder="全部用户"
                 onSelectionChange={(keys) => {
                   const val = Array.from(keys)[0] as string;
                   setLogUserId(val || "all");
@@ -747,11 +746,25 @@ export default function AdminPaymentPage() {
         </>
       )}
 
-      {/* ─ Redeem ── */}
+      {/* ── Redeem ── */}
       {mainTabKey === "redeem" && (
         <>
-          {/* Feature toggle & stats inline */}
+          {/* Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4 mb-6">
+            <Card className="border border-gray-200 dark:border-default-200 shadow-md hover:shadow-lg transition-shadow">
+              <CardBody className="p-3 lg:p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-default-500">余额流水</span>
+                  <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-500/20">
+                    <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
+                      <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="text-xl font-bold text-foreground">{logTotal}</p>
+              </CardBody>
+            </Card>
             <Card className="border border-gray-200 dark:border-default-200 shadow-md hover:shadow-lg transition-shadow">
               <CardBody className="p-3 lg:p-4">
                 <div className="flex items-center justify-between mb-1">
@@ -768,7 +781,7 @@ export default function AdminPaymentPage() {
             <Card className="border border-gray-200 dark:border-default-200 shadow-md hover:shadow-lg transition-shadow">
               <CardBody className="p-3 lg:p-4">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs text-default-500">折扣码</span>
+                  <span className="text-xs text-default-500">生效折扣码</span>
                   <div className="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-500/20">
                     <svg className="w-4 h-4 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zm7-10a1 1 0 01.707.293l3 3a1 1 0 010 1.414l-3 3A1 1 0 0111 9V8h-2a1 1 0 010-2h2V5a1 1 0 011-1zm-4 8a1 1 0 011.707.707l3 3a1 1 0 01-1.414 1.414L10 12.414V15a1 1 0 11-2 0v-2H6a1 1 0 110-2h2V9a1 1 0 011-1z" clipRule="evenodd" />
@@ -778,304 +791,335 @@ export default function AdminPaymentPage() {
                 <p className="text-xl font-bold text-foreground">{activeDiscountCodes}</p>
               </CardBody>
             </Card>
+          </div>
+
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-default-500" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+              </svg>
+              <h2 className="font-semibold text-foreground">兑换码</h2>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-default-500">兑换</span>
+              <Switch size="sm" isSelected={redemptionEnabled} onValueChange={(v) => toggleFeature("redemptionEnabled", v)} />
+            </div>
+          </div>
+
+          <Card className="mb-4">
+            <CardHeader><h2 className="font-medium">生成兑换码</h2></CardHeader>
+            <CardBody className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Row 1: 兑换码(50%) + 生效时间(25%) + 失效时间(25%) */}
+                <div className="lg:col-span-2 space-y-2">
+                  <label className="text-sm text-gray-400 text-foreground">兑换码</label>
+                  <div className="flex gap-2">
+                    <Input variant="bordered" className="flex-1 h-10" value={redeemCodeVal}
+                      onChange={(e) => setRedeemCodeVal(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 64))}
+                      placeholder="留空自动生成" />
+                    <Button className="h-10 shrink-0" variant="bordered" onPress={() => setRedeemCodeVal(randomCode())}>随机</Button>
+                  </div>
+                  <p className="text-xs text-gray-400">随机码为 6-10 位大写字母和数字</p>
+                </div>
+                <div className="col-span-1 space-y-2">
+                  <label className="text-sm text-gray-400 text-foreground">生效时间</label>
+                  <div className="flex gap-2">
+                    <Input variant="bordered" className="flex-1 h-10"
+                      value={redeemStartsAt} onChange={(e) => setRedeemStartsAt(e.target.value)} placeholder="例：20281001" />
+                    <Dropdown>
+                      <DropdownTrigger>
+                        <Button className="h-10 shrink-0" variant="bordered">快捷</Button>
+                      </DropdownTrigger>
+                      <DropdownMenu>
+                        <DropdownItem onPress={() => { const d = new Date(); d.setMonth(d.getMonth() + 1); setRedeemStartsAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>1 月后</DropdownItem>
+                        <DropdownItem onPress={() => { const d = new Date(); d.setMonth(d.getMonth() + 3); setRedeemStartsAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>3 月后</DropdownItem>
+                        <DropdownItem onPress={() => { const d = new Date(); d.setMonth(d.getMonth() + 6); setRedeemStartsAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>6 月后</DropdownItem>
+                        <DropdownItem onPress={() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); setRedeemStartsAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>1 年后</DropdownItem>
+                        <DropdownItem onPress={() => setRedeemStartsAt("")}>永久</DropdownItem>
+                      </DropdownMenu>
+                    </Dropdown>
+                  </div>
+                </div>
+                <div className="col-span-1 space-y-2">
+                  <label className="text-sm text-gray-400 text-foreground">失效时间</label>
+                  <div className="flex gap-2">
+                    <Input variant="bordered" className="flex-1 h-10"
+                      value={redeemExpiresAt} onChange={(e) => setRedeemExpiresAt(e.target.value)} placeholder="例：20281231" />
+                    <Dropdown>
+                      <DropdownTrigger>
+                        <Button className="h-10 shrink-0" variant="bordered">快捷</Button>
+                      </DropdownTrigger>
+                      <DropdownMenu>
+                        <DropdownItem onPress={() => { const d = new Date(); d.setMonth(d.getMonth() + 1); setRedeemExpiresAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>1 月后</DropdownItem>
+                        <DropdownItem onPress={() => { const d = new Date(); d.setMonth(d.getMonth() + 3); setRedeemExpiresAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>3 月后</DropdownItem>
+                        <DropdownItem onPress={() => { const d = new Date(); d.setMonth(d.getMonth() + 6); setRedeemExpiresAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>6 月后</DropdownItem>
+                        <DropdownItem onPress={() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); setRedeemExpiresAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>1 年后</DropdownItem>
+                        <DropdownItem onPress={() => setRedeemExpiresAt("")}>永久</DropdownItem>
+                      </DropdownMenu>
+                    </Dropdown>
+                  </div>
+                </div>
+                <div className="col-span-full h-0"></div>
+
+                {/* Row 2: 数量 + 类型 + 套餐 + 期限 (各25%) */}
+                <div className="col-span-1 space-y-2">
+                  <label className="text-sm text-gray-400 text-foreground">数量</label>
+                  <Input type="number" variant="bordered" className="h-10" min="1" max="500"
+                    value={redeemCount} onChange={(e) => setRedeemCount(e.target.value)} />
+                </div>
+                <div className="col-span-1 space-y-2">
+                  <label className="text-sm text-gray-400 text-foreground">类型</label>
+                  <Select variant="bordered" selectedKeys={[redeemType]}
+                    classNames={{ trigger: "h-10 bg-default-50 border-default-200", value: "text-sm" }}
+                    onSelectionChange={(keys) => { const v = Array.from(keys)[0]; if (v === "plan" || v === "balance") setRedeemType(v); }}>
+                    <SelectItem key="plan">套餐期限</SelectItem>
+                    <SelectItem key="balance">余额</SelectItem>
+                  </Select>
+                </div>
+                {redeemType === "plan" ? (
+                  <>
+                    <div className="col-span-1 space-y-2">
+                      <label className="text-sm text-gray-400 text-foreground">套餐</label>
+                      <Select variant="bordered" selectedKeys={redeemPlanId ? [redeemPlanId] : []}
+                        classNames={{ trigger: "h-10 bg-default-50 border-default-200", value: "text-sm" }}
+                        onSelectionChange={(keys) => { const v = Array.from(keys)[0] as string; if (v) setRedeemPlanId(v); }}>
+                        {products.filter((p) => p.status === 1).map((p) => (
+                          <SelectItem key={String(p.id)}>{p.name}</SelectItem>
+                        ))}
+                      </Select>
+                    </div>
+                    <div className="col-span-1 space-y-2">
+                      <label className="text-sm text-gray-400 text-foreground">期限</label>
+                      <Select variant="bordered" selectedKeys={redeemDuration ? [redeemDuration] : []}
+                        classNames={{ trigger: "h-10 bg-default-50 border-default-200", value: "text-sm" }}
+                        onSelectionChange={(keys) => { const v = Array.from(keys)[0] as string; if (v) setRedeemDuration(v); }}>
+                        <SelectItem key="30">1 个月</SelectItem>
+                        <SelectItem key="90">3 个月</SelectItem>
+                        <SelectItem key="180">6 个月</SelectItem>
+                        <SelectItem key="365">1 年</SelectItem>
+                      </Select>
+                    </div>
+                  </>
+                ) : (
+                  <div className="col-span-2 space-y-2">
+                    <label className="text-sm text-gray-400 text-foreground">余额金额</label>
+                    <Input type="number" variant="bordered" className="h-10" step="0.01" min="0.01"
+                      value={redeemAmount} onChange={(e) => setRedeemAmount(e.target.value)} />
+                  </div>
+                )}
+              </div>
+              <Button className="h-10" color="primary" variant="solid" onPress={handleCreateRedeem}>生成兑换码</Button>
+            </CardBody>
+          </Card>
+
+          <div className="overflow-hidden rounded-xl border border-divider bg-content1 shadow-md">
+            <Table classNames={{ th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle", td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0", tr: "hover:bg-default-50/50 transition-colors" }}>
+              <TableHeader>
+                <TableColumn className="whitespace-nowrap">兑换码</TableColumn>
+                <TableColumn className="whitespace-nowrap">类型</TableColumn>
+                <TableColumn className="whitespace-nowrap">内容</TableColumn>
+                <TableColumn className="whitespace-nowrap">有效期</TableColumn>
+                <TableColumn className="whitespace-nowrap">使用情况</TableColumn>
+                <TableColumn className="whitespace-nowrap">操作</TableColumn>
+              </TableHeader>
+              <TableBody>
+                {redeemCodes.length === 0 ? (
+                  <TableRow><TableCell colSpan={6} className="text-center text-default-400 py-8">暂无兑换码</TableCell></TableRow>
+                ) : redeemCodes.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="font-mono text-xs">{c.code}</TableCell>
+                    <TableCell><Chip size="sm" variant="flat">{c.type === "plan" ? "套餐" : "余额"}</Chip></TableCell>
+                    <TableCell>
+                      {c.type === "balance" ? `${fmtMoney(c.amountCents || 0)} 元` : `套餐 #${c.planId || "-"} ${c.durationDays || ""}天`}
+                    </TableCell>
+                    <TableCell className="text-xs text-default-600">{fmtTime(c.startsAt)} ~ {fmtTime(c.expiresAt)}</TableCell>
+                    <TableCell>
+                      {c.usedAt ? <span className="text-xs text-default-500">已使用 {c.usedByUsername || `#${c.usedByUserId}`}</span> :
+                        <Chip size="sm" color="success" variant="flat">未使用</Chip>}
+                    </TableCell>
+                    <TableCell>
+                      <Button size="sm" color="danger" variant="flat" onPress={() => handleDeleteRedeem(c.id)}>删除</Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
+      )}
+
+      {/* ─ Discount ── */}
+      {mainTabKey === "discount" && (
+        <>
+          {/* Stats */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4 mb-6">
             <Card className="border border-gray-200 dark:border-default-200 shadow-md hover:shadow-lg transition-shadow">
               <CardBody className="p-3 lg:p-4">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs text-default-500">功能开关</span>
-                  <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-500/20">
-                    <svg className="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                  <span className="text-xs text-default-500">余额流水</span>
+                  <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-500/20">
+                    <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
+                      <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
                     </svg>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 mt-2">
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-default-500">兑换</span>
-                    <Switch size="sm" isSelected={redemptionEnabled} onValueChange={(v) => toggleFeature("redemptionEnabled", v)} />
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-default-500">折扣</span>
-                    <Switch size="sm" isSelected={discountEnabled} onValueChange={(v) => toggleFeature("discountEnabled", v)} />
+                <p className="text-xl font-bold text-foreground">{logTotal}</p>
+              </CardBody>
+            </Card>
+            <Card className="border border-gray-200 dark:border-default-200 shadow-md hover:shadow-lg transition-shadow">
+              <CardBody className="p-3 lg:p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-default-500">可用兑换码</span>
+                  <div className="p-1.5 rounded-lg bg-green-100 dark:bg-green-500/20">
+                    <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                    </svg>
                   </div>
                 </div>
+                <p className="text-xl font-bold text-foreground">{activeRedeemCodes}</p>
+              </CardBody>
+            </Card>
+            <Card className="border border-gray-200 dark:border-default-200 shadow-md hover:shadow-lg transition-shadow">
+              <CardBody className="p-3 lg:p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-default-500">生效折扣码</span>
+                  <div className="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-500/20">
+                    <svg className="w-4 h-4 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zm7-10a1 1 0 01.707.293l3 3a1 1 0 010 1.414l-3 3A1 1 0 0111 9V8h-2a1 1 0 010-2h2V5a1 1 0 011-1zm-4 8a1 1 0 011.707.707l3 3a1 1 0 01-1.414 1.414L10 12.414V15a1 1 0 11-2 0v-2H6a1 1 0 110-2h2V9a1 1 0 011-1z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="text-xl font-bold text-foreground">{activeDiscountCodes}</p>
               </CardBody>
             </Card>
           </div>
 
-          {/* Tabs for redeem/discount */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            {[
-              { key: "redeemForm", label: "兑换码" },
-              { key: "discountForm", label: "折扣码" },
-            ].map((tab) => (
-              <Button key={tab.key} size="sm" variant={billingTabKey === tab.key ? "solid" : "flat"} color={billingTabKey === tab.key ? "primary" : "default"} onPress={() => setBillingTabKey(tab.key)}>
-                {tab.label}
-              </Button>
-            ))}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-default-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zm7-10a1 1 0 01.707.293l3 3a1 1 0 010 1.414l-3 3A1 1 0 0111 9V8h-2a1 1 0 010-2h2V5a1 1 0 011-1zm-4 8a1 1 0 011.707.707l3 3a1 1 0 01-1.414 1.414L10 12.414V15a1 1 0 11-2 0v-2H6a1 1 0 110-2h2V9a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+              <h2 className="font-semibold text-foreground">折扣码</h2>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-default-500">折扣</span>
+              <Switch size="sm" isSelected={discountEnabled} onValueChange={(v) => toggleFeature("discountEnabled", v)} />
+            </div>
           </div>
 
-          {billingTabKey === "redeemForm" && (
-            <>
-              <Card>
-                <CardHeader><h2 className="font-medium">生成兑换码</h2></CardHeader>
-                <CardBody className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                    <div className="sm:col-span-3 lg:col-span-3 space-y-2">
-                      <label className="text-sm text-gray-400 text-foreground">兑换码</label>
-                      <div className="flex gap-2">
-                        <Input variant="bordered" className="flex-1 h-10" value={redeemCodeVal}
-                          onChange={(e) => setRedeemCodeVal(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 64))}
-                          placeholder="留空自动生成" />
-                        <Button className="h-10" variant="bordered" onPress={() => setRedeemCodeVal(randomCode())}>
-                          随机
-                        </Button>
-                      </div>
-                      <p className="text-xs text-gray-400">随机码为 6-10 位大写字母和数字</p>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm text-gray-400 text-foreground">类型</label>
-                      <Select variant="bordered" selectedKeys={[redeemType]}
-                        classNames={{ trigger: "h-10 bg-default-50 border-default-200", value: "text-sm" }}
-                        onSelectionChange={(keys) => { const v = Array.from(keys)[0]; if (v === "plan" || v === "balance") setRedeemType(v); }}>
-                        <SelectItem key="plan">套餐期限</SelectItem>
-                        <SelectItem key="balance">余额</SelectItem>
-                      </Select>
-                    </div>
-                    {redeemType === "plan" && (
-                      <div className="space-y-2">
-                        <label className="text-sm text-gray-400 text-foreground">套餐</label>
-                        <Select variant="bordered" selectedKeys={redeemPlanId ? [redeemPlanId] : []}
-                          classNames={{ trigger: "h-10 bg-default-50 border-default-200", value: "text-sm" }}
-                          onSelectionChange={(keys) => { const v = Array.from(keys)[0] as string; if (v) setRedeemPlanId(v); }}>
-                          {products.filter((p) => p.status === 1).map((p) => (
-                            <SelectItem key={String(p.id)}>{p.name}</SelectItem>
-                          ))}
-                        </Select>
-                      </div>
-                    )}
-                    {redeemType === "plan" ? (
-                      <div className="space-y-2">
-                        <label className="text-sm text-gray-400 text-foreground">期限</label>
-                        <Select variant="bordered" selectedKeys={redeemDuration ? [redeemDuration] : []}
-                          classNames={{ trigger: "h-10 bg-default-50 border-default-200", value: "text-sm" }}
-                          onSelectionChange={(keys) => { const v = Array.from(keys)[0] as string; if (v) setRedeemDuration(v); }}>
-                          <SelectItem key="30">1 个月</SelectItem>
-                          <SelectItem key="90">3 个月</SelectItem>
-                          <SelectItem key="180">6 个月</SelectItem>
-                          <SelectItem key="365">1 年</SelectItem>
-                        </Select>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <label className="text-sm text-gray-400 text-foreground">余额金额</label>
-                        <Input type="number" variant="bordered" className="h-10" step="0.01" min="0.01"
-                          value={redeemAmount} onChange={(e) => setRedeemAmount(e.target.value)} />
-                      </div>
-                    )}
-                    <div className="space-y-2">
-                      <label className="text-sm text-gray-400 text-foreground">数量</label>
-                      <Input type="number" variant="bordered" className="h-10" min="1" max="500"
-                        value={redeemCount} onChange={(e) => setRedeemCount(e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm text-gray-400 text-foreground">生效时间</label>
-                      <div className="flex gap-2">
-                        <Input variant="bordered" className="flex-1 h-10"
-                          value={redeemStartsAt} onChange={(e) => setRedeemStartsAt(e.target.value)} placeholder="例：20281001" />
-                        <Dropdown>
-                          <DropdownTrigger>
-                            <Button className="h-10" variant="flat" color="primary" size="sm">快捷</Button>
-                          </DropdownTrigger>
-                          <DropdownMenu>
-                            <DropdownItem onPress={() => { const d = new Date(); d.setMonth(d.getMonth() + 1); setRedeemStartsAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>1 月后</DropdownItem>
-                            <DropdownItem onPress={() => { const d = new Date(); d.setMonth(d.getMonth() + 3); setRedeemStartsAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>3 月后</DropdownItem>
-                            <DropdownItem onPress={() => { const d = new Date(); d.setMonth(d.getMonth() + 6); setRedeemStartsAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>6 月后</DropdownItem>
-                            <DropdownItem onPress={() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); setRedeemStartsAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>1 年后</DropdownItem>
-                            <DropdownItem onPress={() => setRedeemStartsAt("")}>永久</DropdownItem>
-                          </DropdownMenu>
-                        </Dropdown>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm text-gray-400 text-foreground mb-1 block">失效时间</label>
-                      <div className="flex gap-2">
-                        <Input variant="bordered" className="flex-1 h-10"
-                          value={redeemExpiresAt} onChange={(e) => setRedeemExpiresAt(e.target.value)} placeholder="例：20281231" />
-                        <Dropdown>
-                          <DropdownTrigger>
-                            <Button className="h-10" variant="flat" color="primary" size="sm">快捷</Button>
-                          </DropdownTrigger>
-                          <DropdownMenu>
-                            <DropdownItem onPress={() => { const d = new Date(); d.setMonth(d.getMonth() + 1); setRedeemExpiresAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>1 月后</DropdownItem>
-                            <DropdownItem onPress={() => { const d = new Date(); d.setMonth(d.getMonth() + 3); setRedeemExpiresAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>3 月后</DropdownItem>
-                            <DropdownItem onPress={() => { const d = new Date(); d.setMonth(d.getMonth() + 6); setRedeemExpiresAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>6 月后</DropdownItem>
-                            <DropdownItem onPress={() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); setRedeemExpiresAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>1 年后</DropdownItem>
-                            <DropdownItem onPress={() => setRedeemExpiresAt("")}>永久</DropdownItem>
-                          </DropdownMenu>
-                        </Dropdown>
-                      </div>
-                    </div>
-                    <div className="col-span-1 sm:col-span-3 lg:col-span-6">
-                      <Button className="h-10" color="primary" variant="solid" onPress={handleCreateRedeem}>
-                        生成兑换码
-                      </Button>
-                    </div>
+          <Card className="mb-4">
+            <CardHeader><h2 className="font-medium">新增折扣码</h2></CardHeader>
+            <CardBody className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+                {/* Row 1 */}
+                <div className="lg:col-span-3 space-y-2">
+                  <label className="text-sm text-gray-400 text-foreground">折扣码</label>
+                  <div className="flex gap-2">
+                    <Input variant="bordered" className="flex-1 h-10" value={dcCode}
+                      onChange={(e) => setDcCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 64))}
+                      placeholder="例如 SALE2026" />
+                    <Button className="h-10 shrink-0" variant="bordered" onPress={() => setDcCode(randomCode())}>随机</Button>
                   </div>
-                </CardBody>
-              </Card>
-              <div className="overflow-hidden rounded-xl border border-divider bg-content1 shadow-md">
-                <Table classNames={{ th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle", td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0", tr: "hover:bg-default-50/50 transition-colors" }}>
-                  <TableHeader>
-                    <TableColumn className="whitespace-nowrap">兑换码</TableColumn>
-                    <TableColumn className="whitespace-nowrap">类型</TableColumn>
-                    <TableColumn className="whitespace-nowrap">内容</TableColumn>
-                    <TableColumn className="whitespace-nowrap">有效期</TableColumn>
-                    <TableColumn className="whitespace-nowrap">使用情况</TableColumn>
-                    <TableColumn className="whitespace-nowrap">操作</TableColumn>
-                  </TableHeader>
-                  <TableBody>
-                    {redeemCodes.length === 0 ? (
-                      <TableRow><TableCell colSpan={6} className="text-center text-default-400 py-8">暂无兑换码</TableCell></TableRow>
-                    ) : redeemCodes.map((c) => (
-                      <TableRow key={c.id}>
-                        <TableCell className="font-mono text-xs">{c.code}</TableCell>
-                        <TableCell><Chip size="sm" variant="flat">{c.type === "plan" ? "套餐" : "余额"}</Chip></TableCell>
-                        <TableCell>
-                          {c.type === "balance" ? `${fmtMoney(c.amountCents || 0)} 元` : `套餐 #${c.planId || "-"} ${c.durationDays || ""}天`}
-                        </TableCell>
-                        <TableCell className="text-xs text-default-600">{fmtTime(c.startsAt)} ~ {fmtTime(c.expiresAt)}</TableCell>
-                        <TableCell>
-                          {c.usedAt ? <span className="text-xs text-default-500">已使用 {c.usedByUsername || `#${c.usedByUserId}`}</span> :
-                            <Chip size="sm" color="success" variant="flat">未使用</Chip>}
-                        </TableCell>
-                        <TableCell>
-                          <Button size="sm" color="danger" variant="flat" onPress={() => handleDeleteRedeem(c.id)}>删除</Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </>
-          )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm text-gray-400 text-foreground">类型</label>
+                  <Select variant="bordered" selectedKeys={[dcType]}
+                    classNames={{ trigger: "h-10 bg-default-50 border-default-200", value: "text-sm" }}
+                    onSelectionChange={(keys) => { const v = Array.from(keys)[0]; if (v === "percent" || v === "amount") setDcType(v); }}>
+                    <SelectItem key="percent">百分比</SelectItem>
+                    <SelectItem key="amount">固定金额</SelectItem>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm text-gray-400 text-foreground">{dcType === "percent" ? "百分比" : "金额"}</label>
+                  <Input type="number" variant="bordered" className="h-10" min="0" step={dcType === "percent" ? "1" : "0.01"}
+                    value={dcValue} onChange={(e) => setDcValue(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm text-gray-400 text-foreground">可用次数</label>
+                  <Input type="number" variant="bordered" className="h-10" min="0"
+                    value={dcMaxUses} onChange={(e) => setDcMaxUses(e.target.value)} placeholder="0=不限" />
+                </div>
 
-          {billingTabKey === "discountForm" && (
-            <>
-              <Card>
-                <CardHeader><h2 className="font-medium">新增折扣码</h2></CardHeader>
-                <CardBody className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm text-gray-400 text-foreground">折扣码</label>
-                      <div className="flex gap-2">
-                        <Input variant="bordered" className="flex-1 h-10" value={dcCode}
-                          onChange={(e) => setDcCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 64))}
-                          placeholder="例如 SALE2026" />
-                        <Button className="h-10" variant="bordered" onPress={() => setDcCode(randomCode())}>
-                          随机
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm text-gray-400 text-foreground">类型</label>
-                      <Select variant="bordered" selectedKeys={[dcType]}
-                        classNames={{ trigger: "h-10 bg-default-50 border-default-200", value: "text-sm" }}
-                        onSelectionChange={(keys) => { const v = Array.from(keys)[0]; if (v === "percent" || v === "amount") setDcType(v); }}>
-                        <SelectItem key="percent">百分比</SelectItem>
-                        <SelectItem key="amount">固定金额</SelectItem>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm text-gray-400 text-foreground">{dcType === "percent" ? "百分比" : "金额"}</label>
-                      <Input type="number" variant="bordered" className="h-10" min="0" step={dcType === "percent" ? "1" : "0.01"}
-                        value={dcValue} onChange={(e) => setDcValue(e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm text-gray-400 text-foreground">可用次数</label>
-                      <Input type="number" variant="bordered" className="h-10" min="0"
-                        value={dcMaxUses} onChange={(e) => setDcMaxUses(e.target.value)} placeholder="0=不限" />
-                    </div>
+                {/* Row 2 */}
+                <div className="sm:col-span-2 lg:col-span-3 space-y-2">
+                  <label className="text-sm text-gray-400 text-foreground">生效时间</label>
+                  <div className="flex gap-2">
+                    <Input variant="bordered" className="flex-1 h-10"
+                      value={dcStartsAt} onChange={(e) => setDcStartsAt(e.target.value)} placeholder="例：20281001" />
+                    <Dropdown>
+                      <DropdownTrigger>
+                        <Button className="h-10 shrink-0" variant="bordered">快捷</Button>
+                      </DropdownTrigger>
+                      <DropdownMenu>
+                        <DropdownItem onPress={() => { const d = new Date(); d.setMonth(d.getMonth() + 1); setDcStartsAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>1 月后</DropdownItem>
+                        <DropdownItem onPress={() => { const d = new Date(); d.setMonth(d.getMonth() + 3); setDcStartsAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>3 月后</DropdownItem>
+                        <DropdownItem onPress={() => { const d = new Date(); d.setMonth(d.getMonth() + 6); setDcStartsAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>6 月后</DropdownItem>
+                        <DropdownItem onPress={() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); setDcStartsAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>1 年后</DropdownItem>
+                        <DropdownItem onPress={() => setDcStartsAt("")}>永久</DropdownItem>
+                      </DropdownMenu>
+                    </Dropdown>
                   </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm text-gray-400 text-foreground">生效时间</label>
-                      <div className="flex gap-2">
-                        <Input variant="bordered" className="flex-1 h-10"
-                          value={dcStartsAt} onChange={(e) => setDcStartsAt(e.target.value)} placeholder="例：20281001" />
-                        <Dropdown>
-                          <DropdownTrigger>
-                            <Button className="h-10" variant="flat" color="primary" size="sm">快捷</Button>
-                          </DropdownTrigger>
-                          <DropdownMenu>
-                            <DropdownItem onPress={() => { const d = new Date(); d.setMonth(d.getMonth() + 1); setDcStartsAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>1 月后</DropdownItem>
-                            <DropdownItem onPress={() => { const d = new Date(); d.setMonth(d.getMonth() + 3); setDcStartsAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>3 月后</DropdownItem>
-                            <DropdownItem onPress={() => { const d = new Date(); d.setMonth(d.getMonth() + 6); setDcStartsAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>6 月后</DropdownItem>
-                            <DropdownItem onPress={() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); setDcStartsAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>1 年后</DropdownItem>
-                            <DropdownItem onPress={() => setDcStartsAt("")}>永久</DropdownItem>
-                          </DropdownMenu>
-                        </Dropdown>
-                      </div>
-                      <p className="text-xs text-gray-400">留空表示永久有效</p>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm text-gray-400 text-foreground mb-1 block">失效时间</label>
-                      <div className="flex gap-2">
-                        <Input variant="bordered" className="flex-1 h-10"
-                          value={dcExpiresAt} onChange={(e) => setDcExpiresAt(e.target.value)} placeholder="例：20281231" />
-                        <Dropdown>
-                          <DropdownTrigger>
-                            <Button className="h-10" variant="flat" color="primary" size="sm">快捷</Button>
-                          </DropdownTrigger>
-                          <DropdownMenu>
-                            <DropdownItem onPress={() => { const d = new Date(); d.setMonth(d.getMonth() + 1); setDcExpiresAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>1 月后</DropdownItem>
-                            <DropdownItem onPress={() => { const d = new Date(); d.setMonth(d.getMonth() + 3); setDcExpiresAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>3 月后</DropdownItem>
-                            <DropdownItem onPress={() => { const d = new Date(); d.setMonth(d.getMonth() + 6); setDcExpiresAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>6 月后</DropdownItem>
-                            <DropdownItem onPress={() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); setDcExpiresAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>1 年后</DropdownItem>
-                            <DropdownItem onPress={() => setDcExpiresAt("")}>永久</DropdownItem>
-                          </DropdownMenu>
-                        </Dropdown>
-                      </div>
-                      <p className="text-xs invisible">.</p>
-                    </div>
+                  <p className="text-xs text-gray-400">留空表示永久有效</p>
+                </div>
+                <div className="sm:col-span-2 lg:col-span-3 space-y-2">
+                  <label className="text-sm text-gray-400 text-foreground">失效时间</label>
+                  <div className="flex gap-2">
+                    <Input variant="bordered" className="flex-1 h-10"
+                      value={dcExpiresAt} onChange={(e) => setDcExpiresAt(e.target.value)} placeholder="例：20281231" />
+                    <Dropdown>
+                      <DropdownTrigger>
+                        <Button className="h-10 shrink-0" variant="bordered">快捷</Button>
+                      </DropdownTrigger>
+                      <DropdownMenu>
+                        <DropdownItem onPress={() => { const d = new Date(); d.setMonth(d.getMonth() + 1); setDcExpiresAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>1 月后</DropdownItem>
+                        <DropdownItem onPress={() => { const d = new Date(); d.setMonth(d.getMonth() + 3); setDcExpiresAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>3 月后</DropdownItem>
+                        <DropdownItem onPress={() => { const d = new Date(); d.setMonth(d.getMonth() + 6); setDcExpiresAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>6 月后</DropdownItem>
+                        <DropdownItem onPress={() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); setDcExpiresAt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); }}>1 年后</DropdownItem>
+                        <DropdownItem onPress={() => setDcExpiresAt("")}>永久</DropdownItem>
+                      </DropdownMenu>
+                    </Dropdown>
                   </div>
-                  <Button className="h-10" color="primary" variant="solid" onPress={handleCreateDiscount}>生成折扣码</Button>
-                </CardBody>
-              </Card>
-              <div className="overflow-hidden rounded-xl border border-divider bg-content1 shadow-md">
-                <Table classNames={{ th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle", td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0", tr: "hover:bg-default-50/50 transition-colors" }}>
-                  <TableHeader>
-                    <TableColumn>折扣码</TableColumn>
-                    <TableColumn>优惠</TableColumn>
-                    <TableColumn>状态</TableColumn>
-                    <TableColumn>次数</TableColumn>
-                    <TableColumn>有效期</TableColumn>
-                    <TableColumn>操作</TableColumn>
-                  </TableHeader>
-                  <TableBody>
-                    {discountCodes.length === 0 ? (
-                      <TableRow><TableCell colSpan={6} className="text-center text-default-400 py-8">暂无折扣码</TableCell></TableRow>
-                    ) : discountCodes.map((c) => (
-                      <TableRow key={c.id}>
-                        <TableCell className="font-mono text-xs">{c.code}</TableCell>
-                        <TableCell>{c.type === "percent" ? `${c.value}%` : `${fmtMoney(c.value)} 元`}</TableCell>
-                        <TableCell>
-                          <Chip size="sm" color={c.isActive ? "success" : "default"} variant="flat">
-                            {c.isActive ? "生效中" : "停用"}
-                          </Chip>
-                        </TableCell>
-                        <TableCell>{c.usedCount} / {c.maxUses || "不限"}</TableCell>
-                        <TableCell className="text-xs">{fmtTime(c.startsAt)} ~ {fmtTime(c.expiresAt)}</TableCell>
-                        <TableCell>
-                          <Button size="sm" color="danger" variant="flat" onPress={() => handleDeleteDiscount(c.id)}>删除</Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                  <p className="text-xs text-gray-400">留空表示永久有效</p>
+                </div>
               </div>
-            </>
-          )}
+              <Button className="h-10" color="primary" variant="solid" onPress={handleCreateDiscount}>生成折扣码</Button>
+            </CardBody>
+          </Card>
+
+          <div className="overflow-hidden rounded-xl border border-divider bg-content1 shadow-md">
+            <Table classNames={{ th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle", td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0", tr: "hover:bg-default-50/50 transition-colors" }}>
+              <TableHeader>
+                <TableColumn>折扣码</TableColumn>
+                <TableColumn>优惠</TableColumn>
+                <TableColumn>状态</TableColumn>
+                <TableColumn>次数</TableColumn>
+                <TableColumn>有效期</TableColumn>
+                <TableColumn>操作</TableColumn>
+              </TableHeader>
+              <TableBody>
+                {discountCodes.length === 0 ? (
+                  <TableRow><TableCell colSpan={6} className="text-center text-default-400 py-8">暂无折扣码</TableCell></TableRow>
+                ) : discountCodes.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="font-mono text-xs">{c.code}</TableCell>
+                    <TableCell>{c.type === "percent" ? `${c.value}%` : `${fmtMoney(c.value)} 元`}</TableCell>
+                    <TableCell>
+                      <Chip size="sm" color={c.isActive ? "success" : "default"} variant="flat">
+                        {c.isActive ? "生效中" : "停用"}
+                      </Chip>
+                    </TableCell>
+                    <TableCell>{c.usedCount} / {c.maxUses || "不限"}</TableCell>
+                    <TableCell className="text-xs">{fmtTime(c.startsAt)} ~ {fmtTime(c.expiresAt)}</TableCell>
+                    <TableCell>
+                      <Button size="sm" color="danger" variant="flat" onPress={() => handleDeleteDiscount(c.id)}>删除</Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </>
       )}
     </AnimatedPage>
