@@ -16,7 +16,6 @@ import (
 type NowPaymentsConfig struct {
 	APIKey    string `json:"api_key"`
 	IPNSecret string `json:"ipn_secret"`
-	Network   string `json:"network"` // trc20 / polygon
 }
 
 type nowPaymentsGateway struct {
@@ -47,15 +46,6 @@ type npInvoiceResponse struct {
 	PayAmount     string `json:"pay_amount"`
 }
 
-func (g *nowPaymentsGateway) payCurrency() string {
-	switch g.config.Network {
-	case "polygon":
-		return "polygon_usdt"
-	default:
-		return "usdttrc20"
-	}
-}
-
 func (g *nowPaymentsGateway) CreateInvoice(order *model.Order) (*PaymentResult, error) {
 	// Convert 分 to USDT (1 分 = 0.01 CNY, approximate USDT rate)
 	amountCNY := float64(order.Amount) / 100.0
@@ -65,10 +55,10 @@ func (g *nowPaymentsGateway) CreateInvoice(order *model.Order) (*PaymentResult, 
 	reqBody := npInvoiceRequest{
 		PriceAmount:      usdtAmount,
 		PriceCurrency:    "usd",
-		PayCurrency:      g.payCurrency(),
+		PayCurrency:      "usdttrc20",
 		OrderID:          order.OrderNo,
 		OrderDescription: order.ProductName,
-		IPNCallbackURL:   "",
+		IPNCallbackURL:   "", // configured externally
 	}
 
 	body, _ := json.Marshal(reqBody)

@@ -227,9 +227,8 @@ func (h *Handler) listAllOrders(w http.ResponseWriter, r *http.Request) {
 	}
 	status := asInt(req["status"], -1)
 	keyword := asString(req["keyword"])
-	userId := asInt64(req["userId"], 0)
 
-	list, total, err := h.repo.ListAllOrders(status, page, size, keyword, userId)
+	list, total, err := h.repo.ListAllOrders(status, page, size, keyword)
 	if err != nil {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return
