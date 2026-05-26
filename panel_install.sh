@@ -1067,14 +1067,10 @@ setup_caddy() {
   echo "📝 正在写入 Caddyfile 配置..."
   sudo tee /etc/caddy/Caddyfile > /dev/null <<CADDY_EOF
 ${domain} {
-    tls {
-    }
-    
     reverse_proxy http://127.0.0.1:${port} {
-        # X-Forwarded-For
-        # X-Forwarded-Proto
-        # X-Forwarded-Host
         header_up Host {host}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
     }
 }
 CADDY_EOF
