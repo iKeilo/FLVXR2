@@ -91,7 +91,7 @@ func (r *Repository) ListOrders(userID int64, status int, page, size int) ([]*mo
 	return list, total, nil
 }
 
-func (r *Repository) ListAllOrders(status int, page, size int, keyword string) ([]*model.Order, int64, error) {
+func (r *Repository) ListAllOrders(status int, page, size int, keyword string, userId int64) ([]*model.Order, int64, error) {
 	if r == nil || r.db == nil {
 		return nil, 0, errors.New("repository not initialized")
 	}
@@ -99,6 +99,9 @@ func (r *Repository) ListAllOrders(status int, page, size int, keyword string) (
 	query := r.db.Model(&model.Order{})
 	if status >= 0 {
 		query = query.Where("status = ?", status)
+	}
+	if userId > 0 {
+		query = query.Where("user_id = ?", userId)
 	}
 	if keyword != "" {
 		query = query.Where("order_no LIKE ? OR user_name LIKE ?", "%"+keyword+"%", "%"+keyword+"%")

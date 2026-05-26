@@ -231,6 +231,16 @@ export default function AdminLayout({
       adminOnly: true,
     },
     {
+      path: "/admin/billing",
+      label: "营销",
+      icon: (
+        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+        </svg>
+      ),
+      adminOnly: true,
+    },
+    {
       path: "/admin/orders",
       label: "账单",
       icon: (
@@ -247,16 +257,6 @@ export default function AdminLayout({
         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
           <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
           <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
-        </svg>
-      ),
-      adminOnly: true,
-    },
-    {
-      path: "/admin/billing",
-      label: "营销",
-      icon: (
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-          <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
         </svg>
       ),
       adminOnly: true,
@@ -367,9 +367,9 @@ export default function AdminLayout({
           if (!isNaN(ts) && (ts === -1 || ts > Date.now())) {
             setIsRedBannerClosed(true);
           }
-        } catch {}
+        } catch { }
       }
-    } catch {}
+    } catch { }
   }, []);
 
   // 授权状态变化时，清除关闭状态并重新显示横幅
@@ -387,7 +387,7 @@ export default function AdminLayout({
           }
         }
         setIsRedBannerClosed(false);
-      } catch {}
+      } catch { }
     }
   }, [licenseInfo?.tier]);
 
@@ -604,11 +604,10 @@ export default function AdminLayout({
             className={`transition-all duration-300 overflow-hidden ${isCollapsed ? "max-w-0 opacity-0 ml-0" : "max-w-[180px] opacity-100 ml-2"}`}
           >
             <a
-              className={`text-sm font-bold overflow-hidden whitespace-nowrap text-ellipsis transition-colors cursor-pointer no-underline ${
-                licenseInfo?.has_license_key
-                  ? "text-foreground hover:text-primary-600 dark:hover:text-primary-300"
-                  : "text-foreground hover:text-primary-600 dark:hover:text-primary-300"
-              }`}
+              className={`text-sm font-bold overflow-hidden whitespace-nowrap text-ellipsis transition-colors cursor-pointer no-underline ${licenseInfo?.has_license_key
+                ? "text-foreground hover:text-primary-600 dark:hover:text-primary-300"
+                : "text-foreground hover:text-primary-600 dark:hover:text-primary-300"
+                }`}
               href={
                 licenseInfo?.has_license_key
                   ? "/dashboard"
@@ -643,13 +642,12 @@ export default function AdminLayout({
                        w-full flex items-center p-2 rounded-lg text-left
                        relative min-h-[44px] overflow-hidden transition-colors
                        ${isMonitorBlocked ? "opacity-60" : ""}
-                       ${
-                         isActive
-                           ? "text-primary-600 dark:text-primary-300"
-                           : isMonitorBlocked
-                             ? "text-gray-500 dark:text-gray-400"
-                             : "text-gray-700 dark:text-gray-200"
-                       }
+                       ${isActive
+                        ? "text-primary-600 dark:text-primary-300"
+                        : isMonitorBlocked
+                          ? "text-gray-500 dark:text-gray-400"
+                          : "text-gray-700 dark:text-gray-200"
+                      }
                      `}
                     title={
                       isCollapsed
@@ -983,8 +981,8 @@ export default function AdminLayout({
           {/* 中间：授权信息 (全局可见) */}
           <div className="flex-1 flex justify-start items-center h-full mx-4 overflow-hidden">
             {licenseInfo &&
-            (licenseInfo.tier === "free" ||
-              (!licenseInfo.has_license_key && !licenseInfo.tier)) ? (
+              (licenseInfo.tier === "free" ||
+                (!licenseInfo.has_license_key && !licenseInfo.tier)) ? (
               <div className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400 truncate">
                 <svg
                   className="w-4 h-4 flex-shrink-0"
@@ -1038,12 +1036,12 @@ export default function AdminLayout({
                     (() => {
                       const daysLeft = licenseInfo.expire_time
                         ? Math.max(
-                            0,
-                            Math.floor(
-                              (licenseInfo.expire_time - Date.now()) /
-                                (1000 * 60 * 60 * 24),
-                            ),
-                          )
+                          0,
+                          Math.floor(
+                            (licenseInfo.expire_time - Date.now()) /
+                            (1000 * 60 * 60 * 24),
+                          ),
+                        )
                         : 0;
                       const isExpiringSoon = daysLeft < 5;
                       const textColorClass = isExpiringSoon

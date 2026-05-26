@@ -68,7 +68,7 @@ const defaultForm: ProductForm = {
 };
 
 const typeUnit: Record<string, string> = {
-  recharge: "分",
+  recharge: "元",
   traffic: "GB",
   time: "天",
 };
@@ -193,7 +193,7 @@ export default function AdminProductsPage() {
 
   return (
     <AnimatedPage className="px-3 lg:px-6 py-8">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">商品管理</h1>
         <div className="flex gap-2">
           <SearchBar
@@ -205,34 +205,64 @@ export default function AdminProductsPage() {
             onOpen={() => setIsSearchVisible(true)}
           />
           <Button color="primary" size="sm" variant="flat" onPress={handleAdd}>
-            新增商品
+            新增
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardBody className="py-4">
-            <div className="text-sm text-gray-400 mb-1">商品总数</div>
-            <div className="text-2xl font-semibold">{products.length}</div>
+      {/* Stats Cards - Dashboard style */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
+        <Card className="border border-gray-200 dark:border-default-200 shadow-md hover:shadow-lg transition-shadow">
+          <CardBody className="p-3 lg:p-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-default-500">商品总数</span>
+              <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-500/20">
+                <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3z" />
+                </svg>
+              </div>
+            </div>
+            <p className="text-xl font-bold text-foreground">{products.length}</p>
           </CardBody>
         </Card>
-        <Card>
-          <CardBody className="py-4">
-            <div className="text-sm text-gray-400 mb-1">上架</div>
-            <div className="text-2xl font-semibold text-green-600">{activeCount}</div>
+        <Card className="border border-gray-200 dark:border-default-200 shadow-md hover:shadow-lg transition-shadow">
+          <CardBody className="p-3 lg:p-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-default-500">上架</span>
+              <div className="p-1.5 rounded-lg bg-green-100 dark:bg-green-500/20">
+                <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </div>
+            </div>
+            <p className="text-xl font-bold text-green-600">{activeCount}</p>
           </CardBody>
         </Card>
-        <Card>
-          <CardBody className="py-4">
-            <div className="text-sm text-gray-400 mb-1">下架</div>
-            <div className="text-2xl font-semibold text-gray-400">{products.length - activeCount}</div>
+        <Card className="border border-gray-200 dark:border-default-200 shadow-md hover:shadow-lg transition-shadow">
+          <CardBody className="p-3 lg:p-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-default-500">下架</span>
+              <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-500/20">
+                <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </div>
+            </div>
+            <p className="text-xl font-bold text-gray-400">{products.length - activeCount}</p>
           </CardBody>
         </Card>
-        <Card>
-          <CardBody className="py-4">
-            <div className="text-sm text-gray-400 mb-1">类型分布</div>
-            <div className="text-base">
+        <Card className="border border-gray-200 dark:border-default-200 shadow-md hover:shadow-lg transition-shadow">
+          <CardBody className="p-3 lg:p-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-default-500">类型分布</span>
+              <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-500/20">
+                <svg className="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                  <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
+                </svg>
+              </div>
+            </div>
+            <div className="text-sm">
               {productTypeOptions.map((opt) => (
                 <span key={opt.value} className="mr-2">
                   {opt.label}
@@ -244,53 +274,64 @@ export default function AdminProductsPage() {
         </Card>
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableColumn>名称</TableColumn>
-          <TableColumn>类型</TableColumn>
-          <TableColumn>价格</TableColumn>
-          <TableColumn>价值</TableColumn>
-          <TableColumn>排序</TableColumn>
-          <TableColumn>状态</TableColumn>
-          <TableColumn>操作</TableColumn>
-        </TableHeader>
-        <TableBody>
-          {filtered.map((item) => {
-            const typeLabel = productTypeOptions.find((t) => t.value === item.type)?.label || item.type;
-            return (
-              <TableRow key={item.id}>
-                <TableCell>
-                  <div className="font-medium">{item.name}</div>
-                  {item.description && (
-                    <div className="text-xs text-gray-400 truncate max-w-40">{item.description}</div>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Chip color={typeBadgeColor[item.type] || "default"} size="sm" variant="flat">
-                    {typeLabel}
-                  </Chip>
-                </TableCell>
-                <TableCell className="font-mono">{(item.price / 100).toFixed(2)} 元</TableCell>
-                <TableCell>{item.value} {typeUnit[item.type] || ""}</TableCell>
-                <TableCell>{item.sortOrder}</TableCell>
-                <TableCell>
-                  <Chip color={item.status === 1 ? "success" : "default"} size="sm">
-                    {item.status === 1 ? "上架" : "下架"}
-                  </Chip>
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="flat" onPress={() => handleEdit(item)}>编辑</Button>
-                    <Button size="sm" color="danger" variant="flat" onPress={() => handleDelete(item)}>删除</Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+      {/* Table - Limit page style */}
+      <div className="overflow-hidden rounded-xl border border-divider bg-content1 shadow-md">
+        <Table
+          classNames={{
+            th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle",
+            td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
+            tr: "hover:bg-default-50/50 transition-colors",
+          }}
+        >
+          <TableHeader>
+            <TableColumn className="whitespace-nowrap">名称</TableColumn>
+            <TableColumn className="whitespace-nowrap">类型</TableColumn>
+            <TableColumn className="whitespace-nowrap">价格</TableColumn>
+            <TableColumn className="whitespace-nowrap">价值</TableColumn>
+            <TableColumn className="whitespace-nowrap">排序</TableColumn>
+            <TableColumn className="whitespace-nowrap">状态</TableColumn>
+            <TableColumn className="whitespace-nowrap">操作</TableColumn>
+          </TableHeader>
+          <TableBody>
+            {filtered.length === 0 ? (
+              <TableRow><TableCell colSpan={7} className="text-center text-default-400 py-8">暂无商品</TableCell></TableRow>
+            ) : filtered.map((item) => {
+              const typeLabel = productTypeOptions.find((t) => t.value === item.type)?.label || item.type;
+              return (
+                <TableRow key={item.id}>
+                  <TableCell>
+                    <span className="font-medium text-foreground">{item.name}</span>
+                    {item.description && (
+                      <div className="text-xs text-default-500 truncate max-w-40">{item.description}</div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Chip color={typeBadgeColor[item.type] || "default"} size="sm" variant="flat">
+                      {typeLabel}
+                    </Chip>
+                  </TableCell>
+                  <TableCell className="font-mono">{(item.price / 100).toFixed(2)} 元</TableCell>
+                  <TableCell>{item.value} {typeUnit[item.type] || ""}</TableCell>
+                  <TableCell>{item.sortOrder}</TableCell>
+                  <TableCell>
+                    <Chip color={item.status === 1 ? "success" : "default"} size="sm">
+                      {item.status === 1 ? "上架" : "下架"}
+                    </Chip>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-1.5">
+                      <Button size="sm" variant="flat" className="min-h-7 px-2" onPress={() => handleEdit(item)}>编辑</Button>
+                      <Button size="sm" color="danger" variant="flat" className="min-h-7 px-2" onPress={() => handleDelete(item)}>删除</Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
 
-      <Modal isOpen={modalOpen} placement="center" size="2xl"
+      <Modal isOpen={modalOpen} placement="center" size="xl"
         onOpenChange={(open) => { if (!open) setModalOpen(false); }}>
         <ModalContent>
           <ModalHeader>{isEdit ? "编辑商品" : "新增商品"}</ModalHeader>
@@ -298,7 +339,7 @@ export default function AdminProductsPage() {
             <Input label="商品名称" value={form.name} variant="bordered"
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
             <div className="space-y-1">
-              <label className="text-sm text-gray-400">说明</label>
+              <label className="text-sm text-default-500">说明</label>
               <Textarea value={form.description} variant="bordered" className="w-full min-h-20"
                 onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} />
             </div>
@@ -331,7 +372,7 @@ export default function AdminProductsPage() {
               <SelectItem key="1">上架</SelectItem>
               <SelectItem key="0">下架</SelectItem>
             </Select>
-            <div className="text-xs text-gray-400">
+            <div className="text-xs text-default-500">
               {form.type === "recharge" ? "价值单位：分（充值到余额）" :
                form.type === "traffic" ? "价值单位：GB（增加流量）" :
                "价值单位：天（延长有效期）"}

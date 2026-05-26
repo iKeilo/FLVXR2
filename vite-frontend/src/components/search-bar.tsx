@@ -25,7 +25,7 @@ export function SearchBar({
 }: SearchBarProps) {
   return (
     // Fixed h-8 so the container never changes height — eliminates the vertical jitter
-    <div className="flex items-center gap-2 h-8 overflow-hidden">
+    <div className="flex items-center gap-2 h-8">
       <AnimatePresence initial={false} mode="wait">
         {!isVisible ? (
           <motion.div
@@ -72,7 +72,7 @@ export function SearchBar({
             <Button
               isIconOnly
               aria-label="关闭搜索"
-              className="text-default-600 shrink-0"
+              className="text-default-600 shrink-0 hover:bg-default-200"
               color="default"
               size="sm"
               variant="flat"
@@ -83,7 +83,7 @@ export function SearchBar({
             >
               <svg
                 aria-hidden="true"
-                className="w-4 h-4"
+                className="w-4 h-4 text-default-700"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
