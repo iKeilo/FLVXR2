@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import toast from "react-hot-toast";
 
 import { AnimatedPage } from "@/components/animated-page";
@@ -21,8 +21,8 @@ import {
 } from "@/shadcn-bridge/heroui/modal";
 import { Chip } from "@/shadcn-bridge/heroui/chip";
 import { Select, SelectItem } from "@/shadcn-bridge/heroui/select";
-import { getAdminOrderList } from "@/api";
-import type { OrderApiItem } from "@/api/types";
+import { getAdminOrderList, getAllUsers } from "@/api";
+import type { OrderApiItem, UserApiItem } from "@/api/types";
 import { PageLoadingState } from "@/components/page-state";
 
 const statusMap: Record<number, { label: string; color: "warning" | "success" | "default" | "danger" }> = {
@@ -40,23 +40,28 @@ const currencyLabel: Record<string, string> = {
 
 export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const isFirstLoad = useRef(true);
   const [orders, setOrders] = useState<OrderApiItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("-1");
   const [keyword, setKeyword] = useState("");
+  const [userFilter, setUserFilter] = useState<string>("all");
+  const [users, setUsers] = useState<UserApiItem[]>([]);
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailOrder, setDetailOrder] = useState<OrderApiItem | null>(null);
 
   const loadData = useCallback(async () => {
-    setLoading(true);
+    if (!isFirstLoad.current) setRefreshing(true);
     try {
       const res = await getAdminOrderList({
         page,
         size: 10,
         status: parseInt(statusFilter),
         keyword,
+        userId: userFilter !== "all" ? Number(userFilter) : undefined,
       });
       if (res.code === 0) {
         setOrders(res.data.list || []);
@@ -68,10 +73,53 @@ export default function AdminOrdersPage() {
       toast.error("获取订单列表失败");
     } finally {
       setLoading(false);
+      setRefreshing(false);
+      isFirstLoad.current = false;
     }
   }, [page, statusFilter, keyword]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  useEffect(() => {
+    getAllUsers({ size: 1000 }).then((res) => {
+      if (res.code === 0) setUsers(Array.isArray(res.data) ? res.data : []);
+    });
+  }, []);
+
+  // Silent refresh on filter change
+  useEffect(() => {
+    if (isFirstLoad.current) { isFirstLoad.current = false; return; }
+    setRefreshing(true);
+    (async () => {
+      const res = await getAdminOrderList({
+        page, size: 10,
+        status: parseInt(statusFilter),
+        keyword,
+        userId: userFilter !== "all" ? Number(userFilter) : undefined,
+      });
+      if (res.code === 0) {
+        setOrders(res.data.list || []);
+        setTotal(res.data.total || 0);
+      }
+      setRefreshing(false);
+    })();
+  }, [statusFilter, keyword, userFilter]);
+
+  // Override status change to reset page
+  const handleStatusChange = (val: string) => {
+    if (val) { setStatusFilter(val); setPage(1); }
+  };
+
+  const handleSearch = (val: string) => {
+    setKeyword(val);
+    setPage(1);
+  };
+
+  const handleCloseSearch = () => {
+    setIsSearchVisible(false);
+    setKeyword("");
+    setPage(1);
+  };
 
   const handleViewDetail = (order: OrderApiItem) => {
     setDetailOrder(order);
@@ -84,71 +132,94 @@ export default function AdminOrdersPage() {
     <AnimatedPage className="px-3 lg:px-6 py-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">订单管理</h1>
-        <div className="flex gap-2 items-center">
-          <Select
-            label="状态"
-            variant="bordered"
-            size="sm"
-            selectedKeys={[statusFilter]}
-            className="w-32"
+        <SearchBar
+          isVisible={isSearchVisible}
+          placeholder="搜索订单号/用户..."
+          value={keyword}
+          onChange={handleSearch}
+          onClose={handleCloseSearch}
+          onOpen={() => setIsSearchVisible(true)}
+        />
+      </div>
+
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex flex-wrap gap-2">
+          {["-1", "0", "1", "2", "3"].map((key) => {
+            const labels: Record<string, string> = { "-1": "全部", "0": "待支付", "1": "已完成", "2": "已取消", "3": "已退款" };
+            return (
+              <Button key={key} size="sm" variant={statusFilter === key ? "solid" : "flat"} color={statusFilter === key ? "primary" : "default"} onPress={() => handleStatusChange(key)}>
+                {labels[key]}
+              </Button>
+            );
+          })}
+        </div>
+        <div className="ml-auto">
+          <Select variant="bordered" size="sm" className="w-36"
+            selectedKeys={userFilter === "all" ? ["all"] : [userFilter]}
+            placeholder="全部用户"
             onSelectionChange={(keys) => {
               const val = Array.from(keys)[0] as string;
-              if (val) { setStatusFilter(val); setPage(1); }
+              setUserFilter(val || "all");
+              setPage(1);
             }}
           >
-            <SelectItem key="-1">全部</SelectItem>
-            <SelectItem key="0">待支付</SelectItem>
-            <SelectItem key="1">已完成</SelectItem>
-            <SelectItem key="2">已取消</SelectItem>
+            <SelectItem key="all">全部用户</SelectItem>
+            {users.map((u) => (
+              <SelectItem key={String(u.id)}>{u.name || u.user || `#${u.id}`}</SelectItem>
+            ))}
           </Select>
-          <SearchBar
-            isVisible={isSearchVisible}
-            placeholder="搜索订单号/用户..."
-            value={keyword}
-            onChange={setKeyword}
-            onClose={() => { setIsSearchVisible(false); setKeyword(""); setPage(1); }}
-            onOpen={() => setIsSearchVisible(true)}
-          />
         </div>
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableColumn>订单号</TableColumn>
-          <TableColumn>用户</TableColumn>
-          <TableColumn>商品</TableColumn>
-          <TableColumn>金额</TableColumn>
-          <TableColumn>支付方式</TableColumn>
-          <TableColumn>状态</TableColumn>
-          <TableColumn>时间</TableColumn>
-          <TableColumn>操作</TableColumn>
-        </TableHeader>
-        <TableBody>
-          {orders.map((order) => {
-            const st = statusMap[order.status] || { label: "未知", color: "default" };
-            return (
-              <TableRow key={order.id}>
-                <TableCell className="font-mono text-xs">{order.orderNo}</TableCell>
-                <TableCell>{order.userName}</TableCell>
-                <TableCell>{order.productName}</TableCell>
-                <TableCell>{(order.amount / 100).toFixed(2)} 元</TableCell>
-                <TableCell>{currencyLabel[order.payCurrency] || order.payCurrency}</TableCell>
-                <TableCell>
-                  <Chip color={st.color} size="sm">{st.label}</Chip>
-                </TableCell>
-                <TableCell className="text-xs text-gray-400">
-                  {order.createdAt ? new Date(order.createdAt * 1000).toLocaleString() : "-"}
-                </TableCell>
-                <TableCell>
-                  <Button size="sm" variant="flat" onPress={() => handleViewDetail(order)}>
-                    详情
-                  </Button>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+      <div className="relative overflow-hidden rounded-xl border border-divider bg-content1 shadow-md">
+        {refreshing && (
+          <div className="absolute inset-0 bg-white/60 dark:bg-black/40 z-10 flex items-center justify-center">
+            <svg className="animate-spin h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          </div>
+        )}
+        <Table classNames={{ th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle", td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0", tr: "hover:bg-default-50/50 transition-colors" }}>
+          <TableHeader>
+            <TableColumn className="whitespace-nowrap">订单号</TableColumn>
+            <TableColumn className="whitespace-nowrap">用户</TableColumn>
+            <TableColumn className="whitespace-nowrap">商品</TableColumn>
+            <TableColumn className="whitespace-nowrap">金额</TableColumn>
+            <TableColumn className="whitespace-nowrap">支付方式</TableColumn>
+            <TableColumn className="whitespace-nowrap">状态</TableColumn>
+            <TableColumn className="whitespace-nowrap">时间</TableColumn>
+            <TableColumn className="whitespace-nowrap">操作</TableColumn>
+          </TableHeader>
+          <TableBody>
+            {orders.length === 0 ? (
+              <TableRow><TableCell colSpan={8} className="text-center text-default-400 py-8">暂无订单</TableCell></TableRow>
+            ) : orders.map((order) => {
+              const st = statusMap[order.status] || { label: "未知", color: "default" };
+              return (
+                <TableRow key={order.id}>
+                  <TableCell className="font-mono text-xs">{order.orderNo}</TableCell>
+                  <TableCell>{order.userName}</TableCell>
+                  <TableCell>{order.productName}</TableCell>
+                  <TableCell>{(order.amount / 100).toFixed(2)} 元</TableCell>
+                  <TableCell>{currencyLabel[order.payCurrency] || order.payCurrency}</TableCell>
+                  <TableCell>
+                    <Chip color={st.color} size="sm">{st.label}</Chip>
+                  </TableCell>
+                  <TableCell className="text-xs text-gray-400">
+                    {order.createdAt ? new Date(order.createdAt * 1000).toLocaleString() : "-"}
+                  </TableCell>
+                  <TableCell>
+                    <Button size="sm" variant="flat" onPress={() => handleViewDetail(order)}>
+                      详情
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
 
       {total > 10 && (
         <div className="flex justify-center gap-2 mt-4">
@@ -174,22 +245,22 @@ export default function AdminOrdersPage() {
           <ModalBody>
             {detailOrder && (
               <div className="space-y-3 text-sm">
-                <div className="flex justify-between"><span className="text-gray-400">订单号</span><span className="font-mono">{detailOrder.orderNo}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400">用户</span><span>{detailOrder.userName}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400">商品</span><span>{detailOrder.productName}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400">金额</span><span>{(detailOrder.amount / 100).toFixed(2)} 元</span></div>
-                <div className="flex justify-between"><span className="text-gray-400">支付方式</span><span>{currencyLabel[detailOrder.payCurrency] || detailOrder.payCurrency}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400">状态</span><Chip color={statusMap[detailOrder.status]?.color || "default"} size="sm">{statusMap[detailOrder.status]?.label || "未知"}</Chip></div>
+                <div className="flex justify-between"><span className="text-gray-400 text-foreground">订单号</span><span className="font-mono">{detailOrder.orderNo}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400 text-foreground">用户</span><span>{detailOrder.userName}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400 text-foreground">商品</span><span>{detailOrder.productName}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400 text-foreground">金额</span><span>{(detailOrder.amount / 100).toFixed(2)} 元</span></div>
+                <div className="flex justify-between"><span className="text-gray-400 text-foreground">支付方式</span><span>{currencyLabel[detailOrder.payCurrency] || detailOrder.payCurrency}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400 text-foreground">状态</span><Chip color={statusMap[detailOrder.status]?.color || "default"} size="sm">{statusMap[detailOrder.status]?.label || "未知"}</Chip></div>
                 {detailOrder.payTime > 0 && (
-                  <div className="flex justify-between"><span className="text-gray-400">支付时间</span><span>{new Date(detailOrder.payTime * 1000).toLocaleString()}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-400 text-foreground">支付时间</span><span>{new Date(detailOrder.payTime * 1000).toLocaleString()}</span></div>
                 )}
                 {detailOrder.payAddress && (
-                  <div className="flex justify-between"><span className="text-gray-400">USDT 地址</span><span className="font-mono text-xs max-w-[200px] break-all text-right">{detailOrder.payAddress}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-400 text-foreground">USDT 地址</span><span className="font-mono text-xs max-w-[200px] break-all text-right">{detailOrder.payAddress}</span></div>
                 )}
                 {detailOrder.txHash && (
-                  <div className="flex justify-between"><span className="text-gray-400">交易哈希</span><span className="font-mono text-xs max-w-[200px] break-all text-right">{detailOrder.txHash}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-400 text-foreground">交易哈希</span><span className="font-mono text-xs max-w-[200px] break-all text-right">{detailOrder.txHash}</span></div>
                 )}
-                <div className="flex justify-between"><span className="text-gray-400">创建时间</span><span>{detailOrder.createdAt ? new Date(detailOrder.createdAt * 1000).toLocaleString() : "-"}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400 text-foreground">创建时间</span><span>{detailOrder.createdAt ? new Date(detailOrder.createdAt * 1000).toLocaleString() : "-"}</span></div>
               </div>
             )}
           </ModalBody>

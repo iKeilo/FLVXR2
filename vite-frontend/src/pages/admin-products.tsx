@@ -210,33 +210,64 @@ export default function AdminProductsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardBody className="py-4">
-            <div className="text-sm text-gray-400 mb-1">商品总数</div>
-            <div className="text-2xl font-semibold">{products.length}</div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
+        <Card className="border border-gray-200 dark:border-default-200 shadow-md hover:shadow-lg transition-shadow">
+          <CardBody className="p-3 lg:p-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-default-500">商品总数</span>
+              <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-500/20">
+                <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M3 3a1 1 0 000 2h16a1 1 0 100-2H3z" />
+                  <path fillRule="evenodd" d="M3 7a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                  <path fillRule="evenodd" d="M3 11a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                  <path fillRule="evenodd" d="M3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+            </div>
+            <p className="text-xl font-bold text-foreground">{products.length}</p>
           </CardBody>
         </Card>
-        <Card>
-          <CardBody className="py-4">
-            <div className="text-sm text-gray-400 mb-1">上架</div>
-            <div className="text-2xl font-semibold text-green-600">{activeCount}</div>
+        <Card className="border border-gray-200 dark:border-default-200 shadow-md hover:shadow-lg transition-shadow">
+          <CardBody className="p-3 lg:p-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-default-500">上架</span>
+              <div className="p-1.5 rounded-lg bg-green-100 dark:bg-green-500/20">
+                <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </div>
+            </div>
+            <p className="text-xl font-bold text-green-600">{activeCount}</p>
           </CardBody>
         </Card>
-        <Card>
-          <CardBody className="py-4">
-            <div className="text-sm text-gray-400 mb-1">下架</div>
-            <div className="text-2xl font-semibold text-gray-400">{products.length - activeCount}</div>
+        <Card className="border border-gray-200 dark:border-default-200 shadow-md hover:shadow-lg transition-shadow">
+          <CardBody className="p-3 lg:p-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-default-500">下架</span>
+              <div className="p-1.5 rounded-lg bg-red-100 dark:bg-red-500/20">
+                <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </div>
+            </div>
+            <p className="text-xl font-bold text-gray-400">{products.length - activeCount}</p>
           </CardBody>
         </Card>
-        <Card>
-          <CardBody className="py-4">
-            <div className="text-sm text-gray-400 mb-1">类型分布</div>
-            <div className="text-base">
+        <Card className="border border-gray-200 dark:border-default-200 shadow-md hover:shadow-lg transition-shadow">
+          <CardBody className="p-3 lg:p-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-default-500">类型分布</span>
+              <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-500/20">
+                <svg className="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+                </svg>
+              </div>
+            </div>
+            <div className="text-sm mt-2">
               {productTypeOptions.map((opt) => (
-                <span key={opt.value} className="mr-2">
+                <span key={opt.value} className="mr-3">
                   {opt.label}
-                  <span className="ml-1 font-semibold">{typeCounts[opt.value] || 0}</span>
+                  <span className="ml-1 font-semibold text-foreground">{typeCounts[opt.value] || 0}</span>
                 </span>
               ))}
             </div>
@@ -244,17 +275,18 @@ export default function AdminProductsPage() {
         </Card>
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableColumn>名称</TableColumn>
-          <TableColumn>类型</TableColumn>
-          <TableColumn>价格</TableColumn>
-          <TableColumn>价值</TableColumn>
-          <TableColumn>排序</TableColumn>
-          <TableColumn>状态</TableColumn>
-          <TableColumn>操作</TableColumn>
-        </TableHeader>
-        <TableBody>
+      <div className="overflow-hidden rounded-xl border border-divider bg-content1 shadow-md">
+        <Table classNames={{ th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle", td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0", tr: "hover:bg-default-50/50 transition-colors" }}>
+          <TableHeader>
+            <TableColumn className="whitespace-nowrap">名称</TableColumn>
+            <TableColumn className="whitespace-nowrap">类型</TableColumn>
+            <TableColumn className="whitespace-nowrap">价格</TableColumn>
+            <TableColumn className="whitespace-nowrap">价值</TableColumn>
+            <TableColumn className="whitespace-nowrap">排序</TableColumn>
+            <TableColumn className="whitespace-nowrap">状态</TableColumn>
+            <TableColumn className="whitespace-nowrap">操作</TableColumn>
+          </TableHeader>
+          <TableBody>
           {filtered.map((item) => {
             const typeLabel = productTypeOptions.find((t) => t.value === item.type)?.label || item.type;
             return (
@@ -289,6 +321,7 @@ export default function AdminProductsPage() {
           })}
         </TableBody>
       </Table>
+    </div>
 
       <Modal isOpen={modalOpen} placement="center" size="2xl"
         onOpenChange={(open) => { if (!open) setModalOpen(false); }}>
@@ -298,7 +331,7 @@ export default function AdminProductsPage() {
             <Input label="商品名称" value={form.name} variant="bordered"
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
             <div className="space-y-1">
-              <label className="text-sm text-gray-400">说明</label>
+              <label className="text-sm text-gray-400 text-foreground">说明</label>
               <Textarea value={form.description} variant="bordered" className="w-full min-h-20"
                 onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} />
             </div>
