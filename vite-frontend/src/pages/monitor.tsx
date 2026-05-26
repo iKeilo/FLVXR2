@@ -35,7 +35,16 @@ export default function MonitorPage() {
 
     return "list";
   });
+
+  const params = new URLSearchParams(window.location.search);
+  const hideTunnels = params.get("hideTunnels") === "true";
+
   const [activeTab, setActiveTab] = useState<MonitorTab>(() => {
+    const tabParam = params.get("tab");
+
+    if (tabParam === "nodes") return "nodes";
+    if (tabParam === "tunnels") return "tunnels";
+
     try {
       const saved = localStorage.getItem("monitor-active-tab");
 
@@ -144,14 +153,16 @@ export default function MonitorPage() {
             节点
           </Button>
           {/* 隧道按钮 - 绿色 */}
-          <Button
-            color="success"
-            size="sm"
-            variant="flat"
-            onPress={() => setActiveTab("tunnels")}
-          >
-            隧道
-          </Button>
+          {!hideTunnels && (
+            <Button
+              color="success"
+              size="sm"
+              variant="flat"
+              onPress={() => setActiveTab("tunnels")}
+            >
+              隧道
+            </Button>
+          )}
           {/* 刷新按钮 - 紫色 */}
           <Button
             color="secondary"
@@ -171,7 +182,9 @@ export default function MonitorPage() {
         </div>
         {/* 第二行：副标题 */}
         <div className="text-xs text-default-500 truncate">
-          实时节点状态 + 隧道质量检测 + 历史指标图表 + 服务监控 (TCP/ICMP)
+          {hideTunnels
+            ? "实时节点状态 + 历史指标图表 + 服务监控 (TCP/ICMP)"
+            : "实时节点状态 + 隧道质量检测 + 历史指标图表 + 服务监控 (TCP/ICMP)"}
         </div>
         {nodesError && activeTab === "nodes" ? (
           <Card>

@@ -399,6 +399,16 @@ func (r *Repository) UpdateNode(id int64, name, serverIP string, serverIPV4, ser
 		Updates(updates).Error
 }
 
+func (r *Repository) UpdateNodeProtocolFields(nodeID int64, httpVal, tlsVal, socksVal, blockOtherVal int) error {
+	if r == nil || r.db == nil {
+		return errors.New("repository not initialized")
+	}
+	return r.db.Model(&model.Node{}).Where("id = ?", nodeID).Updates(map[string]interface{}{
+		"http": httpVal, "tls": tlsVal, "socks": socksVal,
+		"block_other": blockOtherVal, "updated_time": unixMilliNow(),
+	}).Error
+}
+
 func (r *Repository) GetNodeSecret(nodeID int64) (string, error) {
 	if r == nil || r.db == nil {
 		return "", errors.New("repository not initialized")
@@ -842,7 +852,7 @@ func (r *Repository) UpdateTunnelOrder(tunnelID int64, inx int, now int64) {
 		Updates(map[string]interface{}{"inx": inx, "updated_time": now}).Error
 }
 
-func (r *Repository) UpdateTunnelTx(tx *gorm.DB, tunnelID int64, name string, typeVal int, flow int64, trafficRatio float64, status int, inIP, ipPreference string, listID int64, tunnelGroupID interface{}, remark string, now int64) error {
+func (r *Repository) UpdateTunnelTx(tx *gorm.DB, tunnelID int64, name string, typeVal int, flow int64, trafficRatio float64, status int, inIP, ipPreference string, listID int64, tunnelGroupID interface{}, remark string, now int64, httpVal, tlsVal, socksVal, blockOtherVal int) error {
 	if tx == nil {
 		return errors.New("database unavailable")
 	}
@@ -856,6 +866,10 @@ func (r *Repository) UpdateTunnelTx(tx *gorm.DB, tunnelID int64, name string, ty
 		"ip_preference": ipPreference,
 		"updated_time":  now,
 		"remark":        nullStringFromInterface(remark),
+		"http":          httpVal,
+		"tls":           tlsVal,
+		"socks":         socksVal,
+		"block_other":   blockOtherVal,
 	}
 	if listID > 0 {
 		updates["list_id"] = sql.NullInt64{Int64: listID, Valid: true}
