@@ -8,158 +8,8 @@ import (
 	"time"
 
 	"go-backend/internal/http/response"
-	"go-backend/internal/middleware"
 	"go-backend/internal/store/model"
 )
-
-func (h *Handler) listProducts(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		response.WriteJSON(w, response.ErrDefault("请求失败"))
-		return
-	}
-
-	_, roleID, err := userRoleFromRequest(r)
-	if err != nil {
-		response.WriteJSON(w, response.Err(-2, "用户信息错误"))
-		return
-	}
-
-	onlyActive := roleID != 0
-	items, err := h.repo.ListProducts(onlyActive)
-	if err != nil {
-		response.WriteJSON(w, response.Err(-2, err.Error()))
-		return
-	}
-	if items == nil {
-		items = []*model.Product{}
-	}
-	response.WriteJSON(w, response.OK(items))
-}
-
-func (h *Handler) createProduct(w http.ResponseWriter, r *http.Request) {
-	tier, _ := middleware.GetLicenseTier()
-	if tier == middleware.TierBlocked {
-		response.WriteJSON(w, response.Err(403, "授权无效，无法操作"))
-		return
-	}
-
-	var req map[string]interface{}
-	if err := decodeJSON(r.Body, &req); err != nil {
-		response.WriteJSON(w, response.ErrDefault("请求参数错误"))
-		return
-	}
-
-	name := asString(req["name"])
-	if name == "" {
-		response.WriteJSON(w, response.ErrDefault("商品名称不能为空"))
-		return
-	}
-
-	sortOrder := asInt(req["sort_order"], asInt(req["sortOrder"], 0))
-
-	product, err := h.repo.CreateProduct(
-		name,
-		asString(req["description"]),
-		asString(req["type"]),
-		asInt64(req["price"], 0),
-		asInt64(req["value"], 0),
-		sortOrder,
-		asInt(req["status"], 1),
-	)
-	if err != nil {
-		response.WriteJSON(w, response.Err(-2, err.Error()))
-		return
-	}
-
-	response.WriteJSON(w, response.OK(product))
-}
-
-func (h *Handler) updateProduct(w http.ResponseWriter, r *http.Request) {
-	tier, _ := middleware.GetLicenseTier()
-	if tier == middleware.TierBlocked {
-		response.WriteJSON(w, response.Err(403, "授权无效，无法操作"))
-		return
-	}
-
-	var req map[string]interface{}
-	if err := decodeJSON(r.Body, &req); err != nil {
-		response.WriteJSON(w, response.ErrDefault("请求参数错误"))
-		return
-	}
-
-	id := asInt64(req["id"], 0)
-	if id <= 0 {
-		response.WriteJSON(w, response.ErrDefault("商品ID不能为空"))
-		return
-	}
-
-	name := asString(req["name"])
-	if name == "" {
-		response.WriteJSON(w, response.ErrDefault("商品名称不能为空"))
-		return
-	}
-
-	productType := asString(req["type"])
-	sortOrder := asInt(req["sort_order"], asInt(req["sortOrder"], 0))
-
-	if err := h.repo.UpdateProduct(
-		id, name, asString(req["description"]),
-		productType,
-		asInt64(req["price"], 0), asInt64(req["value"], 0),
-		sortOrder, asInt(req["status"], 1),
-	); err != nil {
-		response.WriteJSON(w, response.Err(-2, err.Error()))
-		return
-	}
-
-	response.WriteJSON(w, response.OKEmpty())
-}
-
-func (h *Handler) deleteProduct(w http.ResponseWriter, r *http.Request) {
-	tier, _ := middleware.GetLicenseTier()
-	if tier == middleware.TierBlocked {
-		response.WriteJSON(w, response.Err(403, "授权无效，无法操作"))
-		return
-	}
-
-	id := idFromBody(r, w)
-	if id <= 0 {
-		return
-	}
-
-	if err := h.repo.DeleteProduct(id); err != nil {
-		response.WriteJSON(w, response.Err(-2, err.Error()))
-		return
-	}
-
-	response.WriteJSON(w, response.OKEmpty())
-}
-
-func (h *Handler) updateProductOrder(w http.ResponseWriter, r *http.Request) {
-	tier, _ := middleware.GetLicenseTier()
-	if tier == middleware.TierBlocked {
-		response.WriteJSON(w, response.Err(403, "授权无效，无法操作"))
-		return
-	}
-
-	var req map[string]interface{}
-	if err := decodeJSON(r.Body, &req); err != nil {
-		response.WriteJSON(w, response.ErrDefault("请求参数错误"))
-		return
-	}
-
-	ids := asInt64Slice(req["ids"])
-	if len(ids) == 0 {
-		response.WriteJSON(w, response.ErrDefault("排序数据不能为空"))
-		return
-	}
-
-	if err := h.repo.UpdateProductOrder(ids); err != nil {
-		response.WriteJSON(w, response.Err(-2, err.Error()))
-		return
-	}
-	response.WriteJSON(w, response.OKEmpty())
-}
 
 func (h *Handler) listPackages(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -170,6 +20,14 @@ func (h *Handler) listPackages(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		response.WriteJSON(w, response.Err(-2, "用户信息错误"))
 		return
+	}
+	// Check store toggle for non-admin users
+	if roleID != 0 {
+		storeCfg, err := h.repo.GetConfigByName("store_enabled")
+		if err == nil && storeCfg != nil && storeCfg.Value == "0" {
+			response.WriteJSON(w, response.OK([]*model.SubscriptionPackage{}))
+			return
+		}
 	}
 	items, err := h.repo.ListPackages(roleID != 0)
 	if err != nil {
@@ -434,4 +292,73 @@ func (h *Handler) createPackageOrder(w http.ResponseWriter, r *http.Request) {
 		"status":   order.Status,
 		"amount":   order.Amount,
 	}))
+}
+
+func (h *Handler) assignPackageToUser(w http.ResponseWriter, r *http.Request) {
+	if !h.ensureAdminAccess(w, r) {
+		return
+	}
+	var req struct {
+		UserID    int64 `json:"userId"`
+		PackageID int64 `json:"packageId"`
+	}
+	if err := decodeJSON(r.Body, &req); err != nil {
+		response.WriteJSON(w, response.ErrDefault("请求参数错误"))
+		return
+	}
+	if req.UserID <= 0 || req.PackageID <= 0 {
+		response.WriteJSON(w, response.ErrDefault("参数错误"))
+		return
+	}
+	pkg, err := h.repo.GetPackageByID(req.PackageID)
+	if err != nil {
+		response.WriteJSON(w, response.Err(-2, "套餐不存在"))
+		return
+	}
+	tunnelGroupIDs, err := h.repo.GetPackageTunnelGroupIDs(req.PackageID)
+	if err != nil {
+		tunnelGroupIDs = nil
+	}
+	if err := h.repo.DeliverPackageToUser(req.UserID, pkg, 0, tunnelGroupIDs); err != nil {
+		response.WriteJSON(w, response.Err(-2, err.Error()))
+		return
+	}
+	response.WriteJSON(w, response.OKEmpty())
+}
+
+func (h *Handler) getStoreStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		response.WriteJSON(w, response.ErrDefault("请求失败"))
+		return
+	}
+	enabled := true
+	cfg, err := h.repo.GetConfigByName("store_enabled")
+	if err == nil && cfg != nil && cfg.Value == "0" {
+		enabled = false
+	}
+	response.WriteJSON(w, response.OK(map[string]interface{}{
+		"enabled": enabled,
+	}))
+}
+
+func (h *Handler) setStoreStatus(w http.ResponseWriter, r *http.Request) {
+	if !h.ensureAdminAccess(w, r) {
+		return
+	}
+	var req struct {
+		Enabled bool `json:"enabled"`
+	}
+	if err := decodeJSON(r.Body, &req); err != nil {
+		response.WriteJSON(w, response.ErrDefault("请求参数错误"))
+		return
+	}
+	value := "0"
+	if req.Enabled {
+		value = "1"
+	}
+	if err := h.repo.UpsertConfig("store_enabled", value, time.Now().UnixMilli()); err != nil {
+		response.WriteJSON(w, response.Err(-2, err.Error()))
+		return
+	}
+	response.WriteJSON(w, response.OKEmpty())
 }

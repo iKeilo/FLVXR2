@@ -199,8 +199,8 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
       ),
     },
     {
-      path: "/admin/products",
-      label: "商品",
+      path: "/admin/plans",
+      label: "套餐",
       adminOnly: true,
       icon: (
         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">

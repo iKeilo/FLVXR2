@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"time"
 
@@ -105,12 +106,6 @@ func (h *Handler) completePayment(orderNo, txHash string) {
 	}
 	_ = h.repo.UpdateOrderPaymentInfo(order.ID, "", txHash)
 
-	var product struct {
-		Value int64  `json:"value"`
-		Type  string `json:"type"`
-	}
-	_ = json.Unmarshal([]byte(order.ProductMeta), &product)
-
 	userID := order.UserID
 	userName := order.UserName
 
@@ -125,18 +120,14 @@ func (h *Handler) completePayment(orderNo, txHash string) {
 
 	// Deliver product
 	switch order.ProductType {
-	case "recharge":
-		_ = h.repo.IncreaseUserBalance(userID, product.Value)
-	case "traffic":
-		_ = h.repo.IncreaseUserFlow(userID, product.Value)
-	case "time":
-		_ = h.repo.ExtendUserExpiry(userID, product.Value)
 	case "package":
 		var pkg model.SubscriptionPackage
 		if err := json.Unmarshal([]byte(order.ProductMeta), &pkg); err == nil {
 			groupIDs, _ := h.repo.GetPackageTunnelGroupIDs(pkg.ID)
 			_ = h.repo.DeliverPackageToUser(userID, &pkg, order.ID, groupIDs)
 		}
+	default:
+		log.Printf("completePayment: unknown product type %q for order %s, skipping delivery", order.ProductType, order.OrderNo)
 	}
 }
 

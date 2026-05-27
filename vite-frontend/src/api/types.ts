@@ -703,20 +703,6 @@ export interface SystemUpgradeRunApiData {
 
 // ─── Payment & Shop ──────────────────────────────────────────────────
 
-export interface ProductApiItem {
-  id: number;
-  name: string;
-  description: string;
-  type: "recharge" | "traffic" | "time";
-  price: number;
-  value: number;
-  sortOrder: number;
-  status: number;
-  createdAt: number;
-  updatedAt: number;
-  [key: string]: unknown;
-}
-
 export interface OrderApiItem {
   id: number;
   orderNo: string;

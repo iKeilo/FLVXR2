@@ -343,13 +343,6 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/node-tag/delete", h.nodeTagHandler.delete)
 	mux.HandleFunc("/api/v1/node-tag/assign", h.nodeTagHandler.assign)
 
-	// Payment & Shop
-	mux.HandleFunc("/api/v1/product/list", h.listProducts)
-	mux.HandleFunc("/api/v1/product/create", h.createProduct)
-	mux.HandleFunc("/api/v1/product/update", h.updateProduct)
-	mux.HandleFunc("/api/v1/product/delete", h.deleteProduct)
-	mux.HandleFunc("/api/v1/product/update-order", h.updateProductOrder)
-
 	// Package (套餐)
 	mux.HandleFunc("/api/v1/package/list", h.listPackages)
 	mux.HandleFunc("/api/v1/package/create", h.createPackage)
@@ -357,6 +350,9 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/package/delete", h.deletePackage)
 	mux.HandleFunc("/api/v1/package/detail", h.getPackageDetail)
 	mux.HandleFunc("/api/v1/package/order/create", h.createPackageOrder)
+	mux.HandleFunc("/api/v1/package/assign", h.assignPackageToUser)
+	mux.HandleFunc("/api/v1/package/store-status", h.getStoreStatus)
+	mux.HandleFunc("/api/v1/package/store-status/save", h.setStoreStatus)
 
 	mux.HandleFunc("/api/v1/order/create", h.createOrder)
 	mux.HandleFunc("/api/v1/order/list", h.listOrders)

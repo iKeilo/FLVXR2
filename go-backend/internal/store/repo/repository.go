@@ -81,7 +81,6 @@ type TunnelMetric = model.TunnelMetric
 type ServiceMonitor = model.ServiceMonitor
 type ServiceMonitorResult = model.ServiceMonitorResult
 type TunnelQuality = model.TunnelQuality
-type Product = model.Product
 type SubscriptionPackage = model.SubscriptionPackage
 type SubscriptionPackageTunnelGroup = model.SubscriptionPackageTunnelGroup
 type PackageSubscription = model.PackageSubscription
@@ -243,7 +242,6 @@ func autoMigrateAll(db *gorm.DB) error {
 		&model.UserTrafficBuyLog{},
 		&model.BalanceLog{},
 		&model.UserTrafficHistory{},
-		&model.Product{},
 		&model.Order{},
 		&model.PaymentConfig{},
 		&model.RedeemCode{},

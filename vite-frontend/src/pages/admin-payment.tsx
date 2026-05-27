@@ -34,15 +34,16 @@ import {
   deleteDiscountCode,
   getBillingFeatureStatus,
   setBillingFeatureStatus,
-  getProductList,
   getAllUsers,
-  createOrder,
+  getPackageList,
+  createPackageOrder,
+  payOrder,
 } from "@/api";
 import type {
   BalanceLogItem,
   RedeemCodeItem,
   DiscountCodeItem,
-  ProductApiItem,
+  SubscriptionPackageApiItem,
   UserApiItem,
 } from "@/api/types";
 
@@ -130,14 +131,14 @@ export default function AdminPaymentPage() {
   const [paymentLoading, setPaymentLoading] = useState(true);
   const [configs, setConfigs] = useState<PaymentConfig[]>([]);
   const [stats, setStats] = useState<PaymentStats>({ paidAmount: 0, paidOrders: 0, pendingOrders: 0 });
-  const [products, setProducts] = useState<ProductApiItem[]>([]);
+  const [packages, setPackages] = useState<SubscriptionPackageApiItem[]>([]);
   const [paymentTabKey, setPaymentTabKey] = useState("yipay");
 
   const [yipay, setYipay] = useState<YiPayForm>(defaultYiPay);
   const [usdt, setUsdt] = useState<UsdtForm>(defaultUsdt);
 
   const [testChannel, setTestChannel] = useState("YIPAY");
-  const [testProductId, setTestProductId] = useState("");
+  const [testPackageId, setTestPackageId] = useState("");
   const [createdPayUrl, setCreatedPayUrl] = useState("");
   const [testLoading, setTestLoading] = useState(false);
 
@@ -183,14 +184,14 @@ export default function AdminPaymentPage() {
   const loadPaymentData = useCallback(async () => {
     setPaymentLoading(true);
     try {
-      const [configRes, statsRes, productRes] = await Promise.all([
+      const [configRes, statsRes, pkgRes] = await Promise.all([
         Network.post<PaymentConfig[]>("/payment/config/admin/list"),
         Network.post<PaymentStats>("/payment/stats"),
-        Network.post<ProductApiItem[]>("/product/list"),
+        getPackageList(),
       ]);
       if (configRes.code === 0) setConfigs(Array.isArray(configRes.data) ? configRes.data : []);
       if (statsRes.code === 0) setStats(statsRes.data);
-      if (productRes.code === 0) setProducts(Array.isArray(productRes.data) ? productRes.data : []);
+      if (pkgRes.code === 0) setPackages(Array.isArray(pkgRes.data) ? pkgRes.data : []);
     } catch {
       toast.error("加载数据失败");
     } finally {
@@ -236,17 +237,24 @@ export default function AdminPaymentPage() {
   };
 
   const handleTestOrder = async () => {
-    if (!testProductId) { toast.error("请选择商品"); return; }
+    if (!testPackageId) { toast.error("请选择套餐"); return; }
     setTestLoading(true);
     try {
-      const createRes = await createOrder({ productId: Number(testProductId), payCurrency: testChannel });
+      const currency = testChannel === "BALANCE" ? "BALANCE" : (testChannel === "USDT" ? "USDT" : "YIPAY");
+      const createRes = await createPackageOrder({ packageId: Number(testPackageId), payCurrency: currency });
       if (createRes.code !== 0) {
         toast.error(createRes.msg || "创建订单失败");
+        setTestLoading(false);
         return;
       }
-      const payRes = await Network.post<{ payUrl: string; payAddress: string }>("/payment/pay", {
-        order_id: createRes.data.orderId,
-      });
+      if (currency === "BALANCE") {
+        setCreatedPayUrl("");
+        toast.success("余额订单已自动扣款");
+        loadPaymentData();
+        setTestLoading(false);
+        return;
+      }
+      const payRes = await payOrder(createRes.data.orderId);
       if (payRes.code === 0) {
         setCreatedPayUrl(payRes.data.payUrl || payRes.data.payAddress || "");
         toast.success("测试订单已创建");
@@ -265,12 +273,12 @@ export default function AdminPaymentPage() {
   const loadBillingData = useCallback(async () => {
     if (!billingIsFirstLoad.current) setRefreshingLogs(true);
     try {
-      const [logRes, redeemRes, discountRes, featureRes, productRes] = await Promise.all([
+      const [logRes, redeemRes, discountRes, featureRes, pkgRes] = await Promise.all([
         getBalanceLogs({ page: logPage, size: 50, userId: logUserId !== "all" ? Number(logUserId) : undefined }),
         getRedeemCodes(),
         getDiscountCodes(),
         getBillingFeatureStatus(),
-        getProductList(),
+        getPackageList(),
       ]);
       if (logRes.code === 0) { setLogs(logRes.data?.list || []); setLogTotal(logRes.data?.total || 0); }
       if (redeemRes.code === 0) setRedeemCodes(Array.isArray(redeemRes.data) ? redeemRes.data : []);
@@ -279,7 +287,7 @@ export default function AdminPaymentPage() {
         setRedemptionEnabled(!!featureRes.data?.redemptionEnabled);
         setDiscountEnabled(!!featureRes.data?.discountEnabled);
       }
-      if (productRes.code === 0) setProducts(Array.isArray(productRes.data) ? productRes.data : []);
+      if (pkgRes.code === 0) setPackages(Array.isArray(pkgRes.data) ? pkgRes.data : []);
     } catch {
       toast.error("加载数据失败");
     } finally {
@@ -532,7 +540,7 @@ export default function AdminPaymentPage() {
                   </div>
                 </div>
                 <div className="flex justify-end pt-2">
-                  <Button color="primary" onPress={() => { const { enabled, ...rest } = yipay; saveConfig("YIPAY", enabled, rest); }}>保存易支付配置</Button>
+                  <Button color="primary" onPress={() => { const { enabled, ...rest } = yipay; saveConfig("YIPAY", enabled, rest); }}>保存配置</Button>
                 </div>
               </CardBody>
             </Card>
@@ -580,7 +588,7 @@ export default function AdminPaymentPage() {
                   回调地址依赖面板公网地址。当前使用<code className="bg-default-100 dark:bg-default-800 px-1 rounded">{panelUrl}</code>，请在系统设置中填写外部可访问地址。
                 </div>
                 <div className="flex justify-end pt-2">
-                  <Button color="primary" onPress={() => { const { enabled, ...rest } = usdt; saveConfig("USDT", enabled, rest); }}>保存 USDT 配置</Button>
+                  <Button color="primary" onPress={() => { const { enabled, ...rest } = usdt; saveConfig("USDT", enabled, rest); }}>保存配置</Button>
                 </div>
               </CardBody>
             </Card>
@@ -593,11 +601,11 @@ export default function AdminPaymentPage() {
                 <p className="text-sm text-gray-400">创建一笔真实支付订单，检查支付接口配置是否正常。</p>
                 <div className="flex gap-4 items-end">
                   <div className="flex-1">
-                    <label className="text-sm text-gray-400 mb-1 block text-foreground">商品</label>
-                    <Select variant="bordered" selectedKeys={testProductId ? [testProductId] : []}
-                      onSelectionChange={(keys) => { const v = Array.from(keys)[0] as string; if (v) setTestProductId(v); }}>
-                      {products.filter((p) => p.status === 1).map((p) => (
-                        <SelectItem key={String(p.id)}>{(p.price / 100).toFixed(2)}元{p.name}</SelectItem>
+                    <label className="text-sm text-gray-400 mb-1 block text-foreground">套餐</label>
+                    <Select variant="bordered" selectedKeys={testPackageId ? [testPackageId] : []}
+                      onSelectionChange={(keys) => { const v = Array.from(keys)[0] as string; if (v) setTestPackageId(v); }}>
+                      {packages.filter((p) => p.enabled === 1).map((p) => (
+                        <SelectItem key={String(p.id)}>{(p.price / 100).toFixed(2)}元 {p.name}</SelectItem>
                       ))}
                     </Select>
                   </div>
@@ -883,7 +891,7 @@ export default function AdminPaymentPage() {
                       <Select variant="bordered" selectedKeys={redeemPlanId ? [redeemPlanId] : []}
                         classNames={{ trigger: "h-10 bg-default-50 border-default-200", value: "text-sm" }}
                         onSelectionChange={(keys) => { const v = Array.from(keys)[0] as string; if (v) setRedeemPlanId(v); }}>
-                        {products.filter((p) => p.status === 1).map((p) => (
+                        {packages.filter((p) => p.enabled === 1).map((p) => (
                           <SelectItem key={String(p.id)}>{p.name}</SelectItem>
                         ))}
                       </Select>

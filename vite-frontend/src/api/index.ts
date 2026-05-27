@@ -57,7 +57,6 @@ import type {
   SystemUpgradeRunApiData,
   SystemUpgradeVersionApiData,
   TrafficHistoryItem,
-  ProductApiItem,
   OrderApiItem,
   PayOrderResult,
   PaymentChannelItem,
@@ -880,21 +879,6 @@ export const runSystemUpgrade = (
 
 // ─── Payment & Shop ──────────────────────────────────────────────────
 
-export const getProductList = (params?: Record<string, unknown>) =>
-  Network.post<ProductApiItem[]>("/product/list", params || {});
-
-export const createProduct = (data: Record<string, unknown>) =>
-  Network.post("/product/create", data);
-
-export const updateProduct = (data: Record<string, unknown>) =>
-  Network.post("/product/update", data);
-
-export const deleteProduct = (id: number) =>
-  Network.post("/product/delete", { id });
-
-export const updateProductOrder = (ids: number[]) =>
-  Network.post("/product/update-order", { ids });
-
 export const createOrder = (data: { productId: number; payCurrency: string }) =>
   Network.post<{
     orderId: number;
@@ -1012,3 +996,12 @@ export const getPackageDetail = (id: number) =>
 
 export const createPackageOrder = (data: { packageId: number; payCurrency: string }) =>
   Network.post<{ orderId: number }>("/package/order/create", data);
+
+export const getStoreStatus = () =>
+  Network.post<{ enabled: boolean }>("/package/store-status");
+
+export const setStoreStatus = (data: { enabled: boolean }) =>
+  Network.post("/package/store-status/save", data);
+
+export const assignPackageToUser = (data: { userId: number; packageId: number }) =>
+  Network.post("/package/assign", data);

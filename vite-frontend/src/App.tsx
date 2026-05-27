@@ -17,7 +17,7 @@ import ConfigPage from "@/pages/config";
 import PanelSharingPage from "@/pages/panel-sharing";
 import ShopPage from "@/pages/shop";
 import MyPackagesPage from "@/pages/my-packages";
-import AdminProductsPage from "@/pages/admin-products";
+import AdminPlansPage from "@/pages/admin-plans";
 import AdminOrdersPage from "@/pages/admin-orders";
 import AdminPaymentPage from "@/pages/admin-payment";
 import { SettingsPage } from "@/pages/settings";
@@ -231,10 +231,10 @@ function App() {
       <Route
         element={
           <ProtectedRoute>
-            <AdminProductsPage />
+            <AdminPlansPage />
           </ProtectedRoute>
         }
-        path="/admin/products"
+        path="/admin/plans"
       />
       <Route
         element={
