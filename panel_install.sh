@@ -1122,6 +1122,17 @@ configure_caddy_interactive() {
 # 主逻辑
 main() {
 
+  # 指定版本时直接升级（无交互）
+  if [[ -n "$ARG_VERSION" ]]; then
+    echo "🔄 指定版本：$ARG_VERSION，直接进入更新流程..."
+    if [[ ! -d "/opt/flvx-svc" ]]; then
+      echo "❌ 未检测到面板安装，请先执行安装操作"
+      exit 1
+    fi
+    update_panel
+    exit $?
+  fi
+
   # 显示交互式菜单
   while true; do
     show_menu
