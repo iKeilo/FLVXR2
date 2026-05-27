@@ -33,6 +33,7 @@ import {
   getPackageDetail,
   getTunnelGroupList,
   getStoreStatus,
+  setStoreStatus,
   assignPackageToUser,
   getAllUsers,
 } from "@/api";
@@ -231,7 +232,7 @@ export default function AdminPlansPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <h1 className="text-2xl font-bold">套餐管理</h1>
         <div className="flex flex-wrap gap-2">
-          <Button variant="flat" onPress={openAssign}>手动分配</Button>
+          <Button className="bg-blue-100 dark:bg-blue-500/20 text-blue-600 hover:bg-blue-200 dark:hover:bg-blue-500/30" size="sm" onPress={openAssign}>手动分配</Button>
           <Button color="primary" variant="flat" onPress={handlePkgAdd}>新增套餐</Button>
         </div>
       </div>
@@ -249,7 +250,22 @@ export default function AdminPlansPage() {
                 )}
               </div>
             </div>
-            <p className={`text-xl font-bold ${storeEnabled ? "text-green-600" : "text-gray-400"}`}>{storeEnabled ? "已开启" : "已关闭"}</p>
+            <div className="flex items-center justify-between">
+              <p className={`text-xl font-bold ${storeEnabled ? "text-green-600" : "text-gray-400"}`}>{storeEnabled ? "已开启" : "已关闭"}</p>
+              <Switch
+                isSelected={storeEnabled}
+                onValueChange={async (enabled: boolean) => {
+                  try {
+                    const res = await setStoreStatus({ enabled });
+                    if (res.code === 0) {
+                      setStoreEnabled(enabled);
+                      toast.success(enabled ? "商城已开启" : "商城已关闭");
+                    } else { toast.error(res.msg || "操作失败"); }
+                  } catch { toast.error("网络错误"); }
+                }}
+                size="sm"
+              />
+            </div>
           </CardBody>
         </Card>
         <Card className="border border-gray-200 dark:border-default-200 shadow-md hover:shadow-lg transition-shadow">
