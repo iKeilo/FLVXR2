@@ -641,8 +641,8 @@ export default function AdminLayout({
                   <motion.button
                     aria-disabled={isMonitorBlocked}
                     className={`
-                       w-full flex items-center p-2 rounded-lg text-left
-                       relative min-h-[44px] overflow-hidden transition-colors
+                       w-full flex items-center p-1 rounded-lg text-left
+                       relative min-h-[20px] overflow-hidden transition-colors
                        ${isMonitorBlocked ? "opacity-60" : ""}
                        ${
                          isActive
@@ -680,7 +680,7 @@ export default function AdminLayout({
                         whileHover={{ opacity: 1 }}
                       />
                     )}
-                    <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center relative z-10">
+                    <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center relative z-10">
                       {item.icon}
                     </div>
                     <div
