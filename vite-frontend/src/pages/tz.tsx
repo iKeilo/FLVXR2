@@ -271,8 +271,8 @@ export default function TZPage() {
                 节点监控名称
                 <span className="text-primary-600 font-bold text-[10px] ml-1">^{validNodes.length}个</span>
               </TableColumn>
-              <TableColumn className="text-right">速率</TableColumn>
-              <TableColumn className="text-right">流量</TableColumn>
+              <TableColumn align="end">速率</TableColumn>
+              <TableColumn align="end">流量</TableColumn>
               <TableColumn>开机时长</TableColumn>
               <TableColumn>CPU</TableColumn>
               <TableColumn>RAM</TableColumn>

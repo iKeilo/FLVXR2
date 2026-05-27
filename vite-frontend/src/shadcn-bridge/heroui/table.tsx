@@ -149,15 +149,19 @@ export const TableBody = React.forwardRef<
 });
 
 export function TableColumn({
+  align = "start",
   className,
   ...props
-}: React.ComponentProps<"th">) {
+}: React.ComponentProps<"th"> & { align?: "start" | "center" | "end" }) {
   const { thClassName } = React.useContext(TableStyleContext);
+
+  const alignClass = align === "center" ? "text-center" : align === "end" ? "text-right" : "text-left";
 
   return (
     <th
       className={cn(
-        "px-3 py-2 text-left font-medium text-default-600",
+        "px-3 py-2 font-medium text-default-600",
+        alignClass,
         thClassName,
         className,
       )}
