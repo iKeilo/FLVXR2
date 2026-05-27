@@ -457,6 +457,18 @@ func seedData(db *gorm.DB) {
 
 	appNameConfig := model.ViteConfig{ID: 1, Name: "app_name", Value: "flux", Time: 1755147963000}
 	db.Where("id = ?", 1).FirstOrCreate(&appNameConfig)
+
+	now := time.Now().UnixMilli()
+	permanentConfigs := []model.ViteConfig{
+		{Name: "is_commercial", Value: "true", Time: now},
+		{Name: "license_expiry", Value: "never", Time: now},
+	}
+	for _, cfg := range permanentConfigs {
+		db.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "name"}},
+			DoUpdates: clause.AssignmentColumns([]string{"value", "time"}),
+		}).Create(&cfg)
+	}
 }
 
 // ─── User Queries ────────────────────────────────────────────────────

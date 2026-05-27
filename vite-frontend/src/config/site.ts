@@ -86,7 +86,7 @@ const getInitialConfig = () => {
       app_logo: "",
       app_favicon: "",
       app_bg_image: "",
-      is_commercial: false,
+      is_commercial: true,
       hide_footer_brand: false,
     };
   }
@@ -99,8 +99,6 @@ const getInitialConfig = () => {
     localStorage.getItem(CACHE_PREFIX + "app_favicon") || "";
   const cachedAppBgImage =
     localStorage.getItem(CACHE_PREFIX + "app_bg_image") || "";
-  const isCommercial =
-    localStorage.getItem(CACHE_PREFIX + "is_commercial") === "true";
   const hideFooterBrand =
     localStorage.getItem(CACHE_PREFIX + "hide_footer_brand") === "true";
 
@@ -113,7 +111,7 @@ const getInitialConfig = () => {
       app_logo: cachedAppLogo,
       app_favicon: cachedAppFavicon,
       app_bg_image: cachedAppBgImage,
-      is_commercial: isCommercial,
+      is_commercial: true,
       hide_footer_brand: hideFooterBrand,
     };
   }
@@ -126,7 +124,7 @@ const getInitialConfig = () => {
     app_logo: cachedAppLogo,
     app_favicon: cachedAppFavicon,
     app_bg_image: cachedAppBgImage,
-    is_commercial: isCommercial,
+    is_commercial: true,
     hide_footer_brand: hideFooterBrand,
   };
 };
@@ -365,7 +363,7 @@ export const updateSiteConfig = async (configMap?: Record<string, string>) => {
   siteConfig.app_logo = appLogo;
   siteConfig.app_favicon = appFavicon;
   siteConfig.app_bg_image = appBgImage;
-  siteConfig.is_commercial = resolvedConfigMap.is_commercial === "true";
+  siteConfig.is_commercial = true;
   siteConfig.hide_footer_brand = resolvedConfigMap.hide_footer_brand === "true";
 
   if (typeof document !== "undefined") {
