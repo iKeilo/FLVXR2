@@ -1579,7 +1579,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                         <TableCell>
                           <div className="flex flex-col gap-2 py-1 text-xs whitespace-nowrap">
                             <div className="flex items-center gap-1.5 font-mono text-success-500">
-                              <span className="w-[86px] text-right inline-block">
+                              <span className="w-[86px] text-left inline-block">
                                 {metric
                                   ? formatBytesPerSecond(metric.netOutSpeed)
                                   : "-"}
@@ -1592,7 +1592,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                               </div>
                             </div>
                             <div className="flex items-center gap-1.5 font-mono text-primary-500">
-                              <span className="w-[86px] text-right inline-block">
+                              <span className="w-[86px] text-left inline-block">
                                 {metric
                                   ? formatBytesPerSecond(metric.netInSpeed)
                                   : "-"}
@@ -1609,7 +1609,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                         <TableCell>
                           <div className="flex flex-col gap-2 py-1 text-xs whitespace-nowrap">
                             <div className="flex items-center gap-1.5 font-mono text-default-600">
-                              <span className="w-[86px] text-right inline-block">
+                              <span className="w-[86px] text-left inline-block">
                                 {metric ? formatBytes(metric.netOutBytes) : "-"}
                               </span>
                               <div className="flex items-center justify-center p-[3px] rounded-full bg-default-100 text-default-500 dark:bg-default-100/50">
@@ -1620,7 +1620,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                               </div>
                             </div>
                             <div className="flex items-center gap-1.5 font-mono text-default-600">
-                              <span className="w-[86px] text-right inline-block">
+                              <span className="w-[86px] text-left inline-block">
                                 {metric ? formatBytes(metric.netInBytes) : "-"}
                               </span>
                               <div className="flex items-center justify-center p-[3px] rounded-full bg-default-100 text-default-500 dark:bg-default-100/50">

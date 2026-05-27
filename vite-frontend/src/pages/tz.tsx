@@ -94,14 +94,14 @@ export default function TZPage() {
     try {
       const saved = localStorage.getItem("public-monitor-view-mode");
       if (saved === "grid" || saved === "list") return saved;
-    } catch {}
+    } catch { }
     return "list";
   });
 
   const toggleViewMode = useCallback(() => {
     setViewMode((prev) => {
       const next = prev === "list" ? "grid" : "list";
-      try { localStorage.setItem("public-monitor-view-mode", next); } catch {}
+      try { localStorage.setItem("public-monitor-view-mode", next); } catch { }
       return next;
     });
   }, []);
@@ -195,7 +195,7 @@ export default function TZPage() {
             刷新
           </Button>
           <Link className="ml-auto text-xs" color="foreground" href="/">
-            返回登录
+            返回
           </Link>
         </div>
 
@@ -241,8 +241,8 @@ export default function TZPage() {
       {viewMode === "grid" && validNodes.length > 0 && (
         <div className="overflow-hidden rounded-xl border border-divider bg-content1 shadow-md">
           <div className="flex items-center justify-between border-b border-divider bg-default-100/40 px-4 py-3">
-            <span className="text-sm font-semibold text-foreground">节点监控数量</span>
-            <span className="text-xs text-default-500 whitespace-nowrap">{validNodes.length} 个监控</span>
+            <span className="text-sm font-semibold text-foreground">节点卡片视图</span>
+            {/* <span className="text-xs text-default-500 whitespace-nowrap">{validNodes.length} 个监控</span> */}
           </div>
           <div className="p-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
@@ -266,10 +266,10 @@ export default function TZPage() {
             }}
           >
             <TableHeader>
-              <TableColumn>状态</TableColumn>
+              <TableColumn align="center" className="w-[60px] text-center">状态</TableColumn>
               <TableColumn>
-                节点监控名称
-                <span className="text-primary-600 font-bold text-[10px] ml-1">^{validNodes.length}个</span>
+                节点名称
+                {/* <span className="text-primary-600 font-bold text-[10px] ml-1">^{validNodes.length}个</span> */}
               </TableColumn>
               <TableColumn>速率</TableColumn>
               <TableColumn>流量</TableColumn>
@@ -302,13 +302,13 @@ export default function TZPage() {
                     <TableCell>
                       <div className="flex flex-col gap-2 py-1 text-xs whitespace-nowrap">
                         <div className="flex items-center gap-1.5 font-mono text-success-500">
-                          <span className="w-[86px] text-right inline-block">{hasMetric ? formatBytesPerSecond(node.netOutSpeed) : "-"}</span>
+                          <span className="w-[86px] text-left inline-block">{hasMetric ? formatBytesPerSecond(node.netOutSpeed) : "-"}</span>
                           <div className="flex items-center justify-center p-[3px] rounded-full bg-success-50 dark:bg-success-500/10 text-success-500">
                             <ArrowUp className="w-3 h-3" strokeWidth={2.5} />
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5 font-mono text-primary-500">
-                          <span className="w-[86px] text-right inline-block">{hasMetric ? formatBytesPerSecond(node.netInSpeed) : "-"}</span>
+                          <span className="w-[86px] text-left inline-block">{hasMetric ? formatBytesPerSecond(node.netInSpeed) : "-"}</span>
                           <div className="flex items-center justify-center p-[3px] rounded-full bg-primary-50 dark:bg-primary-500/10 text-primary-500">
                             <ArrowDown className="w-3 h-3" strokeWidth={2.5} />
                           </div>
@@ -318,13 +318,13 @@ export default function TZPage() {
                     <TableCell>
                       <div className="flex flex-col gap-2 py-1 text-xs whitespace-nowrap">
                         <div className="flex items-center gap-1.5 font-mono text-default-600">
-                          <span className="w-[86px] text-right inline-block">{hasMetric ? formatBytes(node.netOutBytes) : "-"}</span>
+                          <span className="w-[86px] text-left inline-block">{hasMetric ? formatBytes(node.netOutBytes) : "-"}</span>
                           <div className="flex items-center justify-center p-[3px] rounded-full bg-default-100 text-default-500 dark:bg-default-100/50">
                             <ArrowUp className="w-3 h-3" strokeWidth={2.5} />
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5 font-mono text-default-600">
-                          <span className="w-[86px] text-right inline-block">{hasMetric ? formatBytes(node.netInBytes) : "-"}</span>
+                          <span className="w-[86px] text-left inline-block">{hasMetric ? formatBytes(node.netInBytes) : "-"}</span>
                           <div className="flex items-center justify-center p-[3px] rounded-full bg-default-100 text-default-500 dark:bg-default-100/50">
                             <ArrowDown className="w-3 h-3" strokeWidth={2.5} />
                           </div>
@@ -382,17 +382,17 @@ function ServerCard({ node }: { node: MonitorNodeMetricsApiItem }) {
   const hasMetric = node.cpuUsage > 0 || node.memoryUsage > 0 || node.netInSpeed > 0;
   const metric: NodeMetrics = hasMetric
     ? {
-        cpuUsage: node.cpuUsage,
-        memoryUsage: node.memoryUsage,
-        diskUsage: node.diskUsage,
-        netInSpeed: node.netInSpeed,
-        netOutSpeed: node.netOutSpeed,
-        netInBytes: node.netInBytes,
-        netOutBytes: node.netOutBytes,
-        uptime: node.uptime,
-        tcpConns: node.tcpConns,
-        load1: node.load1,
-      }
+      cpuUsage: node.cpuUsage,
+      memoryUsage: node.memoryUsage,
+      diskUsage: node.diskUsage,
+      netInSpeed: node.netInSpeed,
+      netOutSpeed: node.netOutSpeed,
+      netInBytes: node.netInBytes,
+      netOutBytes: node.netOutBytes,
+      uptime: node.uptime,
+      tcpConns: node.tcpConns,
+      load1: node.load1,
+    }
     : emptyMetrics;
 
   return (
