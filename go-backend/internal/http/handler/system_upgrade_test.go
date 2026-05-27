@@ -17,7 +17,7 @@ import (
 )
 
 func TestSelectComposeAssetUsesIPv6Template(t *testing.T) {
-	exec := &systemUpgradeExecutor{deployDir: "/opt/flvx-panel", backendContainer: "flux-panel-backend"}
+	exec := &systemUpgradeExecutor{deployDir: "/opt/flvx-svc", backendContainer: "flvx-svc-backend"}
 	compose := []byte("networks:\n  gost-network:\n    enable_ipv6: true\n")
 
 	if got := exec.selectComposeAsset(compose); got != "docker-compose-v6.yml" {
@@ -66,7 +66,7 @@ func TestDownloadReleaseAssetUsesGithubProxyWhenEnabled(t *testing.T) {
 		t.Fatalf("downloadReleaseAsset() data = %q, want compose data", string(data))
 	}
 
-	wantURL := "https://proxy.example.com/https://example.invalid/Sagit-chu/flvx/releases/download/2.1.9/docker-compose-v4.yml"
+	wantURL := "https://proxy.example.com/https://example.invalid/iKeilo/flvxt2/releases/download/2.1.9/docker-compose-v4.yml"
 	if gotURL != wantURL {
 		t.Fatalf("download URL = %q, want %q", gotURL, wantURL)
 	}
@@ -105,7 +105,7 @@ func TestDownloadReleaseAssetRejectsOversizedBody(t *testing.T) {
 }
 
 func TestSelectComposeAssetUsesIPv6TemplateForYAMLVariants(t *testing.T) {
-	exec := &systemUpgradeExecutor{deployDir: "/opt/flvx-panel", backendContainer: "flux-panel-backend"}
+	exec := &systemUpgradeExecutor{deployDir: "/opt/flvx-svc", backendContainer: "flvx-svc-backend"}
 	for _, compose := range [][]byte{
 		[]byte("networks:\n  gost-network:\n    enable_ipv6:true\n"),
 		[]byte("networks:\n  gost-network:\n    enable_ipv6: True\n"),
@@ -120,7 +120,7 @@ func TestSelectComposeAssetUsesIPv6TemplateForYAMLVariants(t *testing.T) {
 }
 
 func TestSelectComposeAssetFallsBackToIPv4Template(t *testing.T) {
-	exec := &systemUpgradeExecutor{deployDir: "/opt/flvx-panel", backendContainer: "flux-panel-backend"}
+	exec := &systemUpgradeExecutor{deployDir: "/opt/flvx-svc", backendContainer: "flvx-svc-backend"}
 	compose := []byte("services:\n  backend:\n    image: test\n")
 
 	if got := exec.selectComposeAsset(compose); got != "docker-compose-v4.yml" {
@@ -135,7 +135,7 @@ func TestUpdateEnvVersionReplacesExistingValue(t *testing.T) {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
-	exec := &systemUpgradeExecutor{deployDir: dir, backendContainer: "flux-panel-backend"}
+	exec := &systemUpgradeExecutor{deployDir: dir, backendContainer: "flvx-svc-backend"}
 	if err := exec.updateEnvVersion(envPath, "2.1.9"); err != nil {
 		t.Fatalf("updateEnvVersion() error = %v", err)
 	}
@@ -158,7 +158,7 @@ func TestUpdateEnvVersionAppendsMissingValue(t *testing.T) {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
-	exec := &systemUpgradeExecutor{deployDir: dir, backendContainer: "flux-panel-backend"}
+	exec := &systemUpgradeExecutor{deployDir: dir, backendContainer: "flvx-svc-backend"}
 	if err := exec.updateEnvVersion(envPath, "2.1.9"); err != nil {
 		t.Fatalf("updateEnvVersion() error = %v", err)
 	}
@@ -184,7 +184,7 @@ func TestUpdateEnvVersionRejectsUnsafeValue(t *testing.T) {
 				t.Fatalf("WriteFile() error = %v", err)
 			}
 
-			exec := &systemUpgradeExecutor{deployDir: dir, backendContainer: "flux-panel-backend"}
+			exec := &systemUpgradeExecutor{deployDir: dir, backendContainer: "flvx-svc-backend"}
 			if err := exec.updateEnvVersion(envPath, version); err == nil {
 				t.Fatal("expected unsafe version to fail validation")
 			}
@@ -209,7 +209,7 @@ func TestUpdateEnvVersionAcceptsVersionLabels(t *testing.T) {
 				t.Fatalf("WriteFile() error = %v", err)
 			}
 
-			exec := &systemUpgradeExecutor{deployDir: dir, backendContainer: "flux-panel-backend"}
+			exec := &systemUpgradeExecutor{deployDir: dir, backendContainer: "flvx-svc-backend"}
 			if err := exec.updateEnvVersion(envPath, version); err != nil {
 				t.Fatalf("updateEnvVersion() error = %v", err)
 			}
@@ -224,7 +224,7 @@ func TestUpdateEnvVersionPreservesFileMode(t *testing.T) {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
-	exec := &systemUpgradeExecutor{deployDir: dir, backendContainer: "flux-panel-backend"}
+	exec := &systemUpgradeExecutor{deployDir: dir, backendContainer: "flvx-svc-backend"}
 	if err := exec.updateEnvVersion(envPath, "2.1.9"); err != nil {
 		t.Fatalf("updateEnvVersion() error = %v", err)
 	}
@@ -239,22 +239,22 @@ func TestUpdateEnvVersionPreservesFileMode(t *testing.T) {
 }
 
 func TestValidateBackendContainerNameRejectsUnsafeValue(t *testing.T) {
-	if err := validateBackendContainerName("flux-panel-backend;rm -rf /"); err == nil {
+	if err := validateBackendContainerName("flvx-svc-backend;rm -rf /"); err == nil {
 		t.Fatal("expected unsafe container name to fail validation")
 	}
 }
 
 func TestBuildHelperRunArgsUsesDetachedContainer(t *testing.T) {
-	exec := &systemUpgradeExecutor{deployDir: "/opt/flvx-panel", backendContainer: "flux-panel-backend"}
+	exec := &systemUpgradeExecutor{deployDir: "/opt/flvx-svc", backendContainer: "flvx-svc-backend"}
 	args, err := exec.buildHelperRunArgs("sha256:abc", "flvx-upgrade-helper")
 	if err != nil {
 		t.Fatalf("buildHelperRunArgs() error = %v", err)
 	}
 	want := []string{
 		"run", "-d", "--rm", "--name", "flvx-upgrade-helper",
-		"--volumes-from", "flux-panel-backend",
+		"--volumes-from", "flvx-svc-backend",
 		"-v", "/var/run/docker.sock:/var/run/docker.sock",
-		"-e", "PANEL_DEPLOY_DIR=/opt/flvx-panel",
+		"-e", "PANEL_DEPLOY_DIR=/opt/flvx-svc",
 		"--entrypoint", "/bin/sh", "sha256:abc",
 		"-c", exec.helperScript(),
 	}
@@ -265,7 +265,7 @@ func TestBuildHelperRunArgsUsesDetachedContainer(t *testing.T) {
 }
 
 func TestBuildHelperRunArgsRejectsUnsafeBackendContainer(t *testing.T) {
-	exec := &systemUpgradeExecutor{deployDir: "/opt/flvx-panel", backendContainer: "flux-panel-backend;rm -rf /"}
+	exec := &systemUpgradeExecutor{deployDir: "/opt/flvx-svc", backendContainer: "flvx-svc-backend;rm -rf /"}
 	if _, err := exec.buildHelperRunArgs("sha256:abc", "flvx-upgrade-helper"); err == nil {
 		t.Fatal("expected unsafe backend container name to fail validation")
 	}
@@ -311,13 +311,13 @@ func TestSystemUpgradeFailsFastBeforeMutatingFiles(t *testing.T) {
 
 	fakeDockerDir := t.TempDir()
 	fakeDockerPath := filepath.Join(fakeDockerDir, "docker")
-	fakeDockerScript := "#!/bin/sh\ncase \"$1\" in\n  --version)\n    echo 'Docker version 27.0.0'\n    exit 0\n    ;;&\n  compose)\n    if [ \"$2\" = version ]; then\n      echo 'Docker Compose version v2.33.0'\n      exit 0\n    fi\n    exit 0\n    ;;&\n  inspect)\n    echo 'No such object: flux-panel-backend' >&2\n    exit 1\n    ;;&\n  *)\n    exit 0\n    ;;&\n esac\n"
+	fakeDockerScript := "#!/bin/sh\ncase \"$1\" in\n  --version)\n    echo 'Docker version 27.0.0'\n    exit 0\n    ;;&\n  compose)\n    if [ \"$2\" = version ]; then\n      echo 'Docker Compose version v2.33.0'\n      exit 0\n    fi\n    exit 0\n    ;;&\n  inspect)\n    echo 'No such object: flvx-svc-backend' >&2\n    exit 1\n    ;;&\n  *)\n    exit 0\n    ;;&\n esac\n"
 	if err := os.WriteFile(fakeDockerPath, []byte(fakeDockerScript), 0o755); err != nil {
 		t.Fatalf("WriteFile() fake docker error = %v", err)
 	}
 	t.Setenv("PATH", fakeDockerDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	t.Setenv(panelDeployDirEnv, dir)
-	t.Setenv(panelBackendContainerEnv, "flux-panel-backend")
+	t.Setenv(panelBackendContainerEnv, "flvx-svc-backend")
 
 	h := &Handler{}
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/system/upgrade", strings.NewReader(`{"channel":"stable"}`))
@@ -357,7 +357,7 @@ func TestUpgradeBackupUsesStablePathAndRestoreRestoresOriginal(t *testing.T) {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
-	exec := &systemUpgradeExecutor{deployDir: dir, backendContainer: "flux-panel-backend"}
+	exec := &systemUpgradeExecutor{deployDir: dir, backendContainer: "flvx-svc-backend"}
 	backupPath, err := exec.backupFile(path)
 	if err != nil {
 		t.Fatalf("backupFile() error = %v", err)
@@ -388,7 +388,7 @@ func TestRestoreBackupPreservesOriginalFileMode(t *testing.T) {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
-	exec := &systemUpgradeExecutor{deployDir: dir, backendContainer: "flux-panel-backend"}
+	exec := &systemUpgradeExecutor{deployDir: dir, backendContainer: "flvx-svc-backend"}
 	if _, err := exec.backupFile(path); err != nil {
 		t.Fatalf("backupFile() error = %v", err)
 	}

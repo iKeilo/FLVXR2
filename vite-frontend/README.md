@@ -1,50 +1,22 @@
-# Vite & HeroUI Template
+# FLVXT2 Frontend
 
-This is a template for creating applications using Vite and HeroUI (v2).
+这是 `FLVXT2` 的前端工程，基于 `rolldown-vite`、`TypeScript`、`Tailwind CSS v4` 和 `shadcn/ui`。
 
-[Try it on CodeSandbox](https://githubbox.com/frontio-ai/vite-template)
-
-## Technologies Used
-
-- [Vite](https://vitejs.dev/guide/)
-- [HeroUI](https://heroui.com)
-- [Tailwind CSS](https://tailwindcss.com)
-- [Tailwind Variants](https://tailwind-variants.org)
-- [TypeScript](https://www.typescriptlang.org)
-- [Framer Motion](https://www.framer.com/motion)
-
-## How to Use
-
-To clone the project, run the following command:
-
-```bash
-git clone https://github.com/frontio-ai/vite-template.git
-```
-
-### Install dependencies
-
-You can use one of them `npm`, `yarn`, `pnpm`, `bun`, Example using `pnpm`:
+## 开发
 
 ```bash
 pnpm install
-```
-
-### Start development server
-
-```bash
 pnpm run dev
 ```
 
-### Setup pnpm (optional)
-
-If you are using `pnpm`, you need to add the following code to your `.npmrc` file:
+## 构建
 
 ```bash
-public-hoist-pattern[]=*@heroui/*
+pnpm run build
 ```
 
-After modifying the `.npmrc` file, you need to run `pnpm install` again to ensure that the dependencies are installed correctly.
+## 说明
 
-## License
-
-Licensed under the [MIT license](https://github.com/frontio-ai/vite-template/blob/main/LICENSE).
+- 生产环境会从 `VITE_GITHUB_REPO` 读取仓库地址
+- `VITE_APP_VERSION` 用于显示当前版本
+- 如需调整发布链接，请同步更新 Release 工作流和安装脚本

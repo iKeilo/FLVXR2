@@ -1,13 +1,13 @@
 name: Build and Push Images
 
 env:
-  VERSION: "2.0.7-beta"  # 分支推送时使用的默认版本
+  VERSION: "3.0.0"
   REGISTRY: ghcr.io
 
 on:
   push:
     tags:
-      - '[0-9]*'  # 匹配 2.0.8, 2.0.8-beta 等格式
+      - "[0-9]*"
 
 jobs:
   check-version:
@@ -27,49 +27,37 @@ jobs:
       - name: Determine version and build strategy
         id: version
         run: |
-          # 镜像 owner 需要小写
           IMAGE_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           echo "image_owner=$IMAGE_OWNER" >> $GITHUB_OUTPUT
 
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            # Tag 触发：直接使用 tag 名作为版本，全量构建
             VERSION="${{ github.ref_name }}"
-            echo "🏷️ Tag trigger detected: $VERSION"
             echo "version=$VERSION" >> $GITHUB_OUTPUT
             echo "is_tag=true" >> $GITHUB_OUTPUT
             echo "should_build=true" >> $GITHUB_OUTPUT
             echo "should_build_gost=true" >> $GITHUB_OUTPUT
           else
-            # 分支触发：使用 env.VERSION，检查是否需要构建
             VERSION="${{ env.VERSION }}"
-            echo "🌿 Branch trigger detected, using version: $VERSION"
             echo "version=$VERSION" >> $GITHUB_OUTPUT
             echo "is_tag=false" >> $GITHUB_OUTPUT
 
-            # 检查 tag 是否已存在
             if git rev-parse "$VERSION" >/dev/null 2>&1; then
-              echo "Tag $VERSION already exists"
               echo "should_build=false" >> $GITHUB_OUTPUT
 
-              # 检查 go-gost 目录是否有变化
               TAG_COMMIT=$(git rev-list -n 1 "$VERSION")
               if git diff --quiet --ignore-all-space --ignore-blank-lines $TAG_COMMIT HEAD -- go-gost/ 2>/dev/null; then
-                echo "✅ GOST files unchanged since tag"
                 echo "should_build_gost=false" >> $GITHUB_OUTPUT
               else
-                echo "🔄 Detected changes in go-gost directory"
-                git diff --stat $TAG_COMMIT HEAD -- go-gost/ || true
                 echo "should_build_gost=true" >> $GITHUB_OUTPUT
               fi
             else
-              echo "Tag $VERSION does not exist, will build all components"
               echo "should_build=true" >> $GITHUB_OUTPUT
               echo "should_build_gost=true" >> $GITHUB_OUTPUT
             fi
           fi
 
   build-gost:
-    name: Build & Compress GOST Binary
+    name: Build GOST Binaries
     needs: check-version
     if: needs.check-version.outputs.should_build_gost == 'true'
     runs-on: ubuntu-latest
@@ -79,7 +67,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: "1.23"
 
       - name: Cache Go modules
         uses: actions/cache@v4
@@ -91,13 +79,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Install UPX
-        run: |
-          wget -q https://github.com/upx/upx/releases/download/v4.2.1/upx-4.2.1-amd64_linux.tar.xz
-          tar -xf upx-4.2.1-amd64_linux.tar.xz
-          sudo mv upx-4.2.1-amd64_linux/upx /usr/local/bin/
-          rm -rf upx-4.2.1-amd64_linux*
-
       - name: Build GOST binary (AMD64)
         working-directory: ./go-gost
         run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -X main.version=${{ needs.check-version.outputs.version }}" -o gost-amd64
@@ -105,12 +86,6 @@ jobs:
       - name: Build GOST binary (ARM64)
         working-directory: ./go-gost
         run: CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w -X main.version=${{ needs.check-version.outputs.version }}" -o gost-arm64
-
-      - name: Compress with UPX
-        working-directory: ./go-gost
-        run: |
-          upx --best --lzma gost-amd64
-          upx --best --lzma gost-arm64
 
       - name: Generate SHA256 checksums
         working-directory: ./go-gost
@@ -143,7 +118,7 @@ jobs:
           path: ./go-gost/gost-arm64.sha256
 
   build-vite:
-    name: Build & Push Vite Frontend
+    name: Build and Push Frontend Package
     needs: check-version
     if: needs.check-version.outputs.should_build == 'true'
     runs-on: ubuntu-latest
@@ -171,7 +146,7 @@ jobs:
             echo "VITE_APP_VERSION=$VERSION"
           } > ./vite-frontend/.env.production
 
-      - name: Build and push Vite Docker images
+      - name: Build and push frontend image
         run: |
           VERSION="${{ needs.check-version.outputs.version }}"
           OWNER="${{ needs.check-version.outputs.image_owner }}"
@@ -179,12 +154,12 @@ jobs:
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --push \
-            -t ${{ env.REGISTRY }}/${OWNER}/vite-frontend:latest \
-            -t ${{ env.REGISTRY }}/${OWNER}/vite-frontend:${VERSION} \
+            -t ${{ env.REGISTRY }}/${OWNER}/flvx-svc-frontend:latest \
+            -t ${{ env.REGISTRY }}/${OWNER}/flvx-svc-frontend:${VERSION} \
             ./vite-frontend
 
   build-go-backend:
-    name: Build & Push Go Backend
+    name: Build and Push Backend Package
     needs: check-version
     if: needs.check-version.outputs.should_build == 'true'
     runs-on: ubuntu-latest
@@ -197,7 +172,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: "1.23"
 
       - name: Cache Go dependencies
         uses: actions/cache@v4
@@ -222,7 +197,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Go backend Docker images
+      - name: Build and push backend image
         run: |
           VERSION="${{ needs.check-version.outputs.version }}"
           OWNER="${{ needs.check-version.outputs.image_owner }}"
@@ -230,12 +205,12 @@ jobs:
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --push \
-            -t ${{ env.REGISTRY }}/${OWNER}/flux-panel-backend:latest \
-            -t ${{ env.REGISTRY }}/${OWNER}/flux-panel-backend:${VERSION} \
+            -t ${{ env.REGISTRY }}/${OWNER}/flvx-svc-backend:latest \
+            -t ${{ env.REGISTRY }}/${OWNER}/flvx-svc-backend:${VERSION} \
             ./go-backend
 
   create-release:
-    name: Create Release (Tag Only)
+    name: Create Release
     needs: [check-version, build-gost, build-vite, build-go-backend]
     if: needs.check-version.outputs.is_tag == 'true'
     runs-on: ubuntu-latest
@@ -269,39 +244,34 @@ jobs:
           path: ./artifacts/
 
       - name: Prepare release files
-
         run: |
           VERSION="${{ needs.check-version.outputs.version }}"
           OWNER="${{ needs.check-version.outputs.image_owner }}"
-          REPO="${{ github.repository }}"
 
-          # 移动二进制文件
           mv ./artifacts/amd64/gost-amd64 ./artifacts/gost-amd64
           mv ./artifacts/arm64/gost-arm64 ./artifacts/gost-arm64
 
-          # 复制并修改 docker-compose 文件
           cp docker-compose-v4.yml ./artifacts/docker-compose-v4.yml
           cp docker-compose-v6.yml ./artifacts/docker-compose-v6.yml
 
-          # 替换镜像地址为 GHCR
-          sed -i "s|image: .*flux-panel-backend:[^[:space:]]*|image: ${{ env.REGISTRY }}/${OWNER}/flux-panel-backend:${VERSION}|g" ./artifacts/docker-compose-v4.yml
-          sed -i "s|image: .*vite-frontend:[^[:space:]]*|image: ${{ env.REGISTRY }}/${OWNER}/vite-frontend:${VERSION}|g" ./artifacts/docker-compose-v4.yml
-          sed -i "s|image: .*flux-panel-backend:[^[:space:]]*|image: ${{ env.REGISTRY }}/${OWNER}/flux-panel-backend:${VERSION}|g" ./artifacts/docker-compose-v6.yml
-          sed -i "s|image: .*vite-frontend:[^[:space:]]*|image: ${{ env.REGISTRY }}/${OWNER}/vite-frontend:${VERSION}|g" ./artifacts/docker-compose-v6.yml
+          sed -i "s|image: .*flvx-svc-backend:[^[:space:]]*|image: ${{ env.REGISTRY }}/${OWNER}/flvx-svc-backend:${VERSION}|g" ./artifacts/docker-compose-v4.yml
+          sed -i "s|image: .*flvx-svc-frontend:[^[:space:]]*|image: ${{ env.REGISTRY }}/${OWNER}/flvx-svc-frontend:${VERSION}|g" ./artifacts/docker-compose-v4.yml
+          sed -i "s|image: .*flvx-svc-backend:[^[:space:]]*|image: ${{ env.REGISTRY }}/${OWNER}/flvx-svc-backend:${VERSION}|g" ./artifacts/docker-compose-v6.yml
+          sed -i "s|image: .*flvx-svc-frontend:[^[:space:]]*|image: ${{ env.REGISTRY }}/${OWNER}/flvx-svc-frontend:${VERSION}|g" ./artifacts/docker-compose-v6.yml
 
-          # 复制并修改安装脚本
           cp install.sh ./artifacts/install.sh
           cp panel_install.sh ./artifacts/panel_install.sh
 
-          # 替换仓库地址和版本号
-          sed -i "s|bqlpfy/flux-panel|${REPO}|g" ./artifacts/install.sh
-          sed -i "s|bqlpfy/flux-panel|${REPO}|g" ./artifacts/panel_install.sh
-          sed -i "s|2.0.7-beta|${VERSION}|g" ./artifacts/install.sh
-          sed -i "s|2.0.7-beta|${VERSION}|g" ./artifacts/panel_install.sh
-
-          # 注入固定版本号，使从 Release 页下载的脚本只安装该版本
           sed -i "s|^PINNED_VERSION=\"\"|PINNED_VERSION=\"${VERSION}\"|" ./artifacts/install.sh
           sed -i "s|^PINNED_VERSION=\"\"|PINNED_VERSION=\"${VERSION}\"|" ./artifacts/panel_install.sh
+
+          mkdir -p ./artifacts/offline-amd64 ./artifacts/offline-arm64
+          cp ./artifacts/gost-amd64 ./artifacts/offline-amd64/flux_agent
+          cp ./artifacts/install.sh ./artifacts/offline-amd64/offline.sh
+          cp ./artifacts/gost-arm64 ./artifacts/offline-arm64/flux_agent
+          cp ./artifacts/install.sh ./artifacts/offline-arm64/offline.sh
+          cd ./artifacts/offline-amd64 && zip -r ../offline-amd64.zip . && cd ../..
+          cd ./artifacts/offline-arm64 && zip -r ../offline-arm64.zip . && cd ../..
 
       - name: Create Release
         env:
@@ -310,15 +280,24 @@ jobs:
           VERSION="${{ needs.check-version.outputs.version }}"
           OWNER="${{ needs.check-version.outputs.image_owner }}"
 
-          # 获取 commit 信息
+          IS_PRERELEASE=false
+          if [[ "$VERSION" =~ -(dev|beta|alpha|rc) ]]; then
+            IS_PRERELEASE=true
+          fi
+
           COMMIT_MSG=$(git log -1 --pretty=format:"%s")
           COMMIT_AUTHOR=$(git log -1 --pretty=format:"%an")
           COMMIT_DATE=$(git log -1 --pretty=format:"%ai")
 
-          # 创建 release
+          PRERELEASE_FLAG=""
+          if [ "$IS_PRERELEASE" = true ]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
+
           gh release create "${VERSION}" \
+            $PRERELEASE_FLAG \
             --title "Release ${VERSION}" \
-            --notes "## 📝 Release Information
+            --notes "## Release Information
 
           - **Version**: ${VERSION}
           - **Commit**: [\`${GITHUB_SHA:0:7}\`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
@@ -326,58 +305,44 @@ jobs:
           - **Date**: ${COMMIT_DATE}
           - **Message**: ${COMMIT_MSG}
 
-          ## 📦 Docker Images
+          ## Packages
 
           \`\`\`bash
-          # Backend
-          docker pull ${{ env.REGISTRY }}/${OWNER}/flux-panel-backend:${VERSION}
-
-          # Frontend
-          docker pull ${{ env.REGISTRY }}/${OWNER}/vite-frontend:${VERSION}
+          docker pull ${{ env.REGISTRY }}/${OWNER}/flvx-svc-backend:${VERSION}
+          docker pull ${{ env.REGISTRY }}/${OWNER}/flvx-svc-frontend:${VERSION}
           \`\`\`
 
-          ## 🚀 Quick Install
+          ## Quick Install
 
-          **Panel (安装此版本 ${VERSION}):**
+          **Panel (${VERSION})**
           \`\`\`bash
           curl -L https://github.com/${{ github.repository }}/releases/download/${VERSION}/panel_install.sh -o panel_install.sh && chmod +x panel_install.sh && ./panel_install.sh
           \`\`\`
 
-          **Node (安装此版本 ${VERSION}):**
+          **Node (${VERSION})**
           \`\`\`bash
           curl -L https://github.com/${{ github.repository }}/releases/download/${VERSION}/install.sh -o install.sh && chmod +x install.sh && ./install.sh
-          \`\`\`
-
-          **安装最新版:**
-          \`\`\`bash
-          # 面板端
-          curl -L https://raw.githubusercontent.com/${{ github.repository }}/main/panel_install.sh -o panel_install.sh && chmod +x panel_install.sh && ./panel_install.sh
-          # 节点端
-          curl -L https://raw.githubusercontent.com/${{ github.repository }}/main/install.sh -o install.sh && chmod +x install.sh && ./install.sh
           \`\`\`" \
             --repo ${{ github.repository }}
 
-          # 上传所有文件到 release
-          echo "📤 上传 GOST 二进制文件..."
           gh release upload "${VERSION}" ./artifacts/gost-amd64 --clobber
           gh release upload "${VERSION}" ./artifacts/gost-arm64 --clobber
-
-          echo "📤 上传 GOST 校验文件..."
           gh release upload "${VERSION}" ./artifacts/gost-amd64.sha256 --clobber
           gh release upload "${VERSION}" ./artifacts/gost-arm64.sha256 --clobber
-
-          echo "📤 上传安装脚本..."
           gh release upload "${VERSION}" ./artifacts/install.sh --clobber
           gh release upload "${VERSION}" ./artifacts/panel_install.sh --clobber
-
-          echo "📤 上传 Docker Compose 配置文件..."
           gh release upload "${VERSION}" ./artifacts/docker-compose-v4.yml --clobber
           gh release upload "${VERSION}" ./artifacts/docker-compose-v6.yml --clobber
+          gh release upload "${VERSION}" ./artifacts/offline-amd64.zip --clobber
+          gh release upload "${VERSION}" ./artifacts/offline-arm64.zip --clobber
 
-          echo "✅ Release ${VERSION} 创建完成"
+          if [ "$IS_PRERELEASE" = false ]; then
+            RELEASE_ID=$(gh release view "${VERSION}" --json databaseId --jq '.databaseId')
+            gh api -X PATCH repos/${{ github.repository }}/releases/${RELEASE_ID} -f make_latest="true"
+          fi
 
   update-release-gost:
-    name: Update GOST Binaries in Release
+    name: Update GOST Assets in Existing Release
     needs: [check-version, build-gost]
     if: needs.check-version.outputs.is_tag == 'false' && needs.check-version.outputs.should_build == 'false' && needs.check-version.outputs.should_build_gost == 'true'
     runs-on: ubuntu-latest
@@ -410,25 +375,27 @@ jobs:
           name: gost-checksum-arm64
           path: ./artifacts/
 
-      - name: Rename binaries
+      - name: Rename binaries and build offline packages
         run: |
           mv ./artifacts/amd64/gost-amd64 ./artifacts/gost-amd64
           mv ./artifacts/arm64/gost-arm64 ./artifacts/gost-arm64
+          mkdir -p ./artifacts/offline-amd64 ./artifacts/offline-arm64
+          cp ./artifacts/gost-amd64 ./artifacts/offline-amd64/flux_agent
+          cp ./install.sh ./artifacts/offline-amd64/offline.sh
+          cp ./artifacts/gost-arm64 ./artifacts/offline-arm64/flux_agent
+          cp ./install.sh ./artifacts/offline-arm64/offline.sh
+          cd ./artifacts/offline-amd64 && zip -r ../offline-amd64.zip . && cd ../..
+          cd ./artifacts/offline-arm64 && zip -r ../offline-arm64.zip . && cd ../..
 
-      - name: Update GOST binaries in Release
+      - name: Upload refreshed release assets
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="${{ needs.check-version.outputs.version }}"
 
-          echo "🔄 更新 Release ${VERSION} 中的 GOST 二进制文件..."
-
           gh release upload "${VERSION}" ./artifacts/gost-amd64 --clobber
           gh release upload "${VERSION}" ./artifacts/gost-arm64 --clobber
-
-          echo "📤 上传 GOST 校验文件..."
           gh release upload "${VERSION}" ./artifacts/gost-amd64.sha256 --clobber
           gh release upload "${VERSION}" ./artifacts/gost-arm64.sha256 --clobber
-
-          echo "✅ GOST 二进制文件更新完成"
-
+          gh release upload "${VERSION}" ./artifacts/offline-amd64.zip --clobber
+          gh release upload "${VERSION}" ./artifacts/offline-arm64.zip --clobber
