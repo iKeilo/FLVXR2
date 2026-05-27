@@ -86,6 +86,9 @@ install_download_tools() {
 
 install_download_tools
 
+# 脚本参数：指定版本号（可选），例如：bash panel_install.sh v3.6.6
+ARG_VERSION="$1"
+
 # GitHub repo used for release downloads
 REPO="abai569/flvx"
 
@@ -131,6 +134,10 @@ resolve_version() {
     echo "$VERSION"
     return 0
   fi
+  if [[ -n "$ARG_VERSION" ]]; then
+    echo "$ARG_VERSION"
+    return 0
+  fi
   if [[ -n "${FLUX_VERSION:-}" ]]; then
     echo "$FLUX_VERSION"
     return 0
@@ -144,7 +151,7 @@ resolve_version() {
     return 0
   fi
 
-  echo "❌ 无法获取最新版本号。你可以手动指定版本，例如：VERSION=<版本号> ./panel_install.sh" >&2
+  echo "❌ 无法获取最新版本号。你可以手动指定版本，例如：VERSION=<版本号> ./panel_install.sh 或 bash panel_install.sh <版本号>" >&2
   return 1
 }
 
@@ -561,14 +568,19 @@ update_panel() {
     fi
   fi
 
-  echo "🔍 获取最新版本号..."
-  LATEST_VERSION=$(resolve_latest_release_tag) || {
-    echo "❌ 无法获取最新版本号，更新终止"
-    return 1
-  }
-  echo "🆕 最新版本：$LATEST_VERSION"
-  set_compose_urls_by_version "$LATEST_VERSION"
-  upsert_env_var ".env" "FLUX_VERSION" "$LATEST_VERSION"
+  if [[ -n "$ARG_VERSION" ]]; then
+    UPDATE_VERSION="$ARG_VERSION"
+    echo "🆕 指定版本：$UPDATE_VERSION"
+  else
+    echo "🔍 获取最新版本号..."
+    UPDATE_VERSION=$(resolve_latest_release_tag) || {
+      echo "❌ 无法获取最新版本号，更新终止"
+      return 1
+    }
+    echo "🆕 最新版本：$UPDATE_VERSION"
+  fi
+  set_compose_urls_by_version "$UPDATE_VERSION"
+  upsert_env_var ".env" "FLUX_VERSION" "$UPDATE_VERSION"
 
   echo "🔽 下载最新配置文件..."
   DOCKER_COMPOSE_URL=$(get_docker_compose_url)

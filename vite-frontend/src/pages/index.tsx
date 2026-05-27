@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { motion } from "framer-motion";
@@ -32,7 +31,6 @@ export default function IndexPage() {
   const [showCaptcha, setShowCaptcha] = useState(false);
   const isWebView = useWebViewMode();
   const [siteKey, setSiteKey] = useState("");
-  const navigate = useNavigate();
 
   // 验证表单
   const validateForm = (): boolean => {
@@ -91,7 +89,7 @@ export default function IndexPage() {
       if (response.data.requirePasswordChange) {
         writeLoginSession(response.data);
         toast.success("检测到默认密码，即将跳转到修改密码页面");
-        navigate("/change-password");
+        window.location.href = "/change-password";
 
         return;
       }
@@ -101,7 +99,7 @@ export default function IndexPage() {
 
       // 登录成功
       toast.success("登录成功");
-      navigate("/dashboard");
+      window.location.href = "/dashboard";
     } catch {
       toast.error("网络错误，请稍后重试");
     } finally {
