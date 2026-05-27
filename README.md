@@ -22,7 +22,7 @@
 | 操作 | 命令 | 说明 |
 | :--- | :--- | :--- |
 | **交互式安装** | `bash <(curl -L https://raw.githubusercontent.com/abai569/flvx/main/panel_install.sh)` | 手动输入配置，安装最新版 |
-| **指定版本安装** | `bash <(curl -L https://raw.githubusercontent.com/abai569/flvx/main/panel_install.sh) <版本号>` | 手动输入配置，安装指定版本 |
+| **指定版本安装** | `bash <(curl -L https://raw.githubusercontent.com/abai569/flvx/main/panel_install.sh) 版本号` | 手动输入配置，安装指定版本 |
 | **一键升级** | `bash <(curl -L https://raw.githubusercontent.com/abai569/flvx/main/panel_install.sh) update` | **无交互**，自动停止服务并升级到最新版 |
 | **一键卸载** | `bash <(curl -L https://raw.githubusercontent.com/abai569/flvx/main/panel_install.sh) uninstall` | **无交互**，停止并删除所有容器与数据 |
 
@@ -36,79 +36,6 @@
 > ⚠️ 首次登录后请立即修改默认密码！
 
 ---
-
-#### PostgreSQL 部署（Docker Compose）
-
-安装脚本会根据环境自动下载对应的 Compose 配置并保存为 `docker-compose.yml`。默认仍使用 SQLite，切换到 PostgreSQL 只需要配置环境变量。
-
-1) 在 `docker-compose` 同目录创建或修改 `.env`：
-
-```bash
-JWT_SECRET=replace_with_your_secret
-BACKEND_PORT=6365
-FRONTEND_PORT=6366
-
-DB_TYPE=postgres
-DATABASE_URL=postgres://flux_panel:replace_with_strong_password@postgres:5432/flux_panel?sslmode=disable
-
-POSTGRES_DB=flux_panel
-POSTGRES_USER=flux_panel
-POSTGRES_PASSWORD=replace_with_strong_password
-```
-
-> 📌 使用安装脚本部署时，`POSTGRES_PASSWORD` 会自动随机生成并写入 `.env`。
-
-2) 启动服务：
-
-```bash
-docker compose up -d
-```
-
-3) 如果你想继续使用 SQLite，保留 `DB_TYPE=sqlite`（或不设置 `DB_TYPE`）即可。
-
-#### 从 SQLite 迁移到 PostgreSQL
-
-如果你是通过 `panel_install.sh` 安装面板，推荐直接使用脚本菜单一键迁移：
-
-```bash
-bash <(curl -L https://raw.githubusercontent.com/abai569/flvx/main/panel_install.sh)
-# 选择 4. 迁移到 PostgreSQL
-```
-
-脚本会自动完成 SQLite 备份、PostgreSQL 启动、`pgloader` 导入、`.env` 中 `DB_TYPE`/`DATABASE_URL` 更新，并重启服务。
-
-如果你希望手动迁移，以下示例基于 Docker Volume `sqlite_data`（项目默认配置）与 `pgloader`：
-
-1) 停止服务并备份 SQLite 数据：
-
-```bash
-docker compose down
-docker run --rm -v sqlite_data:/data -v "$(pwd)":/backup alpine sh -c "cp /data/gost.db /backup/gost.db.bak"
-```
-
-2) 仅启动 PostgreSQL：
-
-```bash
-docker compose up -d postgres
-```
-
-3) 使用 `pgloader` 迁移：
-
-```bash
-source .env
-docker run --rm --network gost-network -v sqlite_data:/sqlite dimitri/pgloader:latest pgloader /sqlite/gost.db "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
-```
-
-4) 切换后端到 PostgreSQL 并启动：
-
-```bash
-source .env
-export DB_TYPE=postgres
-export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable"
-docker compose up -d
-```
-
-5) 迁移完成后，登录面板检查用户、隧道、转发、节点数据是否正确。
 
 ## Original Project
 - **Name**: flvx-svc

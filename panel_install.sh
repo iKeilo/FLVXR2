@@ -86,8 +86,10 @@ install_download_tools() {
 
 install_download_tools
 
-# 脚本参数：指定版本号（可选），例如：bash panel_install.sh v3.6.6
+# 脚本参数：指定版本号（可选），例如：bash panel_install.sh v3.6.6 或 <3.6.6>
 ARG_VERSION="$1"
+ARG_VERSION="${ARG_VERSION//<}"
+ARG_VERSION="${ARG_VERSION//>}"
 
 # GitHub repo used for release downloads
 REPO="abai569/flvx"
