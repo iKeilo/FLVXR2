@@ -131,6 +131,12 @@ func (h *Handler) completePayment(orderNo, txHash string) {
 		_ = h.repo.IncreaseUserFlow(userID, product.Value)
 	case "time":
 		_ = h.repo.ExtendUserExpiry(userID, product.Value)
+	case "package":
+		var pkg model.SubscriptionPackage
+		if err := json.Unmarshal([]byte(order.ProductMeta), &pkg); err == nil {
+			groupIDs, _ := h.repo.GetPackageTunnelGroupIDs(pkg.ID)
+			_ = h.repo.DeliverPackageToUser(userID, &pkg, order.ID, groupIDs)
+		}
 	}
 }
 

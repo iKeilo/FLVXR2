@@ -6,11 +6,24 @@ import { motion } from "framer-motion";
 import { Card, CardBody, CardHeader } from "@/shadcn-bridge/heroui/card";
 import { Input } from "@/shadcn-bridge/heroui/input";
 import { Button } from "@/shadcn-bridge/heroui/button";
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+} from "@/shadcn-bridge/heroui/modal";
 import { siteConfig } from "@/config/site";
 import { title } from "@/components/primitives";
 import { VersionFooter } from "@/components/version-footer";
 import DefaultLayout from "@/layouts/default";
-import { login, LoginData, checkCaptcha, getConfigByName } from "@/api";
+import {
+  login,
+  register,
+  LoginData,
+  checkCaptcha,
+  getConfigByName,
+} from "@/api";
 import { writeLoginSession } from "@/utils/session";
 import { useWebViewMode } from "@/hooks/useWebViewMode";
 
@@ -31,6 +44,11 @@ export default function IndexPage() {
   const [showCaptcha, setShowCaptcha] = useState(false);
   const isWebView = useWebViewMode();
   const [siteKey, setSiteKey] = useState("");
+
+  const [registerOpen, setRegisterOpen] = useState(false);
+  const [registerForm, setRegisterForm] = useState({ user: "", password: "", confirm: "" });
+  const [registerErrors, setRegisterErrors] = useState<Partial<typeof registerForm>>({});
+  const [registerLoading, setRegisterLoading] = useState(false);
 
   // 验证表单
   const validateForm = (): boolean => {
@@ -149,6 +167,33 @@ export default function IndexPage() {
     }
   };
 
+  const handleRegister = async () => {
+    const errs: Partial<typeof registerForm> = {};
+    if (!registerForm.user.trim()) errs.user = "请输入用户名";
+    if (!registerForm.password) errs.password = "请输入密码";
+    else if (registerForm.password.length < 6) errs.password = "密码长度至少6位";
+    if (registerForm.password !== registerForm.confirm) errs.confirm = "两次密码不一致";
+    setRegisterErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
+    setRegisterLoading(true);
+    try {
+      const res = await register({ user: registerForm.user.trim(), password: registerForm.password });
+      if (res.code === 0) {
+        writeLoginSession(res.data);
+        toast.success("注册成功");
+        setRegisterOpen(false);
+        window.location.href = "/dashboard";
+      } else {
+        toast.error(res.msg || "注册失败");
+      }
+    } catch {
+      toast.error("网络错误");
+    } finally {
+      setRegisterLoading(false);
+    }
+  };
+
   return (
     <DefaultLayout>
       <section className="flex flex-col items-center justify-center gap-4 py-4 sm:py-8 md:py-10 pb-20 min-h-[calc(100dvh-120px)] sm:min-h-[calc(100dvh-200px)]">
@@ -205,6 +250,16 @@ export default function IndexPage() {
                 >
                   {loading ? (showCaptcha ? "验证中..." : "登录中...") : "登录"}
                 </Button>
+
+                <div className="text-center mt-2">
+                  <button
+                    className="text-sm text-primary hover:underline"
+                    type="button"
+                    onClick={() => setRegisterOpen(true)}
+                  >
+                    没有账号？立即注册
+                  </button>
+                </div>
               </div>
             </CardBody>
           </Card>
@@ -224,55 +279,54 @@ export default function IndexPage() {
         {/* 验证码弹层 */}
         {showCaptcha && siteKey && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
-            {/* 背景遮罩层 - 模糊效果，暗黑模式下更深 */}
             <button
               className="absolute inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm captcha-backdrop-enter"
               type="button"
-              onClick={() => {
-                setShowCaptcha(false);
-                setLoading(false);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  setShowCaptcha(false);
-                  setLoading(false);
-                }
-              }}
+              onClick={() => { setShowCaptcha(false); setLoading(false); }}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { setShowCaptcha(false); setLoading(false); } }}
             />
-            {/* 验证码容器 */}
             <div className="mb-4 relative z-50 bg-white dark:bg-zinc-900 p-6 rounded-lg shadow-xl">
-              <div className="mb-4 text-center text-sm font-medium text-gray-700 dark:text-gray-200">
-                请完成安全验证
-              </div>
+              <div className="mb-4 text-center text-sm font-medium text-gray-700 dark:text-gray-200">请完成安全验证</div>
               <div className="flex justify-center">
                 <Turnstile
-                  options={{
-                    theme: (document.documentElement.classList.contains(
-                      "dark",
-                    ) ||
-                    document.documentElement.getAttribute("data-theme") ===
-                      "dark" ||
-                    window.matchMedia("(prefers-color-scheme: dark)").matches
-                      ? "dark"
-                      : "light") as "light" | "dark" | "auto",
-                  }}
+                  options={{ theme: ((document.documentElement.classList.contains("dark") || document.documentElement.getAttribute("data-theme") === "dark" || window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light") as "light" | "dark" | "auto" }}
                   siteKey={siteKey}
-                  onError={() => {
-                    toast.error("验证失败，请刷新重试");
-                    setLoading(false);
-                  }}
-                  onExpire={() => {
-                    setForm((prev) => ({ ...prev, captchaId: "" }));
-                  }}
-                  onSuccess={(token) => {
-                    setForm((prev) => ({ ...prev, captchaId: token }));
-                    void performLogin(token);
-                  }}
+                  onError={() => { toast.error("验证失败，请刷新重试"); setLoading(false); }}
+                  onExpire={() => { setForm((prev) => ({ ...prev, captchaId: "" })); }}
+                  onSuccess={(token) => { setForm((prev) => ({ ...prev, captchaId: token })); void performLogin(token); }}
                 />
               </div>
             </div>
           </div>
         )}
+
+        <Modal isOpen={registerOpen} placement="center"
+          onOpenChange={(open) => { if (!open) { setRegisterOpen(false); setRegisterForm({ user: "", password: "", confirm: "" }); setRegisterErrors({}); } }}>
+          <ModalContent>
+            <ModalHeader>注册账号</ModalHeader>
+            <ModalBody>
+              <div className="flex flex-col gap-4">
+                <Input label="用户名" placeholder="请输入用户名" variant="bordered" value={registerForm.user}
+                  isInvalid={!!registerErrors.user} errorMessage={registerErrors.user}
+                  onChange={(e) => setRegisterForm((p) => ({ ...p, user: e.target.value }))} />
+                <Input label="密码" placeholder="请输入密码" type="password" variant="bordered" value={registerForm.password}
+                  isInvalid={!!registerErrors.password} errorMessage={registerErrors.password}
+                  onChange={(e) => setRegisterForm((p) => ({ ...p, password: e.target.value }))} />
+                <Input label="确认密码" placeholder="再次输入密码" type="password" variant="bordered" value={registerForm.confirm}
+                  isInvalid={!!registerErrors.confirm} errorMessage={registerErrors.confirm}
+                  onChange={(e) => setRegisterForm((p) => ({ ...p, confirm: e.target.value }))} />
+              </div>
+            </ModalBody>
+            <ModalFooter>
+              <Button variant="flat" onPress={() => { setRegisterOpen(false); setRegisterForm({ user: "", password: "", confirm: "" }); setRegisterErrors({}); }}>
+                取消
+              </Button>
+              <Button color="primary" isLoading={registerLoading} onPress={handleRegister}>
+                注册
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
       </section>
     </DefaultLayout>
   );

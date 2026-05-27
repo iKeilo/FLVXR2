@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"go-backend/internal/auth"
 	"go-backend/internal/http/client"
 	"go-backend/internal/http/response"
 	"go-backend/internal/middleware"
@@ -6096,4 +6097,48 @@ func (h *Handler) tunnelListTunnelOrder(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	response.WriteJSON(w, response.OKEmpty())
+}
+
+func (h *Handler) userRegister(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		response.WriteJSON(w, response.ErrDefault("请求失败"))
+		return
+	}
+	var req struct {
+		User     string `json:"user"`
+		Password string `json:"password"`
+	}
+	if err := decodeJSON(r.Body, &req); err != nil {
+		response.WriteJSON(w, response.ErrDefault("请求参数错误"))
+		return
+	}
+	if req.User == "" || req.Password == "" {
+		response.WriteJSON(w, response.ErrDefault("用户名或密码不能为空"))
+		return
+	}
+	exists, err := h.repo.UserExists(req.User)
+	if err != nil {
+		response.WriteJSON(w, response.Err(-2, err.Error()))
+		return
+	}
+	if exists {
+		response.WriteJSON(w, response.ErrDefault("用户名已存在"))
+		return
+	}
+	now := time.Now().UnixMilli()
+	userID, err := h.repo.CreateUser(req.User, security.MD5(req.Password), 1, 0, 0, 1, 0, 1, now, 0, 0, 0)
+	if err != nil {
+		response.WriteJSON(w, response.Err(-2, err.Error()))
+		return
+	}
+	token, err := auth.GenerateToken(userID, req.User, 1, h.jwtSecret)
+	if err != nil {
+		response.WriteJSON(w, response.Err(-2, err.Error()))
+		return
+	}
+	response.WriteJSON(w, response.OK(map[string]interface{}{
+		"token":   token,
+		"name":    req.User,
+		"role_id": 1,
+	}))
 }

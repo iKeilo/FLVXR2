@@ -16,7 +16,7 @@ import LimitPage from "@/pages/limit";
 import ConfigPage from "@/pages/config";
 import PanelSharingPage from "@/pages/panel-sharing";
 import ShopPage from "@/pages/shop";
-import OrdersPage from "@/pages/orders";
+import MyPackagesPage from "@/pages/my-packages";
 import AdminProductsPage from "@/pages/admin-products";
 import AdminOrdersPage from "@/pages/admin-orders";
 import AdminPaymentPage from "@/pages/admin-payment";
@@ -223,10 +223,10 @@ function App() {
       <Route
         element={
           <ProtectedRoute>
-            <OrdersPage />
+            <MyPackagesPage />
           </ProtectedRoute>
         }
-        path="/orders"
+        path="/my/packages"
       />
       <Route
         element={

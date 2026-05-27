@@ -64,6 +64,7 @@ import type {
   RedeemCodeItem,
   DiscountCodeItem,
   BalanceLogItem,
+  SubscriptionPackageApiItem,
 } from "./types";
 
 import axios from "axios";
@@ -88,6 +89,9 @@ export interface LoginResponse {
 
 export const login = (data: LoginData) =>
   Network.post<LoginResponse>("/user/login", data);
+
+export const register = (data: { user: string; password: string }) =>
+  Network.post<LoginResponse>("/user/register", data);
 
 // 用户CRUD操作 - 全部使用POST请求
 export const createUser = (data: UserMutationPayload) =>
@@ -986,3 +990,25 @@ export const getBalanceLogs = (data?: {
     page: number;
     size: number;
   }>("/billing/balance-log/list", data || {});
+
+// ─── Subscription Packages ─────────────────────────────────────
+export const getPackageList = () =>
+  Network.post<SubscriptionPackageApiItem[]>("/package/list");
+
+export const createPackage = (data: Record<string, unknown>) =>
+  Network.post("/package/create", data);
+
+export const updatePackage = (data: Record<string, unknown>) =>
+  Network.post("/package/update", data);
+
+export const deletePackage = (id: number) =>
+  Network.post("/package/delete", { id });
+
+export const getPackageDetail = (id: number) =>
+  Network.post<{
+    package: SubscriptionPackageApiItem;
+    tunnelGroupIds: number[];
+  }>("/package/detail", { id });
+
+export const createPackageOrder = (data: { packageId: number; payCurrency: string }) =>
+  Network.post<{ orderId: number }>("/package/order/create", data);

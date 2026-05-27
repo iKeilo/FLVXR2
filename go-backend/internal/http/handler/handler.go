@@ -152,6 +152,7 @@ func (h *Handler) WebSocketHandler() http.Handler {
 
 func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/user/login", h.login)
+	mux.HandleFunc("/api/v1/user/register", h.userRegister)
 	mux.HandleFunc("/api/v1/user/list", h.userList)
 	mux.HandleFunc("/api/v1/user/create", h.userCreate)
 	mux.HandleFunc("/api/v1/user/update", h.userUpdate)
@@ -180,6 +181,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/captcha/check", h.checkCaptcha)
 	mux.HandleFunc("/api/v1/captcha/verify", h.captchaVerify)
 	mux.HandleFunc("/api/v1/user/package", h.userPackage)
+	mux.HandleFunc("/api/v1/user/my-subscription", h.userMySubscription)
 	mux.HandleFunc("/api/v1/user/updatePassword", h.updatePassword)
 	mux.HandleFunc("/api/v1/node/list", h.nodeList)
 	mux.HandleFunc("/api/v1/node/create", h.nodeCreate)
@@ -347,6 +349,14 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/product/update", h.updateProduct)
 	mux.HandleFunc("/api/v1/product/delete", h.deleteProduct)
 	mux.HandleFunc("/api/v1/product/update-order", h.updateProductOrder)
+
+	// Package (套餐)
+	mux.HandleFunc("/api/v1/package/list", h.listPackages)
+	mux.HandleFunc("/api/v1/package/create", h.createPackage)
+	mux.HandleFunc("/api/v1/package/update", h.updatePackage)
+	mux.HandleFunc("/api/v1/package/delete", h.deletePackage)
+	mux.HandleFunc("/api/v1/package/detail", h.getPackageDetail)
+	mux.HandleFunc("/api/v1/package/order/create", h.createPackageOrder)
 
 	mux.HandleFunc("/api/v1/order/create", h.createOrder)
 	mux.HandleFunc("/api/v1/order/list", h.listOrders)
@@ -1314,6 +1324,34 @@ func (h *Handler) updatePassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.WriteJSON(w, response.OKEmpty())
+}
+
+func (h *Handler) userMySubscription(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		response.WriteJSON(w, response.ErrDefault("请求失败"))
+		return
+	}
+	userID, err := userIDFromRequest(r)
+	if err != nil || userID <= 0 {
+		response.WriteJSON(w, response.Err(401, "用户信息错误"))
+		return
+	}
+	sub, pkg, err := h.repo.GetUserActiveSubscription(userID)
+	if err != nil {
+		response.WriteJSON(w, response.Err(-2, err.Error()))
+		return
+	}
+	if sub == nil {
+		response.WriteJSON(w, response.OK(map[string]interface{}{
+			"subscription": nil,
+			"package":      nil,
+		}))
+		return
+	}
+	response.WriteJSON(w, response.OK(map[string]interface{}{
+		"subscription": sub,
+		"package":      pkg,
+	}))
 }
 
 func (h *Handler) captchaEnabled() (bool, error) {

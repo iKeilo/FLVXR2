@@ -1,5 +1,7 @@
 package model
 
+import "time"
+
 type Product struct {
 	ID          int64  `gorm:"primaryKey;autoIncrement" json:"id"`
 	Name        string `gorm:"column:name;type:varchar(100);not null" json:"name"`
@@ -14,3 +16,55 @@ type Product struct {
 }
 
 func (Product) TableName() string { return "product" }
+
+// SubscriptionPackage 套餐订阅 — 定义资源配额和关联的隧道分组
+type SubscriptionPackage struct {
+	ID             int64  `gorm:"primaryKey;autoIncrement"`
+	Name           string `gorm:"column:name;type:varchar(100);not null"`
+	Description    string `gorm:"column:description;type:varchar(500);default:''"`
+	Price          int64  `gorm:"column:price;not null;default:0"`             // 分
+	ValidityDays   int    `gorm:"column:validity_days;default:0"`              // 0=永久
+	TrafficLimit   int64  `gorm:"column:traffic_limit;default:0"`              // GB, 0=不限
+	PortCount      int    `gorm:"column:port_count;default:0"`                 // 0=不限
+	SpeedLimit     int    `gorm:"column:speed_limit;default:0"`                // MB/s, 0=不限
+	MaxRules       int    `gorm:"column:max_rules;default:0"`                  // 0=不限
+	MaxConnections int    `gorm:"column:max_connections;default:0"`            // 0=不限
+	MaxIPAccess    int    `gorm:"column:max_ip_access;default:0"`              // 0=不限
+	AutoRenew      int    `gorm:"column:auto_renew;default:0"`                 // 套餐级自动续费开关
+	SortOrder      int    `gorm:"column:sort_order;default:0"`
+	Enabled        int    `gorm:"column:enabled;default:1"`                    // 启用
+	ShopVisible    int    `gorm:"column:shop_visible;default:1"`               // 商店可见
+	CreatedAt      int64  `gorm:"column:created_at;not null"`
+	UpdatedAt      int64  `gorm:"column:updated_at;not null"`
+}
+
+func (SubscriptionPackage) TableName() string { return "subscription_package" }
+
+// SubscriptionPackageTunnelGroup 套餐关联的隧道分组（多对多）
+type SubscriptionPackageTunnelGroup struct {
+	PackageID     int64 `gorm:"column:package_id;primaryKey"`
+	TunnelGroupID int64 `gorm:"column:tunnel_group_id;primaryKey"`
+}
+
+func (SubscriptionPackageTunnelGroup) TableName() string { return "subscription_package_tunnel_group" }
+
+// PackageSubscription 用户订阅记录
+type PackageSubscription struct {
+	ID        int64 `gorm:"primaryKey;autoIncrement"`
+	UserID    int64 `gorm:"column:user_id;not null;index"`
+	PackageID int64 `gorm:"column:package_id;not null"`
+	StartAt   int64 `gorm:"column:start_at;not null"`
+	ExpireAt  int64 `gorm:"column:expire_at;not null"`
+	AutoRenew int   `gorm:"column:auto_renew;default:0"`
+	Status    int   `gorm:"column:status;default:1"` // 1=active, 0=expired, 2=cancelled
+	OrderID   int64 `gorm:"column:order_id"`
+	CreatedAt int64 `gorm:"column:created_at;not null"`
+	UpdatedAt int64 `gorm:"column:updated_at;not null"`
+}
+
+func (PackageSubscription) TableName() string { return "package_subscription" }
+
+func init() {
+	// ensure zero time is Jan 1, 1970 for SQLite compatibility
+	var _ = time.Time{}
+}

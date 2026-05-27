@@ -22,7 +22,7 @@ func (h *Handler) StartBackgroundJobs() {
 	ctx, cancel := context.WithCancel(context.Background())
 	h.jobsCancel = cancel
 	h.jobsStarted = true
-	h.jobsWG.Add(8)
+	h.jobsWG.Add(9)
 	h.jobsMu.Unlock()
 
 	go h.runHourlyStatsLoop(ctx)
@@ -33,6 +33,7 @@ func (h *Handler) StartBackgroundJobs() {
 	go h.runTunnelQualityProber(ctx)
 	go h.runNftablesDomainRefreshLoop(ctx)
 	go h.runCancelExpiredOrdersLoop(ctx)
+	go h.runExpirePackageSubscriptionsLoop(ctx)
 }
 
 func (h *Handler) StopBackgroundJobs() {
@@ -547,4 +548,44 @@ func (h *Handler) cancelExpiredOrders() {
 	}
 
 	log.Printf("[orders] 已取消 %d 个超时未支付订单", len(ids))
+}
+
+func (h *Handler) runExpirePackageSubscriptionsLoop(ctx context.Context) {
+	defer h.jobsWG.Done()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(10 * time.Minute):
+			h.expirePackageSubscriptions()
+		}
+	}
+}
+
+func (h *Handler) expirePackageSubscriptions() {
+	if h == nil || h.repo == nil {
+		return
+	}
+
+	expired, err := h.repo.ListExpiredPackageSubscriptions()
+	if err != nil {
+		log.Printf("[packages] 查询过期套餐失败: %v", err)
+		return
+	}
+	if len(expired) == 0 {
+		return
+	}
+
+	for _, sub := range expired {
+		if err := h.repo.ExpirePackageSubscription(sub.ID); err != nil {
+			log.Printf("[packages] 过期套餐 %d 失败: %v", sub.ID, err)
+			continue
+		}
+		if err := h.repo.ResetUserPackageQuotas(sub.UserID); err != nil {
+			log.Printf("[packages] 重置用户 %d 配额失败: %v", sub.UserID, err)
+		}
+	}
+
+	log.Printf("[packages] 已过期 %d 个套餐订阅", len(expired))
 }

@@ -82,6 +82,9 @@ type ServiceMonitor = model.ServiceMonitor
 type ServiceMonitorResult = model.ServiceMonitorResult
 type TunnelQuality = model.TunnelQuality
 type Product = model.Product
+type SubscriptionPackage = model.SubscriptionPackage
+type SubscriptionPackageTunnelGroup = model.SubscriptionPackageTunnelGroup
+type PackageSubscription = model.PackageSubscription
 type OrderModel = model.Order
 type PaymentConfig = model.PaymentConfig
 
@@ -245,6 +248,9 @@ func autoMigrateAll(db *gorm.DB) error {
 		&model.PaymentConfig{},
 		&model.RedeemCode{},
 		&model.DiscountCode{},
+		&model.SubscriptionPackage{},
+		&model.SubscriptionPackageTunnelGroup{},
+		&model.PackageSubscription{},
 	}
 
 	if db.Dialector.Name() != "sqlite" {

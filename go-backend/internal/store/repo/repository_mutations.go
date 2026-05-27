@@ -1262,6 +1262,272 @@ func (r *Repository) ReplaceForwardPorts(forwardID int64, entries []struct {
 	})
 }
 
+func (r *Repository) CreatePackage(pkg *model.SubscriptionPackage, tunnelGroupIDs []int64) error {
+	if r == nil || r.db == nil {
+		return errors.New("repository not initialized")
+	}
+	now := time.Now().UnixMilli()
+	pkg.CreatedAt = now
+	pkg.UpdatedAt = now
+	tx := r.db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+	defer tx.Rollback()
+	if err := tx.Create(pkg).Error; err != nil {
+		return err
+	}
+	for _, tgID := range tunnelGroupIDs {
+		if err := tx.Create(&model.SubscriptionPackageTunnelGroup{PackageID: pkg.ID, TunnelGroupID: tgID}).Error; err != nil {
+			return err
+		}
+	}
+	return tx.Commit().Error
+}
+
+func (r *Repository) UpdatePackage(pkg *model.SubscriptionPackage, tunnelGroupIDs []int64) error {
+	if r == nil || r.db == nil {
+		return errors.New("repository not initialized")
+	}
+	pkg.UpdatedAt = time.Now().UnixMilli()
+	tx := r.db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+	defer tx.Rollback()
+	if err := tx.Model(pkg).Updates(map[string]interface{}{
+		"name": pkg.Name, "description": pkg.Description,
+		"price": pkg.Price, "validity_days": pkg.ValidityDays,
+		"traffic_limit": pkg.TrafficLimit, "port_count": pkg.PortCount,
+		"speed_limit": pkg.SpeedLimit, "max_rules": pkg.MaxRules,
+		"max_connections": pkg.MaxConnections, "max_ip_access": pkg.MaxIPAccess,
+		"auto_renew": pkg.AutoRenew, "sort_order": pkg.SortOrder,
+		"enabled": pkg.Enabled, "shop_visible": pkg.ShopVisible,
+		"updated_at": pkg.UpdatedAt,
+	}).Error; err != nil {
+		return err
+	}
+	tx.Where("package_id = ?", pkg.ID).Delete(&model.SubscriptionPackageTunnelGroup{})
+	for _, tgID := range tunnelGroupIDs {
+		if err := tx.Create(&model.SubscriptionPackageTunnelGroup{PackageID: pkg.ID, TunnelGroupID: tgID}).Error; err != nil {
+			return err
+		}
+	}
+	return tx.Commit().Error
+}
+
+func (r *Repository) DeletePackage(id int64) error {
+	if r == nil || r.db == nil {
+		return errors.New("repository not initialized")
+	}
+	tx := r.db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+	defer tx.Rollback()
+	tx.Where("package_id = ?", id).Delete(&model.SubscriptionPackageTunnelGroup{})
+	tx.Where("package_id = ?", id).Delete(&model.PackageSubscription{})
+	if err := tx.Delete(&model.SubscriptionPackage{}, id).Error; err != nil {
+		return err
+	}
+	return tx.Commit().Error
+}
+
+func (r *Repository) ListPackages(onlyActive bool) ([]*model.SubscriptionPackage, error) {
+	if r == nil || r.db == nil {
+		return nil, errors.New("repository not initialized")
+	}
+	q := r.db.Order("sort_order ASC, id DESC")
+	if onlyActive {
+		q = q.Where("enabled = 1 AND shop_visible = 1")
+	}
+	var items []*model.SubscriptionPackage
+	if err := q.Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (r *Repository) GetPackageTunnelGroupIDs(packageID int64) ([]int64, error) {
+	if r == nil || r.db == nil {
+		return nil, errors.New("repository not initialized")
+	}
+	var rows []*model.SubscriptionPackageTunnelGroup
+	if err := r.db.Where("package_id = ?", packageID).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	ids := make([]int64, len(rows))
+	for i, row := range rows {
+		ids[i] = row.TunnelGroupID
+	}
+	return ids, nil
+}
+
+func (r *Repository) GetPackageByID(id int64) (*model.SubscriptionPackage, error) {
+	if r == nil || r.db == nil {
+		return nil, errors.New("repository not initialized")
+	}
+	var pkg model.SubscriptionPackage
+	if err := r.db.First(&pkg, id).Error; err != nil {
+		return nil, err
+	}
+	return &pkg, nil
+}
+
+// GetTunnelsInGroups returns all tunnel IDs that belong to the given tunnel group IDs.
+func (r *Repository) GetTunnelsInGroups(groupIDs []int64) ([]int64, error) {
+	if r == nil || r.db == nil {
+		return nil, errors.New("repository not initialized")
+	}
+	if len(groupIDs) == 0 {
+		return nil, nil
+	}
+	var ids []int64
+	if err := r.db.Model(&model.TunnelGroupTunnel{}).
+		Where("tunnel_group_id IN ?", groupIDs).
+		Pluck("tunnel_id", &ids).Error; err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
+// DeliverPackageToUser applies a subscription package to a user: deactivates old subscriptions,
+// creates a new PackageSubscription, updates user quotas, and grants tunnel permissions.
+func (r *Repository) DeliverPackageToUser(userID int64, pkg *model.SubscriptionPackage, orderID int64, tunnelGroupIDs []int64) error {
+	if r == nil || r.db == nil {
+		return errors.New("repository not initialized")
+	}
+	now := time.Now().UnixMilli()
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// 1. Deactivate old active subscriptions for this user
+		if err := tx.Model(&model.PackageSubscription{}).
+			Where("user_id = ? AND status = 1", userID).
+			Updates(map[string]interface{}{
+				"status":     0,
+				"updated_at": now,
+			}).Error; err != nil {
+			return err
+		}
+		// 2. Create new subscription
+		expireAt := time.Now().Unix() + int64(pkg.ValidityDays)*86400
+		sub := &model.PackageSubscription{
+			UserID:    userID,
+			PackageID: pkg.ID,
+			StartAt:   time.Now().Unix(),
+			ExpireAt:  expireAt,
+			AutoRenew: pkg.AutoRenew,
+			Status:    1,
+			OrderID:   orderID,
+			CreatedAt: now,
+			UpdatedAt: now,
+		}
+		if err := tx.Create(sub).Error; err != nil {
+			return err
+		}
+		// 3. Update user quotas (replace, not add)
+		updates := map[string]interface{}{
+			"flow":            int64(pkg.TrafficLimit),
+			"num":             pkg.PortCount,
+			"exp_time":        expireAt,
+			"speed_limit":     pkg.SpeedLimit,
+			"max_rules":       pkg.MaxRules,
+			"max_connections": pkg.MaxConnections,
+			"max_ip_access":   pkg.MaxIPAccess,
+			"updated_time":    now,
+		}
+		if err := tx.Model(&model.User{}).Where("id = ?", userID).Updates(updates).Error; err != nil {
+			return err
+		}
+		// 4. Grant tunnel permissions for each tunnel in the package's tunnel groups
+		tunnelIDs, err := r.GetTunnelsInGroups(tunnelGroupIDs)
+		if err != nil {
+			return err
+		}
+		for _, tunnelID := range tunnelIDs {
+			var existing model.UserTunnel
+			err := tx.Select("id").Where("user_id = ? AND tunnel_id = ?", userID, tunnelID).First(&existing).Error
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				ut := model.UserTunnel{
+					UserID:   userID,
+					TunnelID: tunnelID,
+					Num:      pkg.PortCount,
+					Flow:     int64(pkg.TrafficLimit),
+					ExpTime:  expireAt,
+					Status:   1,
+				}
+				if err := tx.Create(&ut).Error; err != nil {
+					return err
+				}
+			} else if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// ListExpiredPackageSubscriptions returns active subscriptions that have expired.
+func (r *Repository) ListExpiredPackageSubscriptions() ([]*model.PackageSubscription, error) {
+	if r == nil || r.db == nil {
+		return nil, errors.New("repository not initialized")
+	}
+	now := time.Now().Unix()
+	var list []*model.PackageSubscription
+	if err := r.db.Where("status = 1 AND expire_at < ?", now).Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+// ExpirePackageSubscription marks a subscription as expired.
+func (r *Repository) ExpirePackageSubscription(id int64) error {
+	if r == nil || r.db == nil {
+		return errors.New("repository not initialized")
+	}
+	return r.db.Model(&model.PackageSubscription{}).
+		Where("id = ?", id).
+		Updates(map[string]interface{}{
+			"status":     0,
+			"updated_at": time.Now().UnixMilli(),
+		}).Error
+}
+
+// ResetUserPackageQuotas resets package-related quota fields on the user to 0.
+func (r *Repository) ResetUserPackageQuotas(userID int64) error {
+	if r == nil || r.db == nil {
+		return errors.New("repository not initialized")
+	}
+	return r.db.Model(&model.User{}).
+		Where("id = ?", userID).
+		Updates(map[string]interface{}{
+			"speed_limit":     0,
+			"max_rules":       0,
+			"max_connections": 0,
+			"max_ip_access":   0,
+			"updated_time":    time.Now().UnixMilli(),
+		}).Error
+}
+
+// GetUserActiveSubscription returns the user's active subscription with package details.
+// Returns nil if no active subscription exists.
+func (r *Repository) GetUserActiveSubscription(userID int64) (*model.PackageSubscription, *model.SubscriptionPackage, error) {
+	if r == nil || r.db == nil {
+		return nil, nil, errors.New("repository not initialized")
+	}
+	var sub model.PackageSubscription
+	if err := r.db.Where("user_id = ? AND status = 1", userID).First(&sub).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil, nil
+		}
+		return nil, nil, err
+	}
+	var pkg model.SubscriptionPackage
+	if err := r.db.First(&pkg, sub.PackageID).Error; err != nil {
+		return &sub, nil, nil
+	}
+	return &sub, &pkg, nil
+}
+
 func (r *Repository) CountNodes() (int64, error) {
 	var count int64
 	err := r.db.Model(&model.Node{}).Count(&count).Error

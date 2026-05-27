@@ -12,16 +12,18 @@ import {
   ModalFooter,
 } from "@/shadcn-bridge/heroui/modal";
 import { Chip } from "@/shadcn-bridge/heroui/chip";
-import { getProductList, createOrder, payOrder, getPaymentConfigs } from "@/api";
-import type { ProductApiItem, PaymentChannelItem } from "@/api/types";
+import { getProductList, createOrder, payOrder, getPaymentConfigs, getPackageList, createPackageOrder } from "@/api";
+import type { ProductApiItem, PaymentChannelItem, SubscriptionPackageApiItem } from "@/api/types";
 import { PageLoadingState } from "@/components/page-state";
 
 export default function ShopPage() {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<ProductApiItem[]>([]);
+  const [packages, setPackages] = useState<SubscriptionPackageApiItem[]>([]);
   const [payChannels, setPayChannels] = useState<PaymentChannelItem[]>([]);
   const [buyModalOpen, setBuyModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ProductApiItem | null>(null);
+  const [selectedPackage, setSelectedPackage] = useState<SubscriptionPackageApiItem | null>(null);
   const [selectedCurrency, setSelectedCurrency] = useState("BALANCE");
   const [submitting, setSubmitting] = useState(false);
   const [payResult, setPayResult] = useState<{ payUrl: string; payAddress: string; payAmount: string; orderNo: string } | null>(null);
@@ -29,15 +31,19 @@ export default function ShopPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [prodRes, payRes] = await Promise.all([
+      const [prodRes, payRes, pkgRes] = await Promise.all([
         getProductList(),
         getPaymentConfigs(),
+        getPackageList(),
       ]);
       if (prodRes.code === 0) {
         setProducts(Array.isArray(prodRes.data) ? prodRes.data : []);
       }
       if (payRes.code === 0) {
         setPayChannels(Array.isArray(payRes.data) ? payRes.data : []);
+      }
+      if (pkgRes.code === 0) {
+        setPackages(Array.isArray(pkgRes.data) ? pkgRes.data.filter((p: SubscriptionPackageApiItem) => p.shopVisible === 1 && p.enabled === 1) : []);
       }
     } catch {
       toast.error("加载失败");
@@ -50,6 +56,15 @@ export default function ShopPage() {
 
   const handleBuy = (product: ProductApiItem) => {
     setSelectedProduct(product);
+    setSelectedPackage(null);
+    setSelectedCurrency("BALANCE");
+    setPayResult(null);
+    setBuyModalOpen(true);
+  };
+
+  const handleBuyPackage = (pkg: SubscriptionPackageApiItem) => {
+    setSelectedPackage(pkg);
+    setSelectedProduct(null);
     setSelectedCurrency("BALANCE");
     setPayResult(null);
     setBuyModalOpen(true);
@@ -67,13 +82,18 @@ export default function ShopPage() {
   ];
 
   const handleSubmitOrder = async () => {
-    if (!selectedProduct) return;
+    if (!selectedProduct && !selectedPackage) return;
     setSubmitting(true);
     try {
-      const res = await createOrder({
-        productId: selectedProduct.id,
-        payCurrency: selectedCurrency,
-      });
+      const res = selectedPackage
+        ? await createPackageOrder({
+            packageId: selectedPackage.id,
+            payCurrency: selectedCurrency,
+          })
+        : await createOrder({
+            productId: selectedProduct!.id,
+            payCurrency: selectedCurrency,
+          });
       if (res.code !== 0) {
         if (res.code === 1001) {
           toast.error("余额不足，请选择其他支付方式或联系管理员充值");
@@ -152,12 +172,44 @@ export default function ShopPage() {
         );
       })}
 
-      {products.filter((p) => p.status === 1).length === 0 && (
+      {packages.length > 0 && (
+        <div key="packages" className="mb-8">
+          <h2 className="text-lg font-semibold mb-3">套餐</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {packages.map((pkg) => (
+              <Card key={pkg.id}>
+                <CardHeader>
+                  <div className="flex justify-between items-center w-full">
+                    <span className="font-medium">{pkg.name}</span>
+                    <Chip color="secondary" size="sm">
+                      {(pkg.price / 100).toFixed(2)} 元
+                    </Chip>
+                  </div>
+                </CardHeader>
+                <CardBody>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mb-4 space-y-1">
+                    {pkg.description && <p>{pkg.description}</p>}
+                    <p>有效期: {pkg.validityDays} 天</p>
+                    <p>流量: {pkg.trafficLimit > 0 ? `${pkg.trafficLimit} GB` : "不限"}</p>
+                    <p>端口: {pkg.portCount > 0 ? pkg.portCount : "不限"}</p>
+                    {pkg.speedLimit > 0 && <p>限速: {pkg.speedLimit} Mbps</p>}
+                  </div>
+                  <Button color="secondary" className="w-full" onPress={() => handleBuyPackage(pkg)}>
+                    立即购买
+                  </Button>
+                </CardBody>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {products.filter((p) => p.status === 1).length === 0 && packages.length === 0 && (
         <div className="text-center text-gray-400 py-20">暂无上架商品</div>
       )}
 
       <Modal isOpen={buyModalOpen} placement="center" size="2xl"
-        onOpenChange={(open) => { if (!open) { setBuyModalOpen(false); setPayResult(null); } }}>
+        onOpenChange={(open) => { if (!open) { setBuyModalOpen(false); setPayResult(null); setSelectedPackage(null); } }}>
         <ModalContent>
           <ModalHeader>
             {payResult ? "去支付" : "确认购买"}
@@ -199,12 +251,12 @@ export default function ShopPage() {
               </div>
             ) : (
               <>
-                <p className="mb-4">
-                  商品: <strong>{selectedProduct?.name}</strong>
-                </p>
-                <p className="mb-4">
-                  价格: <strong>{(selectedProduct?.price ?? 0) / 100} 元</strong>
-                </p>
+              <p className="mb-4">
+                商品: <strong>{selectedProduct?.name || selectedPackage?.name}</strong>
+              </p>
+              <p className="mb-4">
+                价格: <strong>{(selectedProduct?.price ?? selectedPackage?.price ?? 0) / 100} 元</strong>
+              </p>
                 <div className="space-y-2">
                   <p className="text-sm font-medium">选择支付方式：</p>
                   {availableChannels.map((ch) => (
@@ -237,12 +289,12 @@ export default function ShopPage() {
           </ModalBody>
           <ModalFooter>
             {payResult ? (
-              <Button variant="flat" onPress={() => { setBuyModalOpen(false); setPayResult(null); }}>
+              <Button variant="flat" onPress={() => { setBuyModalOpen(false); setPayResult(null); setSelectedPackage(null); }}>
                 关闭
               </Button>
             ) : (
               <>
-                <Button variant="flat" onPress={() => setBuyModalOpen(false)}>取消</Button>
+                <Button variant="flat" onPress={() => { setBuyModalOpen(false); setPayResult(null); setSelectedPackage(null); }}>取消</Button>
                 <Button color="primary" isLoading={submitting} onPress={handleSubmitOrder}>
                   确认支付
                 </Button>

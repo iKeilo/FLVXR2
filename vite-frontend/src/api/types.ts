@@ -790,3 +790,23 @@ export interface BalanceLogItem {
   reason: string;
   createdTime: number;
 }
+
+export interface SubscriptionPackageApiItem {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  validityDays: number;
+  trafficLimit: number;
+  portCount: number;
+  speedLimit: number;
+  maxRules: number;
+  maxConnections: number;
+  maxIPAccess: number;
+  autoRenew: number;
+  sortOrder: number;
+  enabled: number;
+  shopVisible: number;
+  createdAt: number;
+  updatedAt: number;
+}

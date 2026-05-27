@@ -32,6 +32,10 @@ type User struct {
 	BuyTrafficAmount int64        `gorm:"column:buy_traffic_amount;default:0"` // 每次购买流量量 (GB)
 	BuyTrafficPrice int64         `gorm:"column:buy_traffic_price;default:0"`  // 每次购买价格 (分)
 	BaseFlow        int64         `gorm:"column:base_flow;default:0"`          // 初始流量配额 (GB)
+	SpeedLimit      int           `gorm:"column:speed_limit;default:0"`        // 限速 MB/s (0=不限)
+	MaxRules        int           `gorm:"column:max_rules;default:0"`          // 最大规则数 (0=不限)
+	MaxConnections  int           `gorm:"column:max_connections;default:0"`    // 最大连接数 (0=不限)
+	MaxIPAccess     int           `gorm:"column:max_ip_access;default:0"`      // 单 IP 接入限制 (0=不限)
 }
 
 func (User) TableName() string { return "user" }
