@@ -95,11 +95,22 @@ const Network = {
           resolve(response.data);
         })
         .catch(function (error: unknown) {
-          const errorMessage = extractApiErrorMessage(error);
+          const status = axios.isAxiosError(error) ? error.response?.status : 0;
+          const isAuthError = status === 401;
+
+          if (isAuthError) {
+            resolve({
+              code: -1,
+              msg: "公共监控未开放",
+              data: null as T,
+            });
+
+            return;
+          }
 
           resolve({
             code: -1,
-            msg: errorMessage,
+            msg: extractApiErrorMessage(error),
             data: null as T,
           });
         });
