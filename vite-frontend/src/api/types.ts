@@ -398,6 +398,10 @@ export interface TunnelMutationPayload {
   chainNodes?: TunnelChainNodePayload[][];
   tunnelGroupId?: number | null;
   remark?: string;
+  http?: number;
+  tls?: number;
+  socks?: number;
+  blockOther?: number;
 }
 
 export interface UserQuotaResetPayload {
@@ -676,100 +680,100 @@ export interface SystemUpgradeCheckApiData extends SystemUpgradeVersionApiData {
 }
 
 export interface SystemUpgradeRunApiData {
-	version: string;
-	channel: "stable" | "dev";
-	composeAsset: string;
-	helperContainer: string;
-	backendImageId: string;
-	message: string;
+  version: string;
+  channel: "stable" | "dev";
+  composeAsset: string;
+  helperContainer: string;
+  backendImageId: string;
+  message: string;
 }
 
 // ─── Payment & Shop ──────────────────────────────────────────────────
 
 export interface ProductApiItem {
-	id: number;
-	name: string;
-	description: string;
-	type: "recharge" | "traffic" | "time";
-	price: number;
-	value: number;
-	sortOrder: number;
-	status: number;
-	createdAt: number;
-	updatedAt: number;
-	[key: string]: unknown;
+  id: number;
+  name: string;
+  description: string;
+  type: "recharge" | "traffic" | "time";
+  price: number;
+  value: number;
+  sortOrder: number;
+  status: number;
+  createdAt: number;
+  updatedAt: number;
+  [key: string]: unknown;
 }
 
 export interface OrderApiItem {
-	id: number;
-	orderNo: string;
-	userId: number;
-	userName: string;
-	productId: number;
-	productName: string;
-	productType: string;
-	amount: number;
-	payCurrency: "BALANCE" | "USDT" | "YIPAY";
-	status: number;
-	payTime: number;
-	payUrl: string;
-	payAddress: string;
-	txHash: string;
-	createdAt: number;
-	[key: string]: unknown;
+  id: number;
+  orderNo: string;
+  userId: number;
+  userName: string;
+  productId: number;
+  productName: string;
+  productType: string;
+  amount: number;
+  payCurrency: "BALANCE" | "USDT" | "YIPAY";
+  status: number;
+  payTime: number;
+  payUrl: string;
+  payAddress: string;
+  txHash: string;
+  createdAt: number;
+  [key: string]: unknown;
 }
 
 export interface PaymentChannelItem {
-	channel: string;
-	enabled: number;
+  channel: string;
+  enabled: number;
 }
 
 export interface PayOrderResult {
-	payUrl: string;
-	payAddress: string;
-	payAmount: string;
-	orderNo: string;
+  payUrl: string;
+  payAddress: string;
+  payAmount: string;
+  orderNo: string;
 }
 
 // ─── Billing ─────────────────────────────────────────────────────────
 
 export interface RedeemCodeItem {
-	id: number;
-	code: string;
-	type: "plan" | "balance";
-	planId?: number;
-	durationDays?: number;
-	amountCents?: number;
-	isActive: number;
-	usedByUserId?: number;
-	usedByUsername?: string;
-	usedAt?: number;
-	startsAt?: number;
-	expiresAt?: number;
-	createdAt: number;
+  id: number;
+  code: string;
+  type: "plan" | "balance";
+  planId?: number;
+  durationDays?: number;
+  amountCents?: number;
+  isActive: number;
+  usedByUserId?: number;
+  usedByUsername?: string;
+  usedAt?: number;
+  startsAt?: number;
+  expiresAt?: number;
+  createdAt: number;
 }
 
 export interface DiscountCodeItem {
-	id: number;
-	code: string;
-	type: "percent" | "amount";
-	value: number;
-	maxUses: number;
-	usedCount: number;
-	planIds?: string;
-	isActive: number;
-	startsAt?: number;
-	expiresAt?: number;
-	createdAt: number;
+  id: number;
+  code: string;
+  type: "percent" | "amount";
+  value: number;
+  maxUses: number;
+  usedCount: number;
+  planIds?: string;
+  isActive: number;
+  startsAt?: number;
+  expiresAt?: number;
+  createdAt: number;
 }
 
 export interface BalanceLogItem {
-	id: number;
-	userId: number;
-	userName: string;
-	amount: number;
-	balanceBefore: number;
-	balanceAfter: number;
-	reason: string;
-	createdTime: number;
+  id: number;
+  userId: number;
+  userName: string;
+  amount: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  reason: string;
+  createdTime: number;
 }
