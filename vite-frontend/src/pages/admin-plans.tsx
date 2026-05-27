@@ -51,11 +51,11 @@ interface PackageForm {
   priceYuan: string;
   validityDays: number;
   trafficLimit: number;
-  portCount: number;
+  // portCount: number;
   speedLimit: number;
   maxRules: number;
   maxConnections: number;
-  maxIPAccess: number;
+  // maxIPAccess: number;
   autoRenew: boolean;
   enabled: boolean;
   shopVisible: boolean;
@@ -69,11 +69,11 @@ const defaultPackageForm: PackageForm = {
   priceYuan: "0",
   validityDays: 30,
   trafficLimit: 0,
-  portCount: 0,
+  // portCount: 0,
   speedLimit: 0,
   maxRules: 0,
   maxConnections: 0,
-  maxIPAccess: 0,
+  // maxIPAccess: 0,
   autoRenew: false,
   enabled: true,
   shopVisible: true,
@@ -154,8 +154,8 @@ export default function AdminPlansPage() {
         setPkgForm({
           id: p.id, name: p.name, description: p.description || "",
           priceYuan: (p.price / 100).toFixed(2), validityDays: p.validityDays,
-          trafficLimit: p.trafficLimit, portCount: p.portCount, speedLimit: p.speedLimit,
-          maxRules: p.maxRules, maxConnections: p.maxConnections, maxIPAccess: p.maxIPAccess,
+          trafficLimit: p.trafficLimit, /* portCount: p.portCount, */ speedLimit: p.speedLimit,
+          maxRules: p.maxRules, maxConnections: p.maxConnections, /* maxIPAccess: p.maxIPAccess, */
           autoRenew: p.autoRenew === 1, enabled: p.enabled === 1, shopVisible: p.shopVisible === 1,
           sortOrder: p.sortOrder, tunnelGroupIds: res.data.tunnelGroupIds || [],
         });
@@ -171,9 +171,10 @@ export default function AdminPlansPage() {
       const priceFen = Math.round(parseFloat(pkgForm.priceYuan || "0") * 100);
       const data = {
         id: pkgForm.id, name: pkgForm.name, description: pkgForm.description, price: priceFen,
-        validityDays: pkgForm.validityDays, trafficLimit: pkgForm.trafficLimit, portCount: pkgForm.portCount,
+        validityDays: pkgForm.validityDays, trafficLimit: pkgForm.trafficLimit,
+        /* portCount: pkgForm.portCount, */
         speedLimit: pkgForm.speedLimit, maxRules: pkgForm.maxRules, maxConnections: pkgForm.maxConnections,
-        maxIPAccess: pkgForm.maxIPAccess, autoRenew: pkgForm.autoRenew ? 1 : 0, enabled: pkgForm.enabled ? 1 : 0,
+        /* maxIPAccess: pkgForm.maxIPAccess, */ autoRenew: pkgForm.autoRenew ? 1 : 0, enabled: pkgForm.enabled ? 1 : 0,
         shopVisible: pkgForm.shopVisible ? 1 : 0, sortOrder: pkgForm.sortOrder, tunnelGroupIds: pkgForm.tunnelGroupIds,
       };
       const res = isPkgEdit ? await updatePackage(data) : await createPackage(data);
@@ -232,7 +233,7 @@ export default function AdminPlansPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <h1 className="text-2xl font-bold">套餐管理</h1>
         <div className="flex flex-wrap gap-2">
-          <Button className="bg-blue-100 dark:bg-blue-500/20 text-blue-600 hover:bg-blue-200 dark:hover:bg-blue-500/30" size="sm" onPress={openAssign}>手动分配</Button>
+          <Button color="secondary" variant="flat" onPress={openAssign}>手动分配</Button>
           <Button color="primary" variant="flat" onPress={handlePkgAdd}>新增套餐</Button>
         </div>
       </div>
@@ -327,11 +328,11 @@ export default function AdminPlansPage() {
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
                     <Chip size="sm" variant="flat">{item.trafficLimit > 0 ? `${item.trafficLimit} GB` : "不限流量"}</Chip>
-                    <Chip size="sm" variant="flat">{item.portCount > 0 ? `${item.portCount} 端口` : "不限端口"}</Chip>
+                    {/* <Chip size="sm" variant="flat">{item.portCount > 0 ? `${item.portCount} 端口` : "不限端口"}</Chip> */}
                   </div>
                 </TableCell>
                 <TableCell className="text-xs text-gray-500">
-                  <div>规则 {item.maxRules || "不限"} · 连接 {item.maxConnections || "不限"} · IP {item.maxIPAccess || "不限"}</div>
+                  <div>规则 {item.maxRules || "不限"} · 连接 {item.maxConnections || "不限"}{/* · IP {item.maxIPAccess || "不限"} */}</div>
                   <div>{item.speedLimit > 0 ? `${item.speedLimit} Mbps` : "不限速"}</div>
                 </TableCell>
                 <TableCell>
@@ -353,7 +354,7 @@ export default function AdminPlansPage() {
         </Table>
       </div>
 
-      <Modal isOpen={pkgModalOpen} placement="center" size="2xl" scrollBehavior="inside" onOpenChange={(open) => { if (!open) setPkgModalOpen(false); }}>
+      <Modal isOpen={pkgModalOpen} placement="center" size="xl" scrollBehavior="inside" onOpenChange={(open) => { if (!open) setPkgModalOpen(false); }}>
         <ModalContent>
           <ModalHeader>{isPkgEdit ? "编辑套餐" : "新增套餐"}</ModalHeader>
           {pkgModalLoading ? <ModalBody><PageLoadingState message="加载套餐详情..." /></ModalBody> : (
@@ -374,15 +375,15 @@ export default function AdminPlansPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <Input label="总流量 (GB, 0=不限)" type="number" min="0" value={String(pkgForm.trafficLimit)} variant="bordered" onChange={(e) => setPkgForm((p) => ({ ...p, trafficLimit: parseInt(e.target.value) || 0 }))} />
-                <Input label="连续端口数 (0=不限)" type="number" min="0" value={String(pkgForm.portCount)} variant="bordered" onChange={(e) => setPkgForm((p) => ({ ...p, portCount: parseInt(e.target.value) || 0 }))} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <Input label="限速 (Mbps, 0=不限)" type="number" min="0" value={String(pkgForm.speedLimit)} variant="bordered" onChange={(e) => setPkgForm((p) => ({ ...p, speedLimit: parseInt(e.target.value) || 0 }))} />
                 <Input label="最大规则数 (0=不限)" type="number" min="0" value={String(pkgForm.maxRules)} variant="bordered" onChange={(e) => setPkgForm((p) => ({ ...p, maxRules: parseInt(e.target.value) || 0 }))} />
               </div>
               <div className="grid grid-cols-2 gap-4">
+                <Input label="限速 (Mbps, 0=不限)" type="number" min="0" value={String(pkgForm.speedLimit)} variant="bordered" onChange={(e) => setPkgForm((p) => ({ ...p, speedLimit: parseInt(e.target.value) || 0 }))} />
                 <Input label="最大连接数 (0=不限)" type="number" min="0" value={String(pkgForm.maxConnections)} variant="bordered" onChange={(e) => setPkgForm((p) => ({ ...p, maxConnections: parseInt(e.target.value) || 0 }))} />
-                <Input label="单 IP 接入限制 (0=不限)" type="number" min="0" value={String(pkgForm.maxIPAccess)} variant="bordered" onChange={(e) => setPkgForm((p) => ({ ...p, maxIPAccess: parseInt(e.target.value) || 0 }))} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {/* <Input label="连续端口数 (0=不限)" type="number" min="0" value={String(pkgForm.portCount)} variant="bordered" onChange={(e) => setPkgForm((p) => ({ ...p, portCount: parseInt(e.target.value) || 0 }))} /> */}                
+                {/* <Input label="单 IP 接入限制 (0=不限)" type="number" min="0" value={String(pkgForm.maxIPAccess)} variant="bordered" onChange={(e) => setPkgForm((p) => ({ ...p, maxIPAccess: parseInt(e.target.value) || 0 }))} /> */}
               </div>
               <div className="flex flex-wrap gap-6">
                 <div className="flex flex-col gap-1">

@@ -148,11 +148,11 @@ export default function ShopPage() {
               <CardBody className="pt-0 space-y-2">
                 <div className="flex flex-wrap gap-1">
                   <Chip size="sm" variant="flat">{formatTraffic(pkg.trafficLimit)}</Chip>
-                  <Chip size="sm" variant="flat">{pkg.portCount > 0 ? `${pkg.portCount} 端口` : "不限端口"}</Chip>
+                  {/* <Chip size="sm" variant="flat">{pkg.portCount > 0 ? `${pkg.portCount} 端口` : "不限端口"}</Chip> */}
                   <Chip size="sm" variant="flat">{pkg.speedLimit > 0 ? `${pkg.speedLimit} Mbps` : "不限速"}</Chip>
                 </div>
                 <div className="text-xs text-gray-400 space-y-0.5">
-                  <div>规则 {pkg.maxRules || "不限"} &middot; 连接 {pkg.maxConnections || "不限"} &middot; 单IP {pkg.maxIPAccess || "不限"}</div>
+                  <div>规则 {pkg.maxRules || "不限"} &middot; 连接 {pkg.maxConnections || "不限"}{/* &middot; 单IP {pkg.maxIPAccess || "不限"} */}</div>
                 </div>
                 <Button
                   color="primary"

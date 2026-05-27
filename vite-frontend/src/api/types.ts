@@ -784,11 +784,11 @@ export interface SubscriptionPackageApiItem {
   price: number;
   validityDays: number;
   trafficLimit: number;
-  portCount: number;
+  // portCount: number;
   speedLimit: number;
   maxRules: number;
   maxConnections: number;
-  maxIPAccess: number;
+  // maxIPAccess: number;
   autoRenew: number;
   sortOrder: number;
   enabled: number;

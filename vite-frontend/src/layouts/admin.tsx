@@ -255,7 +255,7 @@ export default function AdminLayout({
       adminOnly: true,
     },
     {
-      path: "/my/packages",
+      path: "/myhome",
       label: "我的",
       userOnly: true,
       icon: (

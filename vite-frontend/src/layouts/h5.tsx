@@ -244,7 +244,7 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
       ),
     },
     {
-      path: "/my/packages",
+      path: "/myhome",
       label: "我的",
       userOnly: true,
       icon: (

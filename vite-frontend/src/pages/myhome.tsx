@@ -37,12 +37,12 @@ const currencyLabel: Record<string, string> = {
   BALANCE: "余额", USDT: "USDT", YIPAY: "易支付",
 };
 
-export default function MyPackagesPage() {
+export default function MyHomePage() {
   const navigate = useNavigate();
   const [pageLoading, setPageLoading] = useState(true);
   const [subData, setSubData] = useState<{
     subscription: { id: number; packageId: number; startAt: number; expireAt: number; autoRenew: number; status: number } | null;
-    package: { id: number; name: string; description: string; trafficLimit: number; portCount: number; speedLimit: number; maxRules: number; maxConnections: number; maxIPAccess: number } | null;
+    package: { id: number; name: string; description: string; trafficLimit: number; /* portCount: number; */ speedLimit: number; maxRules: number; maxConnections: number; /* maxIPAccess: number; */ } | null;
   } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const isFirstLoad = useRef(true);
@@ -64,7 +64,7 @@ export default function MyPackagesPage() {
         getOrderList({ page, size: 10, status: parseInt(statusFilter) }),
         Network.post<{
           subscription: { id: number; packageId: number; startAt: number; expireAt: number; autoRenew: number; status: number } | null;
-          package: { id: number; name: string; description: string; trafficLimit: number; portCount: number; speedLimit: number; maxRules: number; maxConnections: number; maxIPAccess: number } | null;
+          package: { id: number; name: string; description: string; trafficLimit: number; /* portCount: number; */ speedLimit: number; maxRules: number; maxConnections: number; /* maxIPAccess: number; */ } | null;
         }>("/user/my-subscription"),
       ]);
       if (orderRes.code === 0) {
@@ -95,7 +95,7 @@ export default function MyPackagesPage() {
         getOrderList({ page, size: 10, status: parseInt(statusFilter) }),
         Network.post<{
           subscription: { id: number; packageId: number; startAt: number; expireAt: number; autoRenew: number; status: number } | null;
-          package: { id: number; name: string; description: string; trafficLimit: number; portCount: number; speedLimit: number; maxRules: number; maxConnections: number; maxIPAccess: number } | null;
+          package: { id: number; name: string; description: string; trafficLimit: number; /* portCount: number; */ speedLimit: number; maxRules: number; maxConnections: number; /* maxIPAccess: number; */ } | null;
         }>("/user/my-subscription"),
       ]);
       if (orderRes.code === 0) { setOrders(orderRes.data.list || []); setTotal(orderRes.data.total || 0); }
@@ -159,20 +159,20 @@ export default function MyPackagesPage() {
                 <span className="text-default-400">流量</span>
                 <p className="font-medium">{subData.package!.trafficLimit > 0 ? `${subData.package!.trafficLimit} GB` : "不限"}</p>
               </div>
-              <div>
+              {/* <div>
                 <span className="text-default-400">端口</span>
                 <p className="font-medium">{subData.package!.portCount > 0 ? subData.package!.portCount : "不限"}</p>
-              </div>
+              </div> */}
               <div>
                 <span className="text-default-400">限速</span>
                 <p className="font-medium">{subData.package!.speedLimit > 0 ? `${subData.package!.speedLimit} Mbps` : "不限"}</p>
               </div>
               <div>
-                <span className="text-default-400">规则/连接/IP</span>
+                <span className="text-default-400">规则/连接</span>
                 <p className="font-medium">
                   {subData.package!.maxRules > 0 ? subData.package!.maxRules : "∞"} /
-                  {subData.package!.maxConnections > 0 ? subData.package!.maxConnections : "∞"} /
-                  {subData.package!.maxIPAccess > 0 ? subData.package!.maxIPAccess : "∞"}
+                  {subData.package!.maxConnections > 0 ? subData.package!.maxConnections : "∞"}
+                  {/* {subData.package!.maxIPAccess > 0 ? subData.package!.maxIPAccess : "∞"} */}
                 </p>
               </div>
             </div>
