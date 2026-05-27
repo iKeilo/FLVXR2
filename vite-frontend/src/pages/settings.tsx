@@ -29,7 +29,6 @@ interface PanelAddress {
   inx: boolean;
 }
 const FORWARD_COMPACT_MODE_CONFIG_KEY = "forward_compact_mode";
-const LOGIN_MONITOR_LINK_CONFIG_KEY = "login_monitor_link";
 
 export const SettingsPage = () => {
   const navigate = useNavigate();

@@ -165,10 +165,6 @@ type Tunnel struct {
 	ListID        sql.NullInt64  `gorm:"column:list_id;index"`         // 所属隧道分组（旧字段，保留兼容）
 	TunnelGroupID sql.NullInt64  `gorm:"column:tunnel_group_id;index"` // 所属隧道分组（新字段）
 	Remark        sql.NullString `gorm:"column:remark;type:text"`
-	HTTP          int            `gorm:"column:http;not null;default:0"`
-	TLS           int            `gorm:"column:tls;not null;default:0"`
-	Socks         int            `gorm:"column:socks;not null;default:0"`
-	BlockOther    int            `gorm:"column:block_other;not null;default:0"`
 }
 
 func (Tunnel) TableName() string { return "tunnel" }

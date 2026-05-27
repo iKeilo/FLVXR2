@@ -398,10 +398,6 @@ export interface TunnelMutationPayload {
   chainNodes?: TunnelChainNodePayload[][];
   tunnelGroupId?: number | null;
   remark?: string;
-  http?: number;
-  tls?: number;
-  socks?: number;
-  blockOther?: number;
 }
 
 export interface UserQuotaResetPayload {
