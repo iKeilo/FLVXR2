@@ -225,21 +225,18 @@ export default function AdminOrdersPage() {
         </Card>
       </div>
 
-      <div className="flex items-center gap-3 mb-4">
-        <div className="flex flex-wrap gap-2">
-          {["-1", "0", "1", "2", "3"].map((key) => {
-            const labels: Record<string, string> = { "-1": "全部", "0": "待支付", "1": "已完成", "2": "已取消", "3": "已退款" };
-            return (
-              <Button key={key} size="sm" variant={statusFilter === key ? "solid" : "flat"} color={statusFilter === key ? "primary" : "default"} onPress={() => handleStatusChange(key)}>
-                {labels[key]}
-              </Button>
-            );
-          })}
-        </div>
-        <div className="ml-auto">
-          <Select variant="bordered" size="sm" className="w-36"
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <SearchBar
+            isVisible={isSearchVisible}
+            placeholder="搜索订单号/用户..."
+            value={keyword}
+            onChange={handleSearch}
+            onClose={handleCloseSearch}
+            onOpen={() => setIsSearchVisible(true)}
+          />
+          <Select variant="bordered" size="sm" className="w-24"
             selectedKeys={userFilter === "all" ? ["all"] : [userFilter]}
-            //placeholder="全部用户"
             onSelectionChange={(keys) => {
               const val = Array.from(keys)[0] as string;
               setUserFilter(val || "all");
@@ -253,9 +250,19 @@ export default function AdminOrdersPage() {
             ))}
           </Select>
         </div>
+        <div className="flex flex-wrap gap-2 sm:ml-auto">
+          {["-1", "0", "1", "2", "3"].map((key) => {
+            const labels: Record<string, string> = { "-1": "全部", "0": "待支付", "1": "已完成", "2": "已取消", "3": "已退款" };
+            return (
+              <Button key={key} size="sm" variant={statusFilter === key ? "solid" : "flat"} color={statusFilter === key ? "primary" : "default"} onPress={() => handleStatusChange(key)}>
+                {labels[key]}
+              </Button>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="relative overflow-hidden rounded-xl border border-divider bg-content1 shadow-md">
+      <div className="relative overflow-x-auto rounded-xl border border-divider bg-content1 shadow-md">
         {refreshing && (
           <div className="absolute inset-0 bg-white/60 dark:bg-black/40 z-10 flex items-center justify-center">
             <svg className="animate-spin h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24">
@@ -264,7 +271,8 @@ export default function AdminOrdersPage() {
             </svg>
           </div>
         )}
-        <Table classNames={{ th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle", td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0", tr: "hover:bg-default-50/50 transition-colors" }}>
+        <div style={{ minWidth: 750 }}>
+          <Table classNames={{ th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle", td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0", tr: "hover:bg-default-50/50 transition-colors" }}>
           <TableHeader>
             <TableColumn className="whitespace-nowrap">订单号</TableColumn>
             <TableColumn className="whitespace-nowrap">用户</TableColumn>
@@ -288,13 +296,13 @@ export default function AdminOrdersPage() {
                   <TableCell>{(order.amount / 100).toFixed(2)} 元</TableCell>
                   <TableCell>{currencyLabel[order.payCurrency] || order.payCurrency}</TableCell>
                   <TableCell>
-                    <Chip color={st.color} size="sm">{st.label}</Chip>
+                    <Chip className="rounded" color={st.color} size="sm">{st.label}</Chip>
                   </TableCell>
                   <TableCell className="text-xs text-gray-400">
                     {order.createdAt ? new Date(order.createdAt * 1000).toLocaleString() : "-"}
                   </TableCell>
                   <TableCell>
-                    <Button size="sm" variant="flat" onPress={() => handleViewDetail(order)}>
+                    <Button color="primary" size="sm" variant="flat" onPress={() => handleViewDetail(order)}>
                       详情
                     </Button>
                   </TableCell>
@@ -303,6 +311,7 @@ export default function AdminOrdersPage() {
             })}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       {total > 10 && (
@@ -334,7 +343,7 @@ export default function AdminOrdersPage() {
                 <div className="flex justify-between"><span className="text-gray-400 text-foreground">商品</span><span>{detailOrder.productName}</span></div>
                 <div className="flex justify-between"><span className="text-gray-400 text-foreground">金额</span><span>{(detailOrder.amount / 100).toFixed(2)} 元</span></div>
                 <div className="flex justify-between"><span className="text-gray-400 text-foreground">支付方式</span><span>{currencyLabel[detailOrder.payCurrency] || detailOrder.payCurrency}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400 text-foreground">状态</span><Chip color={statusMap[detailOrder.status]?.color || "default"} size="sm">{statusMap[detailOrder.status]?.label || "未知"}</Chip></div>
+                <div className="flex justify-between"><span className="text-gray-400 text-foreground">状态</span><Chip className="rounded" color={statusMap[detailOrder.status]?.color || "default"} size="sm">{statusMap[detailOrder.status]?.label || "未知"}</Chip></div>
                 {detailOrder.payTime > 0 && (
                   <div className="flex justify-between"><span className="text-gray-400 text-foreground">支付时间</span><span>{new Date(detailOrder.payTime * 1000).toLocaleString()}</span></div>
                 )}

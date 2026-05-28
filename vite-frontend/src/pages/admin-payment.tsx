@@ -425,7 +425,7 @@ export default function AdminPaymentPage() {
       const res = await getAllUsers({ size: 1000 });
 
       if (res.code === 0) setUsers(Array.isArray(res.data) ? res.data : []);
-    } catch {}
+    } catch { }
   }, []);
 
   const handleDeleteLog = async (log: BalanceLogItem) => {
@@ -639,10 +639,10 @@ export default function AdminPaymentPage() {
       {/* Main tabs */}
       <div className="flex flex-wrap gap-2 mb-6">
         {[
-          { key: "billing", label: "账单流水" },
+          { key: "billing", label: "账单" },
+          { key: "payment", label: "支付" },
           { key: "redeem", label: "兑换码" },
           { key: "discount", label: "折扣码" },
-          { key: "payment", label: "支付渠道" },
         ].map((tab) => (
           <Button
             key={tab.key}
@@ -943,7 +943,7 @@ export default function AdminPaymentPage() {
                         return updated;
                       });
                     }}
-                   />
+                  />
                 </div>
               </CardHeader>
               <CardBody className="p-4 space-y-4">
@@ -1294,25 +1294,15 @@ export default function AdminPaymentPage() {
                 />
               </svg>
               <h2 className="font-semibold text-foreground">余额流水</h2>
-              <Button
-                color="danger"
-                size="sm"
-                variant="flat"
-                onPress={handleCleanupLogs}
-              >
-                清理脏数据
-              </Button>
             </div>
-            <div className="w-44 flex-shrink-0">
+            <div className="flex items-center gap-2">
               <Select
-                className="w-full"
+                className="w-24"
                 size="sm"
                 variant="bordered"
                 selectedKeys={logUserId === "all" ? ["all"] : [logUserId]}
-                //placeholder="全部用户"
                 onSelectionChange={(keys) => {
                   const val = Array.from(keys)[0] as string;
-
                   setLogUserId(val || "all");
                   localStorage.setItem("adminPaymentLogUserFilter", val || "all");
                   setLogPage(1);
@@ -1323,9 +1313,17 @@ export default function AdminPaymentPage() {
                   <SelectItem key={String(u.id)}>{u.name}</SelectItem>
                 ))}
               </Select>
+              <Button
+                className="h-8 text-xs px-2"
+                color="danger"
+                variant="flat"
+                onPress={handleCleanupLogs}
+              >
+                删脏数据
+              </Button>
             </div>
           </div>
-          <div className="relative overflow-hidden rounded-xl border border-divider bg-content1 shadow-md">
+          <div className="relative overflow-x-auto rounded-xl border border-divider bg-content1 shadow-md">
             {refreshingLogs && (
               <div className="absolute inset-0 bg-white/60 dark:bg-black/40 z-10 flex items-center justify-center">
                 <svg
@@ -1349,71 +1347,73 @@ export default function AdminPaymentPage() {
                 </svg>
               </div>
             )}
-            <Table
-              classNames={{
-                th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle",
-                td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-                tr: "hover:bg-default-50/50 transition-colors",
-              }}
-            >
-              <TableHeader>
-                <TableColumn className="whitespace-nowrap">用户</TableColumn>
-                <TableColumn className="whitespace-nowrap">金额</TableColumn>
-                <TableColumn className="whitespace-nowrap">变动前</TableColumn>
-                <TableColumn className="whitespace-nowrap">变动后</TableColumn>
-                <TableColumn className="whitespace-nowrap">原因</TableColumn>
-                <TableColumn className="whitespace-nowrap">时间</TableColumn>
-                <TableColumn className="whitespace-nowrap">操作</TableColumn>
-              </TableHeader>
-              <TableBody>
-                {logs.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      className="text-center text-default-400 py-8"
-                      colSpan={7}
-                    >
-                      暂无记录
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  logs.map((log) => (
-                    <TableRow key={log.id}>
-                      <TableCell>{log.userName}</TableCell>
+            <div style={{ minWidth: 650 }}>
+              <Table
+                classNames={{
+                  th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle",
+                  td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
+                  tr: "hover:bg-default-50/50 transition-colors",
+                }}
+              >
+                <TableHeader>
+                  <TableColumn className="whitespace-nowrap">用户</TableColumn>
+                  <TableColumn className="whitespace-nowrap">金额</TableColumn>
+                  <TableColumn className="whitespace-nowrap">变动前</TableColumn>
+                  <TableColumn className="whitespace-nowrap">变动后</TableColumn>
+                  <TableColumn className="whitespace-nowrap">原因</TableColumn>
+                  <TableColumn className="whitespace-nowrap">时间</TableColumn>
+                  <TableColumn className="whitespace-nowrap">操作</TableColumn>
+                </TableHeader>
+                <TableBody>
+                  {logs.length === 0 ? (
+                    <TableRow>
                       <TableCell
-                        className={
-                          log.amount >= 0
-                            ? "text-green-600 font-mono"
-                            : "text-red-500 font-mono"
-                        }
+                        className="text-center text-default-400 py-8"
+                        colSpan={7}
                       >
-                        {log.amount >= 0 ? "+" : ""}
-                        {fmtMoney(log.amount)} 元
-                      </TableCell>
-                      <TableCell className="font-mono">
-                        {fmtMoney(log.balanceBefore)} 元
-                      </TableCell>
-                      <TableCell className="font-mono">
-                        {fmtMoney(log.balanceAfter)} 元
-                      </TableCell>
-                      <TableCell>{log.reason}</TableCell>
-                      <TableCell className="text-sm text-default-600">
-                        {fmtTime(log.createdTime)}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          color="danger"
-                          size="sm"
-                          variant="flat"
-                          onPress={() => handleDeleteLog(log)}
-                        >
-                          删除
-                        </Button>
+                        暂无记录
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    logs.map((log) => (
+                      <TableRow key={log.id}>
+                        <TableCell>{log.userName}</TableCell>
+                        <TableCell
+                          className={
+                            log.amount >= 0
+                              ? "text-green-600 font-mono"
+                              : "text-red-500 font-mono"
+                          }
+                        >
+                          {log.amount >= 0 ? "+" : ""}
+                          {fmtMoney(log.amount)} 元
+                        </TableCell>
+                        <TableCell className="font-mono">
+                          {fmtMoney(log.balanceBefore)} 元
+                        </TableCell>
+                        <TableCell className="font-mono">
+                          {fmtMoney(log.balanceAfter)} 元
+                        </TableCell>
+                        <TableCell>{log.reason}</TableCell>
+                        <TableCell className="text-sm text-default-600">
+                          {fmtTime(log.createdTime)}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            color="danger"
+                            size="sm"
+                            variant="flat"
+                            onPress={() => handleDeleteLog(log)}
+                          >
+                            删除
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
             {logTotal > 50 && (
               <div className="flex items-center justify-between p-4 border-t border-divider">
                 <span className="text-sm text-default-500">
@@ -1837,79 +1837,81 @@ export default function AdminPaymentPage() {
             </CardBody>
           </Card>
 
-          <div className="overflow-hidden rounded-xl border border-divider bg-content1 shadow-md">
-            <Table
-              classNames={{
-                th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle",
-                td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-                tr: "hover:bg-default-50/50 transition-colors",
-              }}
-            >
-              <TableHeader>
-                <TableColumn className="whitespace-nowrap">兑换码</TableColumn>
-                <TableColumn className="whitespace-nowrap">类型</TableColumn>
-                <TableColumn className="whitespace-nowrap">内容</TableColumn>
-                <TableColumn className="whitespace-nowrap">有效期</TableColumn>
-                <TableColumn className="whitespace-nowrap">
-                  使用情况
-                </TableColumn>
-                <TableColumn className="whitespace-nowrap">操作</TableColumn>
-              </TableHeader>
-              <TableBody>
-                {redeemCodes.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      className="text-center text-default-400 py-8"
-                      colSpan={6}
-                    >
-                      暂无兑换码
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  redeemCodes.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-mono text-xs">
-                        {c.code}
-                      </TableCell>
-                      <TableCell>
-                        <Chip size="sm" variant="flat">
-                          {c.type === "plan" ? "套餐" : "余额"}
-                        </Chip>
-                      </TableCell>
-                      <TableCell>
-                        {c.type === "balance"
-                          ? `${fmtMoney(c.amountCents || 0)} 元`
-                          : `套餐 #${c.planId || "-"} ${c.durationDays || ""}天`}
-                      </TableCell>
-                      <TableCell className="text-xs text-default-600">
-                        {fmtTime(c.startsAt)} ~ {fmtTime(c.expiresAt)}
-                      </TableCell>
-                      <TableCell>
-                        {c.usedAt ? (
-                          <span className="text-xs text-default-500">
-                            已使用 {c.usedByUsername || `#${c.usedByUserId}`}
-                          </span>
-                        ) : (
-                          <Chip color="success" size="sm" variant="flat">
-                            未使用
-                          </Chip>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          color="danger"
-                          size="sm"
-                          variant="flat"
-                          onPress={() => handleDeleteRedeem(c.id)}
-                        >
-                          删除
-                        </Button>
+          <div className="overflow-x-auto rounded-xl border border-divider bg-content1 shadow-md">
+            <div style={{ minWidth: 600 }}>
+              <Table
+                classNames={{
+                  th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle",
+                  td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
+                  tr: "hover:bg-default-50/50 transition-colors",
+                }}
+              >
+                <TableHeader>
+                  <TableColumn className="whitespace-nowrap">兑换码</TableColumn>
+                  <TableColumn className="whitespace-nowrap">类型</TableColumn>
+                  <TableColumn className="whitespace-nowrap">内容</TableColumn>
+                  <TableColumn className="whitespace-nowrap">有效期</TableColumn>
+                  <TableColumn className="whitespace-nowrap">
+                    使用情况
+                  </TableColumn>
+                  <TableColumn className="whitespace-nowrap">操作</TableColumn>
+                </TableHeader>
+                <TableBody>
+                  {redeemCodes.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        className="text-center text-default-400 py-8"
+                        colSpan={6}
+                      >
+                        暂无兑换码
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    redeemCodes.map((c) => (
+                      <TableRow key={c.id}>
+                        <TableCell className="font-mono text-xs">
+                          {c.code}
+                        </TableCell>
+                        <TableCell>
+                          <Chip size="sm" variant="flat">
+                            {c.type === "plan" ? "套餐" : "余额"}
+                          </Chip>
+                        </TableCell>
+                        <TableCell>
+                          {c.type === "balance"
+                            ? `${fmtMoney(c.amountCents || 0)} 元`
+                            : `套餐 #${c.planId || "-"} ${c.durationDays || ""}天`}
+                        </TableCell>
+                        <TableCell className="text-xs text-default-600">
+                          {fmtTime(c.startsAt)} ~ {fmtTime(c.expiresAt)}
+                        </TableCell>
+                        <TableCell>
+                          {c.usedAt ? (
+                            <span className="text-xs text-default-500">
+                              已使用 {c.usedByUsername || `#${c.usedByUserId}`}
+                            </span>
+                          ) : (
+                            <Chip color="success" size="sm" variant="flat">
+                              未使用
+                            </Chip>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            color="danger"
+                            size="sm"
+                            variant="flat"
+                            onPress={() => handleDeleteRedeem(c.id)}
+                          >
+                            删除
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </>
       )}
@@ -2258,73 +2260,75 @@ export default function AdminPaymentPage() {
             </CardBody>
           </Card>
 
-          <div className="overflow-hidden rounded-xl border border-divider bg-content1 shadow-md">
-            <Table
-              classNames={{
-                th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle",
-                td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-                tr: "hover:bg-default-50/50 transition-colors",
-              }}
-            >
-              <TableHeader>
-                <TableColumn>折扣码</TableColumn>
-                <TableColumn>优惠</TableColumn>
-                <TableColumn>状态</TableColumn>
-                <TableColumn>次数</TableColumn>
-                <TableColumn>有效期</TableColumn>
-                <TableColumn>操作</TableColumn>
-              </TableHeader>
-              <TableBody>
-                {discountCodes.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      className="text-center text-default-400 py-8"
-                      colSpan={6}
-                    >
-                      暂无折扣码
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  discountCodes.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-mono text-xs">
-                        {c.code}
-                      </TableCell>
-                      <TableCell>
-                        {c.type === "percent"
-                          ? `${c.value}%`
-                          : `${fmtMoney(c.value)} 元`}
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          color={c.isActive ? "success" : "default"}
-                          size="sm"
-                          variant="flat"
-                        >
-                          {c.isActive ? "生效中" : "停用"}
-                        </Chip>
-                      </TableCell>
-                      <TableCell>
-                        {c.usedCount} / {c.maxUses || "不限"}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {fmtTime(c.startsAt)} ~ {fmtTime(c.expiresAt)}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          color="danger"
-                          size="sm"
-                          variant="flat"
-                          onPress={() => handleDeleteDiscount(c.id)}
-                        >
-                          删除
-                        </Button>
+          <div className="overflow-x-auto rounded-xl border border-divider bg-content1 shadow-md">
+            <div style={{ minWidth: 580 }}>
+              <Table
+                classNames={{
+                  th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle",
+                  td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
+                  tr: "hover:bg-default-50/50 transition-colors",
+                }}
+              >
+                <TableHeader>
+                  <TableColumn>折扣码</TableColumn>
+                  <TableColumn>优惠</TableColumn>
+                  <TableColumn>状态</TableColumn>
+                  <TableColumn>次数</TableColumn>
+                  <TableColumn>有效期</TableColumn>
+                  <TableColumn>操作</TableColumn>
+                </TableHeader>
+                <TableBody>
+                  {discountCodes.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        className="text-center text-default-400 py-8"
+                        colSpan={6}
+                      >
+                        暂无折扣码
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    discountCodes.map((c) => (
+                      <TableRow key={c.id}>
+                        <TableCell className="font-mono text-xs">
+                          {c.code}
+                        </TableCell>
+                        <TableCell>
+                          {c.type === "percent"
+                            ? `${c.value}%`
+                            : `${fmtMoney(c.value)} 元`}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            color={c.isActive ? "success" : "default"}
+                            size="sm"
+                            variant="flat"
+                          >
+                            {c.isActive ? "生效中" : "停用"}
+                          </Chip>
+                        </TableCell>
+                        <TableCell>
+                          {c.usedCount} / {c.maxUses || "不限"}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {fmtTime(c.startsAt)} ~ {fmtTime(c.expiresAt)}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            color="danger"
+                            size="sm"
+                            variant="flat"
+                            onPress={() => handleDeleteDiscount(c.id)}
+                          >
+                            删除
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </>
       )}
