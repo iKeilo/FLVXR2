@@ -96,7 +96,8 @@ func (g *gmpayGateway) CreateInvoice(order *model.Order) (*PaymentResult, error)
 		network = "tron"
 	}
 
-	params := map[string]string{
+	// Build params for signing (all strings)
+	signParams := map[string]string{
 		"pid":        g.config.PID,
 		"order_id":   order.OrderNo,
 		"currency":   currency,
@@ -106,14 +107,29 @@ func (g *gmpayGateway) CreateInvoice(order *model.Order) (*PaymentResult, error)
 		"notify_url": g.config.NotifyURL,
 	}
 	if g.config.ReturnURL != "" {
-		params["redirect_url"] = g.config.ReturnURL
+		signParams["redirect_url"] = g.config.ReturnURL
 	}
 
 	retry := 0
 	for {
-		params["signature"] = g.sign(params, g.config.SecretKey)
+		signature := g.sign(signParams, g.config.SecretKey)
 
-		body, _ := json.Marshal(params)
+		// Build JSON body with proper types (amount as number)
+		bodyParams := map[string]interface{}{
+			"pid":        g.config.PID,
+			"order_id":   order.OrderNo,
+			"currency":   currency,
+			"token":      token,
+			"network":    network,
+			"amount":     amountCNY,
+			"notify_url": g.config.NotifyURL,
+			"signature":  signature,
+		}
+		if g.config.ReturnURL != "" {
+			bodyParams["redirect_url"] = g.config.ReturnURL
+		}
+
+		body, _ := json.Marshal(bodyParams)
 		endpoint := strings.TrimRight(g.config.APIURL, "/") + "/payments/gmpay/v1/order/create-transaction"
 		req, err := http.NewRequest("POST", endpoint, bytes.NewReader(body))
 		if err != nil {
