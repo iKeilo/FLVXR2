@@ -50,9 +50,13 @@ export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<OrderApiItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [statusFilter, setStatusFilter] = useState("-1");
+  const [statusFilter, setStatusFilter] = useState(
+    () => localStorage.getItem("adminOrderStatus") || "-1",
+  );
   const [keyword, setKeyword] = useState("");
-  const [userFilter, setUserFilter] = useState<string>("all");
+  const [userFilter, setUserFilter] = useState<string>(
+    () => localStorage.getItem("adminOrderUserFilter") || "all",
+  );
   const [users, setUsers] = useState<UserApiItem[]>([]);
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -123,7 +127,11 @@ export default function AdminOrdersPage() {
 
   // Override status change to reset page
   const handleStatusChange = (val: string) => {
-    if (val) { setStatusFilter(val); setPage(1); }
+    if (val) {
+      setStatusFilter(val);
+      localStorage.setItem("adminOrderStatus", val);
+      setPage(1);
+    }
   };
 
   const handleSearch = (val: string) => {
@@ -235,6 +243,7 @@ export default function AdminOrdersPage() {
             onSelectionChange={(keys) => {
               const val = Array.from(keys)[0] as string;
               setUserFilter(val || "all");
+              localStorage.setItem("adminOrderUserFilter", val || "all");
               setPage(1);
             }}
           >
