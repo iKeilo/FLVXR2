@@ -21,7 +21,12 @@ import { Input } from "@/shadcn-bridge/heroui/input";
 import { BrandLogo } from "@/components/brand-logo";
 import { VersionFooter } from "@/components/version-footer";
 import { SunFilledIcon, MoonFilledIcon } from "@/components/icons";
-import { getLicenseInfo, getMonitorAccess, updatePassword, getStoreStatus } from "@/api";
+import {
+  getLicenseInfo,
+  getMonitorAccess,
+  updatePassword,
+  getStoreStatus,
+} from "@/api";
 import { safeLogout } from "@/utils/logout";
 import { siteConfig } from "@/config/site";
 import { getAdminFlag, getSessionName } from "@/utils/session";
@@ -204,9 +209,15 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
       label: "套餐",
       adminOnly: true,
       icon: (
-        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-          <path d="M9 12l2 2 4-4"/>
-          <circle cx="12" cy="12" r="9"/>
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <path d="M9 12l2 2 4-4" />
+          <circle cx="12" cy="12" r="9" />
         </svg>
       ),
     },
@@ -318,6 +329,7 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
     if (item.path === "/shop" && !storeEnabled) {
       toast.error("商城已关闭，仅支持手动分配");
       hideMobileMenu();
+
       return;
     }
     if (item.target === "_blank") {
@@ -454,92 +466,94 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        {/* 授权信息居左显示 */}
-        <div className="flex-1 flex justify-start items-center h-full mx-2 overflow-hidden">
-          {licenseInfo &&
-          (licenseInfo.tier === "free" ||
-            (!licenseInfo.has_license_key && !licenseInfo.tier)) ? (
-            <div className="flex items-center gap-1 text-xs text-yellow-600 dark:text-yellow-400 truncate">
-              <svg
-                className="w-4 h-4 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                />
-              </svg>
-              <span className="truncate">
-                免费版：已限制最多5个节点、5个隧道、1个用户，授权请联系作者
-              </span>
-              <a
-                className="text-blue-600 dark:text-blue-400 flex-shrink-0 underline whitespace-nowrap"
-                href="https://t.me/erflvx"
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                TG群组
-              </a>
-            </div>
-          ) : licenseInfo && licenseInfo.tier === "blocked" ? (
-            <div className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400 truncate">
-              <svg
-                className="w-4 h-4 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                />
-              </svg>
-              <span className="truncate font-bold">
-                {licenseInfo.reason || "授权无效"}
-              </span>
-            </div>
-          ) : (
-            licenseInfo &&
-            licenseInfo.configured && (
-              <div className="flex items-center justify-start h-full overflow-hidden whitespace-nowrap">
-                {licenseInfo.valid ? (
-                  (() => {
-                    const daysLeft = licenseInfo.expire_time
-                      ? Math.max(
-                          0,
-                          Math.floor(
-                            (licenseInfo.expire_time - Date.now()) /
-                              (1000 * 60 * 60 * 24),
-                          ),
-                        )
-                      : 0;
-                    const isExpiringSoon = daysLeft < 5;
-                    const textColorClass = isExpiringSoon
-                      ? "text-red-500 font-bold dark:text-red-400"
-                      : "text-green-600 dark:text-green-400";
-
-                    return (
-                      <span className={`${textColorClass} text-xs truncate`}>
-                        授权剩余 {daysLeft} 天
-                        {isExpiringSoon ? " (即将过期)" : ""}
-                      </span>
-                    );
-                  })()
-                ) : (
-                  <span className="text-red-600 dark:text-red-400 text-xs font-bold truncate">
-                    {licenseInfo.reason || "授权无效"}
-                  </span>
-                )}
+        {/* 授权信息 (仅管理员可见) */}
+        {isAdmin && (
+          <div className="flex-1 flex justify-start items-center h-full mx-2 overflow-hidden">
+            {licenseInfo &&
+            (licenseInfo.tier === "free" ||
+              (!licenseInfo.has_license_key && !licenseInfo.tier)) ? (
+              <div className="flex items-center gap-1 text-xs text-yellow-600 dark:text-yellow-400 truncate">
+                <svg
+                  className="w-4 h-4 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                  />
+                </svg>
+                <span className="truncate">
+                  免费版：已限制最多5个节点、5个隧道、1个用户，授权请联系作者
+                </span>
+                <a
+                  className="text-blue-600 dark:text-blue-400 flex-shrink-0 underline whitespace-nowrap"
+                  href="https://t.me/erflvx"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  TG群组
+                </a>
               </div>
-            )
-          )}
-        </div>
+            ) : licenseInfo && licenseInfo.tier === "blocked" ? (
+              <div className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400 truncate">
+                <svg
+                  className="w-4 h-4 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                  />
+                </svg>
+                <span className="truncate font-bold">
+                  {licenseInfo.reason || "授权无效"}
+                </span>
+              </div>
+            ) : (
+              licenseInfo &&
+              licenseInfo.configured && (
+                <div className="flex items-center justify-start h-full overflow-hidden whitespace-nowrap">
+                  {licenseInfo.valid ? (
+                    (() => {
+                      const daysLeft = licenseInfo.expire_time
+                        ? Math.max(
+                            0,
+                            Math.floor(
+                              (licenseInfo.expire_time - Date.now()) /
+                                (1000 * 60 * 60 * 24),
+                            ),
+                          )
+                        : 0;
+                      const isExpiringSoon = daysLeft < 5;
+                      const textColorClass = isExpiringSoon
+                        ? "text-red-500 font-bold dark:text-red-400"
+                        : "text-green-600 dark:text-green-400";
+
+                      return (
+                        <span className={`${textColorClass} text-xs truncate`}>
+                          授权剩余 {daysLeft} 天
+                          {isExpiringSoon ? " (即将过期)" : ""}
+                        </span>
+                      );
+                    })()
+                  ) : (
+                    <span className="text-red-600 dark:text-red-400 text-xs font-bold truncate">
+                      {licenseInfo.reason || "授权无效"}
+                    </span>
+                  )}
+                </div>
+              )
+            )}
+          </div>
+        )}
 
         {/* 顶部右侧 - 用户名下拉菜单 */}
         <div className="flex items-center gap-1">
