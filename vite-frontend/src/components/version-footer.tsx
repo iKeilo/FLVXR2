@@ -159,25 +159,30 @@ export function VersionFooter({
     <>
       <div className={containerClassName}>
         <p className={versionClassName}>
-          v{version}
-          {showUpdateInfo && updateAvailable && latestUpdateVersion && (
+          {upgrading ? (
+            <span className="animate-pulse inline-flex items-center h-[18px] px-2 rounded text-[10px] font-semibold bg-primary text-primary-foreground">升级中...</span>
+          ) : (
             <>
-              {" → "}
-              <span className={updateBadgeClassName} role="status">
-                {latestUpdateVersion}
-              </span>
+              v{version}
+              {showUpdateInfo && updateAvailable && latestUpdateVersion && (
+                <>
+                  {" → "}
+                  <span className={updateBadgeClassName} role="status">
+                    {latestUpdateVersion}
+                  </span>
+                </>
+              )}{" "}
+              {showUpdateInfo && updateAvailable && (
+                <Button
+                  className="inline-flex h-[16px] px-1.5 text-[9px] min-w-0 rounded-xs font-semibold [&>span]:text-[9px]"
+                  color="danger"
+                  size="sm"
+                  onPress={() => setNotificationOpen(true)}
+                >
+                  UP
+                </Button>
+              )}
             </>
-          )}{" "}
-          {showUpdateInfo && updateAvailable && (
-            <Button
-              className="inline-flex h-[16px] px-1.5 text-[9px] min-w-0 rounded-xs font-semibold [&>span]:text-[9px]"
-              color="primary"
-              isLoading={upgrading}
-              size="sm"
-              onPress={handleDirectUpgrade}
-            >
-              UP
-            </Button>
           )}
         </p>
         <p className={poweredClassName}>
@@ -221,7 +226,7 @@ export function VersionFooter({
                     </div>
                     <div className="text-default-500 text-left">
                       最新版本：
-                      <span className="font-medium text-primary">
+                      <span className="font-medium text-green-500 dark:text-green-400">
                         {latestUpdateVersion ? `v${latestUpdateVersion}` : "-"}
                       </span>
                     </div>
@@ -247,9 +252,9 @@ export function VersionFooter({
                 <Button
                   color="primary"
                   isLoading={upgrading}
-                  onPress={() => setNotificationOpen(true)}
+                  onPress={handleDirectUpgrade}
                 >
-                  UP
+                  确认
                 </Button>
               </ModalFooter>
             </>

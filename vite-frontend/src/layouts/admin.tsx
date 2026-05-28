@@ -705,7 +705,7 @@ export default function AdminLayout({
             <VersionFooter
               poweredClassName="text-xs text-gray-400 dark:text-gray-500"
               showUpdateInfo={isAdmin}
-              updateBadgeClassName="inline-flex items-center h-[16px] px-1.5 rounded-xs bg-rose-500/90 text-[9px] font-semibold text-white"
+              updateBadgeClassName="inline-flex items-center h-[16px] px-1.5 rounded-xs bg-green-500/90 text-[9px] font-semibold text-white"
               version={siteConfig.version}
               versionClassName="text-xs text-gray-400 dark:text-gray-500"
             />

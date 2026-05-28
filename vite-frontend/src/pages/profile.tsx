@@ -305,7 +305,7 @@ export default function ProfilePage() {
           containerClassName="fixed inset-x-0 bottom-20 text-center py-4"
           poweredClassName="text-xs text-gray-400 dark:text-gray-500"
           showUpdateInfo={false}
-          updateBadgeClassName="inline-flex items-center h-[18px] px-1.5 rounded-sm bg-rose-500/90 text-[10px] font-semibold text-white"
+          updateBadgeClassName="inline-flex items-center h-[18px] px-1.5 rounded-sm bg-green-500/90 text-[10px] font-semibold text-white"
           version={
             isWebViewFunc() ? siteConfig.app_version : siteConfig.version
           }
