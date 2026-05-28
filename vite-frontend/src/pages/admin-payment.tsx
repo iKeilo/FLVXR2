@@ -582,21 +582,23 @@ export default function AdminPaymentPage() {
               </CardHeader>
               <CardBody className="p-4 space-y-4">
                 <div className="text-xs text-default-500">对接自托管 Epusdt (GMPay) 支付网关。请先在 Epusdt 管理后台创建商户获取 PID 和密钥。</div>
-                <div>
-                  <label className="text-sm text-gray-400 text-foreground mb-1 block">U 支付网关</label>
-                  <Input variant="bordered" placeholder="https://epusdt.example.com" value={usdt.api_url}
-                    onChange={(e) => setUsdt((p) => ({ ...p, api_url: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400 text-foreground mb-1 block">U 支付商户 PID</label>
-                  <Input variant="bordered" placeholder="1000" value={usdt.pid}
-                    onChange={(e) => setUsdt((p) => ({ ...p, pid: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400 text-foreground mb-1 block">U 支付商户密钥</label>
-                  <Input variant="bordered" type="password" placeholder="留空不修改" value={usdt.secret_key}
-                    onChange={(e) => setUsdt((p) => ({ ...p, secret_key: e.target.value }))} />
-                  {usdtConfig && <p className="text-xs text-default-400 mt-1">已配置，留空不会修改现有密钥</p>}
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-sm text-gray-400 text-foreground mb-1 block">U 支付网关</label>
+                    <Input variant="bordered" placeholder="https://epusdt.example.com" value={usdt.api_url}
+                      onChange={(e) => setUsdt((p) => ({ ...p, api_url: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-400 text-foreground mb-1 block">U 支付商户 PID</label>
+                    <Input variant="bordered" placeholder="1000" value={usdt.pid}
+                      onChange={(e) => setUsdt((p) => ({ ...p, pid: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-400 text-foreground mb-1 block">U 支付商户密钥</label>
+                    <Input variant="bordered" type="password" placeholder="留空不修改" value={usdt.secret_key}
+                      onChange={(e) => setUsdt((p) => ({ ...p, secret_key: e.target.value }))} />
+                    {usdtConfig && <p className="text-xs text-default-400 mt-1">已配置，留空不修改</p>}
+                  </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
