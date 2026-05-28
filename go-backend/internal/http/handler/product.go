@@ -253,15 +253,6 @@ func (h *Handler) createPackageOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if currency == "BALANCE" {
-		ok, err := h.repo.DeductUserBalance(userID, order.Amount)
-		if err != nil {
-			response.WriteJSON(w, response.Err(-2, err.Error()))
-			return
-		}
-		if !ok {
-			response.WriteJSON(w, response.Err(1001, "余额不足"))
-			return
-		}
 		order.Status = 1
 		order.PayTime = time.Now().Unix()
 
@@ -270,14 +261,7 @@ func (h *Handler) createPackageOrder(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		user, _ := h.repo.GetUserByID(userID)
-		if user != nil {
-			_ = h.repo.CreateBalanceLog(userID, userName, -order.Amount,
-				user.Balance+order.Amount, user.Balance,
-				time.Now().Unix(), "余额购买套餐")
-		}
-
-		if err := h.repo.DeliverPackageToUser(userID, pkg, order.ID, tunnelGroupIDs); err != nil {
+		if err := h.repo.CompletePackageOrder(userID, userName, order, pkg, tunnelGroupIDs); err != nil {
 			response.WriteJSON(w, response.Err(-2, "套餐交付失败: "+err.Error()))
 			return
 		}
