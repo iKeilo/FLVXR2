@@ -785,9 +785,25 @@ export default function AdminPaymentPage() {
                   <Switch
                     isSelected={yipay.enabled}
                     size="lg"
-                    onValueChange={(v) =>
-                      setYipay((p) => ({ ...p, enabled: v }))
-                    }
+                    onValueChange={async (v) => {
+                      setYipay((p) => ({ ...p, enabled: v }));
+                      try {
+                        const { enabled, ...rest } = { ...yipay, enabled: v };
+                        const res = await Network.post("/payment/config/save", {
+                          channel: "YIPAY",
+                          config: JSON.stringify(rest),
+                          enabled: v ? 1 : 0,
+                        });
+                        if (res?.code === 0) {
+                          toast.success("设置成功");
+                          loadPaymentData();
+                        } else {
+                          toast.error(res?.msg || "保存失败");
+                        }
+                      } catch {
+                        toast.error("保存失败");
+                      }
+                    }}
                   />
                 </div>
               </CardHeader>
@@ -905,33 +921,29 @@ export default function AdminPaymentPage() {
                     isSelected={usdt.enabled}
                     size="lg"
                     onValueChange={async (v) => {
-                      setUsdt((p) => ({ ...p, enabled: v }));
-                      try {
-                        const {
-                          enabled,
-                          secret_key: sk,
-                          ...rest
-                        } = { ...usdt, enabled: v };
+                      setUsdt((prev) => {
+                        const updated = { ...prev, enabled: v };
+                        const { enabled: _, secret_key: sk, ...rest } = updated;
                         const cfg: Record<string, unknown> = { ...rest };
-
                         if (sk) cfg.secret_key = sk;
-                        const res = await Network.post("/payment/config/save", {
+                        Network.post("/payment/config/save", {
                           channel: "USDT",
                           config: JSON.stringify(cfg),
                           enabled: v ? 1 : 0,
+                        }).then((res) => {
+                          if (res?.code === 0) {
+                            toast.success("设置成功");
+                            loadPaymentData();
+                          } else {
+                            toast.error(res?.msg || "保存失败");
+                          }
+                        }).catch(() => {
+                          toast.error("保存失败");
                         });
-
-                        if (res?.code === 0) {
-                          toast.success("设置成功");
-                          loadPaymentData();
-                        } else {
-                          toast.error(res?.msg || "保存失败");
-                        }
-                      } catch {
-                        toast.error("保存失败");
-                      }
+                        return updated;
+                      });
                     }}
-                  />
+                   />
                 </div>
               </CardHeader>
               <CardBody className="p-4 space-y-4">
