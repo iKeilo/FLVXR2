@@ -744,7 +744,7 @@ export default function AdminPaymentPage() {
                 color={paymentTabKey === tab.key ? "primary" : "default"}
                 size="sm"
                 variant={paymentTabKey === tab.key ? "solid" : "flat"}
-                onPress={() => handlePaymentTabChange(tab.key)}
+                onPress={() => setPaymentTabKey(tab.key)}
               >
                 {tab.label}
               </Button>
