@@ -167,6 +167,7 @@ export default function AdminPaymentPage() {
 
   const [yipay, setYipay] = useState<YiPayForm>(defaultYiPay);
   const [usdt, setUsdt] = useState<UsdtForm>(defaultUsdt);
+  const [editingUsdtKey, setEditingUsdtKey] = useState(false);
 
   const [testChannel, setTestChannel] = useState("YIPAY");
   const [testPackageId, setTestPackageId] = useState("");
@@ -273,7 +274,7 @@ export default function AdminPaymentPage() {
           enabled: !!usdtConfig.enabled,
           api_url: parsed.api_url || "",
           pid: parsed.pid || "",
-          secret_key: "",
+          secret_key: parsed.secret_key || "",
           notify_url:
             parsed.notify_url || panelUrl + "/api/v1/payment/callback/usdt",
           return_url: parsed.return_url || "",
@@ -990,19 +991,41 @@ export default function AdminPaymentPage() {
                     <label className="text-sm text-gray-400 text-foreground mb-1 block">
                       U 支付商户密钥
                     </label>
-                    <Input
-                      placeholder="留空不修改"
-                      type="password"
-                      value={usdt.secret_key}
-                      variant="bordered"
-                      onChange={(e) =>
-                        setUsdt((p) => ({ ...p, secret_key: e.target.value }))
-                      }
-                    />
-                    {usdtConfig && (
-                      <p className="text-xs text-default-400 mt-1">
-                        已配置，留空不修改
-                      </p>
+                    {usdt.secret_key && !editingUsdtKey ? (
+                      <div className="h-10 flex items-center gap-2 px-3 border border-default-200 rounded-lg bg-gray-50 dark:bg-gray-900 text-sm">
+                        <span className="truncate text-xs text-gray-600 dark:text-gray-400 font-mono">
+                          {"\u2022".repeat(Math.max(0, usdt.secret_key.length - 6))}{usdt.secret_key.slice(-6)}
+                        </span>
+                        <Button
+                          className="shrink-0 ml-auto"
+                          size="sm"
+                          variant="flat"
+                          onPress={() => setEditingUsdtKey(true)}
+                        >
+                          修改
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="留空不修改"
+                          value={usdt.secret_key}
+                          variant="bordered"
+                          onChange={(e) =>
+                            setUsdt((p) => ({ ...p, secret_key: e.target.value }))
+                          }
+                        />
+                        {usdt.secret_key && (
+                          <Button
+                            className="shrink-0"
+                            size="sm"
+                            variant="flat"
+                            onPress={() => setEditingUsdtKey(false)}
+                          >
+                            取消
+                          </Button>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1011,24 +1034,14 @@ export default function AdminPaymentPage() {
                     <label className="text-sm text-gray-400 text-foreground mb-1 block">
                       U 支付异步通知地址
                     </label>
-                    <div className="h-10 flex items-center justify-between px-3 border border-default-200 rounded-lg bg-gray-50 dark:bg-gray-900 text-sm">
-                      <span className="truncate text-xs text-gray-600 dark:text-gray-400 mr-2">
-                        {panelUrl}/api/v1/payment/callback/usdt
-                      </span>
-                      <Button
-                        className="shrink-0"
-                        size="sm"
-                        variant="flat"
-                        onPress={() => {
-                          navigator.clipboard.writeText(
-                            panelUrl + "/api/v1/payment/callback/usdt",
-                          );
-                          toast.success("已复制");
-                        }}
-                      >
-                        复制
-                      </Button>
-                    </div>
+                    <Input
+                      placeholder={panelUrl + "/api/v1/payment/callback/usdt"}
+                      value={usdt.notify_url}
+                      variant="bordered"
+                      onChange={(e) =>
+                        setUsdt((p) => ({ ...p, notify_url: e.target.value }))
+                      }
+                    />
                   </div>
                   <div>
                     <label className="text-sm text-gray-400 text-foreground mb-1 block">
