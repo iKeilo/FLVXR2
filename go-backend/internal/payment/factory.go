@@ -18,11 +18,11 @@ func GetGateway(channel string, r *repo.Repository) (PaymentGateway, error) {
 
 	switch channel {
 	case "USDT":
-		var npCfg NowPaymentsConfig
-		if err := json.Unmarshal([]byte(cfg.Config), &npCfg); err != nil {
+		var gmCfg GMPayConfig
+		if err := json.Unmarshal([]byte(cfg.Config), &gmCfg); err != nil {
 			return nil, fmt.Errorf("parse USDT config: %w", err)
 		}
-		return NewNowPayments(&npCfg), nil
+		return NewGMPay(&gmCfg), nil
 
 	case "YIPAY":
 		var ypCfg YiPayConfig
