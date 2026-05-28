@@ -207,7 +207,7 @@ export default function MyHomePage() {
         </div>
       </div>
 
-      <div className="relative overflow-hidden rounded-xl border border-divider bg-content1 shadow-md">
+      <div className="relative overflow-x-auto rounded-xl border border-divider bg-content1 shadow-md">
         {refreshing && (
           <div className="absolute inset-0 bg-white/60 dark:bg-black/40 z-10 flex items-center justify-center">
             <svg className="animate-spin h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24">
@@ -216,6 +216,7 @@ export default function MyHomePage() {
             </svg>
           </div>
         )}
+        <div style={{ minWidth: 700 }}>
         <Table classNames={{ th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle", td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0", tr: "hover:bg-default-50/50 transition-colors" }}>
           <TableHeader>
             <TableColumn className="whitespace-nowrap">订单号</TableColumn>
@@ -233,17 +234,17 @@ export default function MyHomePage() {
               const st = statusMap[order.status] || { label: "未知", color: "default" };
               return (
                 <TableRow key={order.id}>
-                  <TableCell className="font-mono text-xs">{order.orderNo}</TableCell>
-                  <TableCell>{order.productName}</TableCell>
-                  <TableCell>{(order.amount / 100).toFixed(2)} 元</TableCell>
-                  <TableCell>{currencyLabel[order.payCurrency] || order.payCurrency}</TableCell>
-                  <TableCell>
-                    <Chip color={st.color} size="sm">{st.label}</Chip>
+                  <TableCell className="font-mono text-xs whitespace-nowrap">{order.orderNo}</TableCell>
+                  <TableCell className="whitespace-nowrap">{order.productName}</TableCell>
+                  <TableCell className="whitespace-nowrap">{(order.amount / 100).toFixed(2)} 元</TableCell>
+                  <TableCell className="whitespace-nowrap">{currencyLabel[order.payCurrency] || order.payCurrency}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <Chip className="rounded" color={st.color} size="sm">{st.label}</Chip>
                   </TableCell>
-                  <TableCell className="text-xs text-gray-400">
+                  <TableCell className="text-xs text-gray-400 whitespace-nowrap">
                     {order.createdAt ? new Date(order.createdAt * 1000).toLocaleString() : "-"}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     <div className="flex gap-1">
                       <Button size="sm" variant="flat" onPress={() => { setDetailOrder(order); setDetailModalOpen(true); }}>
                         详情
@@ -270,6 +271,7 @@ export default function MyHomePage() {
             })}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       {total > 10 && (
@@ -331,7 +333,7 @@ export default function MyHomePage() {
                 <div className="flex justify-between"><span className="text-gray-400 text-foreground">商品</span><span>{detailOrder.productName}</span></div>
                 <div className="flex justify-between"><span className="text-gray-400 text-foreground">金额</span><span>{(detailOrder.amount / 100).toFixed(2)} 元</span></div>
                 <div className="flex justify-between"><span className="text-gray-400 text-foreground">支付方式</span><span>{currencyLabel[detailOrder.payCurrency] || detailOrder.payCurrency}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400 text-foreground">状态</span><Chip color={statusMap[detailOrder.status]?.color || "default"} size="sm">{statusMap[detailOrder.status]?.label || "未知"}</Chip></div>
+                <div className="flex justify-between"><span className="text-gray-400 text-foreground">状态</span><Chip className="rounded" color={statusMap[detailOrder.status]?.color || "default"} size="sm">{statusMap[detailOrder.status]?.label || "未知"}</Chip></div>
                 {detailOrder.payTime > 0 && (
                   <div className="flex justify-between"><span className="text-gray-400 text-foreground">支付时间</span><span>{new Date(detailOrder.payTime * 1000).toLocaleString()}</span></div>
                 )}

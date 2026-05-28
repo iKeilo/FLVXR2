@@ -262,8 +262,8 @@ func (h *Handler) createPackageOrder(w http.ResponseWriter, r *http.Request) {
 		}
 
 		response.WriteJSON(w, response.OK(map[string]interface{}{
-			"order_id": order.ID,
-			"order_no": order.OrderNo,
+			"orderId":  order.ID,
+			"orderNo":  order.OrderNo,
 			"status":   order.Status,
 			"amount":   order.Amount,
 		}))
@@ -276,8 +276,8 @@ func (h *Handler) createPackageOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.WriteJSON(w, response.OK(map[string]interface{}{
-		"order_id": order.ID,
-		"order_no": order.OrderNo,
+		"orderId":  order.ID,
+		"orderNo":  order.OrderNo,
 		"status":   order.Status,
 		"amount":   order.Amount,
 	}))

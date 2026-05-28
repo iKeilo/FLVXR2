@@ -280,7 +280,7 @@ export default function IndexPage() {
 
         <VersionFooter
           containerClassName="fixed inset-x-0 bottom-4 text-center py-4"
-          poweredClassName="text-xs text-gray-400 dark:text-gray-500"
+          poweredClassName="text-xs text-gray-600 dark:text-white"
           showUpdateInfo={false}
           updateBadgeClassName="inline-flex items-center h-[18px] px-1.5 rounded-sm bg-green-500/90 text-[10px] font-semibold text-white"
           version={isWebView ? siteConfig.app_version : siteConfig.version}

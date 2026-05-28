@@ -755,7 +755,7 @@ export default function AdminLayout({
             className={`transition-all duration-300 overflow-hidden flex items-center ${isCollapsed ? "max-w-0 opacity-0" : "max-w-[200px] opacity-100"}`}
           >
             <VersionFooter
-              poweredClassName="text-xs text-gray-400 dark:text-gray-500"
+              poweredClassName="text-xs text-gray-600 dark:text-white"
               showUpdateInfo={isAdmin}
               updateBadgeClassName="inline-flex items-center h-[16px] px-1.5 rounded-xs bg-green-500/90 text-[9px] font-semibold text-white"
               version={siteConfig.version}

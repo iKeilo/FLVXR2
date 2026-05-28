@@ -308,7 +308,7 @@ export default function AdminPlansPage() {
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-divider bg-content1 shadow-md">
-        <Table classNames={{ th: "bg-default-100/50 text-default-600 font-semibold text-xs border-b border-divider py-2 uppercase tracking-wider text-left align-middle", td: "py-2 border-b border-divider/50 group-data-[last=true]:border-b-0 text-sm", tr: "hover:bg-default-50/50 transition-colors" }} className="min-w-[640px]">
+        <Table classNames={{ th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-2 uppercase tracking-wider text-left align-middle", td: "py-2 border-b border-divider/50 group-data-[last=true]:border-b-0 text-sm", tr: "hover:bg-default-50/50 transition-colors" }} className="min-w-[640px]">
           <TableHeader>
             <TableColumn className="whitespace-nowrap min-w-[120px]">名称</TableColumn>
             <TableColumn className="whitespace-nowrap min-w-[140px]">价格</TableColumn>

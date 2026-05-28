@@ -150,6 +150,7 @@ func (h *Handler) getPaymentConfigs(w http.ResponseWriter, r *http.Request) {
 	for _, cfg := range list {
 		result = append(result, map[string]interface{}{
 			"channel": cfg.Channel,
+			"config":  cfg.Config,
 			"enabled": cfg.Enabled,
 		})
 	}

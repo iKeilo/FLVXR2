@@ -5,6 +5,7 @@ import { AnimatedPage } from "@/components/animated-page";
 import { SearchBar } from "@/components/search-bar";
 import { Button } from "@/shadcn-bridge/heroui/button";
 import { Card, CardBody } from "@/shadcn-bridge/heroui/card";
+import { Input } from "@/shadcn-bridge/heroui/input";
 import {
   Table,
   TableHeader,
@@ -22,10 +23,8 @@ import {
 } from "@/shadcn-bridge/heroui/modal";
 import { Chip } from "@/shadcn-bridge/heroui/chip";
 import { Select, SelectItem } from "@/shadcn-bridge/heroui/select";
-import { Input } from "@/shadcn-bridge/heroui/input";
 import { getAdminOrderList, getAllUsers, getPaymentStats, deleteOrder, updateOrder } from "@/api";
 import type { OrderApiItem, UserApiItem } from "@/api/types";
-import { PageLoadingState } from "@/components/page-state";
 
 const statusMap: Record<number, { label: string; color: "warning" | "success" | "default" | "danger" }> = {
   0: { label: "待支付", color: "warning" },
@@ -189,7 +188,7 @@ export default function AdminOrdersPage() {
 
   const handleSaveEdit = async () => {
     if (!editOrder) return;
-    const updates: Record<string, unknown> = { id: editOrder.id };
+    const updates: { id: number; status?: number; amount?: number; payTime?: number; payCurrency?: string; productName?: string } = { id: editOrder.id };
     const newStatus = parseInt(editForm.status);
     if (!isNaN(newStatus) && newStatus !== editOrder.status) updates.status = newStatus;
     const newAmount = Math.round(parseFloat(editForm.amount) * 100);
@@ -209,8 +208,6 @@ export default function AdminOrdersPage() {
       toast.error(res.msg || "保存失败");
     }
   };
-
-  if (loading) return <PageLoadingState message="加载订单中..." />;
 
   return (
     <AnimatedPage className="px-3 lg:px-6 py-8">
@@ -323,6 +320,15 @@ export default function AdminOrdersPage() {
       </div>
 
       <div className="relative overflow-x-auto rounded-xl border border-divider bg-content1 shadow-md">
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <svg className="animate-spin h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            <span className="ml-2 text-sm text-default-500">加载订单中...</span>
+          </div>
+        )}
         {refreshing && (
           <div className="absolute inset-0 bg-white/60 dark:bg-black/40 z-10 flex items-center justify-center">
             <svg className="animate-spin h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24">
@@ -331,8 +337,8 @@ export default function AdminOrdersPage() {
             </svg>
           </div>
         )}
-        <div style={{ minWidth: 750 }}>
-          <Table classNames={{ th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle", td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0", tr: "hover:bg-default-50/50 transition-colors" }}>
+        {!loading && (
+        <Table classNames={{ th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle", td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0", tr: "hover:bg-default-50/50 transition-colors" }}>
           <TableHeader>
             <TableColumn className="whitespace-nowrap">订单号</TableColumn>
             <TableColumn className="whitespace-nowrap">用户</TableColumn>
@@ -350,18 +356,18 @@ export default function AdminOrdersPage() {
               const st = statusMap[order.status] || { label: "未知", color: "default" };
               return (
                 <TableRow key={order.id}>
-                  <TableCell className="font-mono text-xs">{order.orderNo}</TableCell>
-                  <TableCell>{order.userName}</TableCell>
-                  <TableCell>{order.productName}</TableCell>
-                  <TableCell>{(order.amount / 100).toFixed(2)} 元</TableCell>
-                  <TableCell>{currencyLabel[order.payCurrency] || order.payCurrency}</TableCell>
-                  <TableCell>
+                  <TableCell className="font-mono text-xs whitespace-nowrap">{order.orderNo}</TableCell>
+                  <TableCell className="whitespace-nowrap">{order.userName}</TableCell>
+                  <TableCell className="whitespace-nowrap">{order.productName}</TableCell>
+                  <TableCell className="whitespace-nowrap">{(order.amount / 100).toFixed(2)} 元</TableCell>
+                  <TableCell className="whitespace-nowrap">{currencyLabel[order.payCurrency] || order.payCurrency}</TableCell>
+                  <TableCell className="whitespace-nowrap">
                     <Chip className="rounded" color={st.color} size="sm">{st.label}</Chip>
                   </TableCell>
-                  <TableCell className="text-xs text-gray-400">
+                  <TableCell className="text-xs text-gray-400 whitespace-nowrap">
                     {order.createdAt ? new Date(order.createdAt * 1000).toLocaleString() : "-"}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     <div className="flex gap-1">
                       <Button color="primary" size="sm" variant="flat" onPress={() => handleViewDetail(order)}>详情</Button>
                       <Button color="warning" size="sm" variant="flat" onPress={() => handleOpenEdit(order)}>编辑</Button>
@@ -373,7 +379,7 @@ export default function AdminOrdersPage() {
             })}
           </TableBody>
         </Table>
-        </div>
+        )}
       </div>
 
       {total > 10 && (
@@ -435,21 +441,19 @@ export default function AdminOrdersPage() {
                 <div className="text-xs text-gray-400">订单号: {editOrder.orderNo}</div>
                 <Input label="状态" size="sm" variant="bordered"
                   value={editForm.status}
-                  onValueChange={(v) => setEditForm(f => ({ ...f, status: v }))}
-                  description="0=待支付 1=已完成 2=已取消 3=已退款"
+                  onChange={(e) => setEditForm(f => ({ ...f, status: e.target.value }))}
                 />
                 <Input label="金额 (元)" size="sm" variant="bordered" type="number" step="0.01"
                   value={editForm.amount}
-                  onValueChange={(v) => setEditForm(f => ({ ...f, amount: v }))}
+                  onChange={(e) => setEditForm(f => ({ ...f, amount: e.target.value }))}
                 />
                 <Input label="商品名称" size="sm" variant="bordered"
                   value={editForm.productName}
-                  onValueChange={(v) => setEditForm(f => ({ ...f, productName: v }))}
+                  onChange={(e) => setEditForm(f => ({ ...f, productName: e.target.value }))}
                 />
                 <Input label="支付方式" size="sm" variant="bordered"
                   value={editForm.payCurrency}
-                  onValueChange={(v) => setEditForm(f => ({ ...f, payCurrency: v }))}
-                  description="BALANCE / USDT / YIPAY"
+                  onChange={(e) => setEditForm(f => ({ ...f, payCurrency: e.target.value }))}
                 />
               </div>
             )}

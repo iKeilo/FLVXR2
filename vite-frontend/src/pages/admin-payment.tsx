@@ -37,7 +37,6 @@ import {
   ModalBody,
   ModalFooter,
 } from "@/shadcn-bridge/heroui/modal";
-import { PageLoadingState } from "@/components/page-state";
 import Network from "@/api/network";
 import {
   getBalanceLogs,
@@ -650,11 +649,6 @@ export default function AdminPaymentPage() {
     }
   };
 
-  if (paymentLoading && mainTabKey === "payment")
-    return <PageLoadingState message="加载支付配置..." />;
-  if (billingLoading && mainTabKey !== "payment")
-    return <PageLoadingState message="加载账单数据..." />;
-
   return (
     <AnimatedPage className="px-3 lg:px-6 py-8">
       <div className="flex items-center justify-between mb-4">
@@ -783,6 +777,16 @@ export default function AdminPaymentPage() {
             </Card>
           </div>
 
+          {paymentLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <svg className="animate-spin h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              <span className="ml-2 text-sm text-default-500">加载支付配置...</span>
+            </div>
+          ) : (
+          <>
           {/* Sub tabs */}
           <div className="flex flex-wrap gap-2 mb-4">
             {[
@@ -1235,6 +1239,8 @@ export default function AdminPaymentPage() {
               </CardBody>
             </Card>
           )}
+          </>
+          )}
         </>
       )}
 
@@ -1358,31 +1364,17 @@ export default function AdminPaymentPage() {
             </div>
           </div>
           <div className="relative overflow-x-auto rounded-xl border border-divider bg-content1 shadow-md">
-            {refreshingLogs && (
-              <div className="absolute inset-0 bg-white/60 dark:bg-black/40 z-10 flex items-center justify-center">
-                <svg
-                  className="animate-spin h-6 w-6 text-primary"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    fill="currentColor"
-                  />
+            {(billingLoading || refreshingLogs) && (
+              <div className="flex items-center justify-center py-12">
+                <svg className="animate-spin h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
+                <span className="ml-2 text-sm text-default-500">加载流水中...</span>
               </div>
             )}
-            <div style={{ minWidth: 650 }}>
-              <Table
+            {!billingLoading && !refreshingLogs && (
+            <Table
                 classNames={{
                   th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle",
                   td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
@@ -1415,28 +1407,28 @@ export default function AdminPaymentPage() {
                   ) : (
                     logs.map((log) => (
                       <TableRow key={log.id}>
-                        <TableCell>{log.userName}</TableCell>
+                        <TableCell className="whitespace-nowrap">{log.userName}</TableCell>
                         <TableCell
                           className={
                             log.amount >= 0
-                              ? "text-green-600 font-mono"
-                              : "text-red-500 font-mono"
+                              ? "text-green-600 font-mono whitespace-nowrap"
+                              : "text-red-500 font-mono whitespace-nowrap"
                           }
                         >
                           {log.amount >= 0 ? "+" : ""}
                           {fmtMoney(log.amount)} 元
                         </TableCell>
-                        <TableCell className="font-mono">
+                        <TableCell className="font-mono whitespace-nowrap">
                           {fmtMoney(log.balanceBefore)} 元
                         </TableCell>
-                        <TableCell className="font-mono">
+                        <TableCell className="font-mono whitespace-nowrap">
                           {fmtMoney(log.balanceAfter)} 元
                         </TableCell>
-                        <TableCell>{log.reason}</TableCell>
-                        <TableCell className="text-sm text-default-600">
+                        <TableCell className="whitespace-nowrap">{log.reason}</TableCell>
+                        <TableCell className="text-sm text-default-600 whitespace-nowrap">
                           {fmtTime(log.createdTime)}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           <Button
                             color="danger"
                             size="sm"
@@ -1451,7 +1443,7 @@ export default function AdminPaymentPage() {
                   )}
                 </TableBody>
               </Table>
-            </div>
+              )}
             {logTotal > 50 && (
               <div className="flex items-center justify-between p-4 border-t border-divider">
                 <span className="text-sm text-default-500">
@@ -1876,8 +1868,7 @@ export default function AdminPaymentPage() {
           </Card>
 
           <div className="overflow-x-auto rounded-xl border border-divider bg-content1 shadow-md">
-            <div style={{ minWidth: 600 }}>
-              <Table
+            <Table
                 classNames={{
                   th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle",
                   td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
@@ -1911,23 +1902,23 @@ export default function AdminPaymentPage() {
                   ) : (
                     redeemCodes.map((c) => (
                       <TableRow key={c.id}>
-                        <TableCell className="font-mono text-xs">
+                        <TableCell className="font-mono text-xs whitespace-nowrap">
                           {c.code}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           <Chip size="sm" variant="flat">
                             {c.type === "plan" ? "套餐" : "余额"}
                           </Chip>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           {c.type === "balance"
                             ? `${fmtMoney(c.amountCents || 0)} 元`
                             : `套餐 #${c.planId || "-"} ${c.durationDays || ""}天`}
                         </TableCell>
-                        <TableCell className="text-xs text-default-600">
+                        <TableCell className="text-xs text-default-600 whitespace-nowrap">
                           {fmtTime(c.startsAt)} ~ {fmtTime(c.expiresAt)}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           {c.usedAt ? (
                             <span className="text-xs text-default-500">
                               已使用 {c.usedByUsername || `#${c.usedByUserId}`}
@@ -1953,7 +1944,6 @@ export default function AdminPaymentPage() {
                   )}
                 </TableBody>
               </Table>
-            </div>
           </div>
         </>
       )}
@@ -2303,8 +2293,7 @@ export default function AdminPaymentPage() {
           </Card>
 
           <div className="overflow-x-auto rounded-xl border border-divider bg-content1 shadow-md">
-            <div style={{ minWidth: 580 }}>
-              <Table
+            <Table
                 classNames={{
                   th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle",
                   td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
@@ -2332,15 +2321,15 @@ export default function AdminPaymentPage() {
                   ) : (
                     discountCodes.map((c) => (
                       <TableRow key={c.id}>
-                        <TableCell className="font-mono text-xs">
+                        <TableCell className="font-mono text-xs whitespace-nowrap">
                           {c.code}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           {c.type === "percent"
                             ? `${c.value}%`
                             : `${fmtMoney(c.value)} 元`}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           <Chip
                             color={c.isActive ? "success" : "default"}
                             size="sm"
@@ -2349,13 +2338,13 @@ export default function AdminPaymentPage() {
                             {c.isActive ? "生效中" : "停用"}
                           </Chip>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           {c.usedCount} / {c.maxUses || "不限"}
                         </TableCell>
-                        <TableCell className="text-xs">
+                        <TableCell className="text-xs whitespace-nowrap">
                           {fmtTime(c.startsAt)} ~ {fmtTime(c.expiresAt)}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           <Button
                             color="danger"
                             size="sm"
@@ -2370,7 +2359,6 @@ export default function AdminPaymentPage() {
                   )}
                 </TableBody>
               </Table>
-            </div>
           </div>
         </>
       )}

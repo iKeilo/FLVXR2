@@ -9,6 +9,8 @@ import {
   ModalFooter,
 } from "@/shadcn-bridge/heroui/modal";
 import { Button } from "@/shadcn-bridge/heroui/button";
+import { Select, SelectItem } from "@/shadcn-bridge/heroui/select";
+import { Spinner } from "@/shadcn-bridge/heroui/spinner";
 import { siteConfig } from "@/config/site";
 import {
   UPDATE_CHANNEL_CHANGED_EVENT,
@@ -17,6 +19,7 @@ import {
   getUpdateReleaseChannel,
   hasVersionUpdate,
 } from "@/utils/version-update";
+import { getPanelReleases, type PanelReleaseItem } from "@/api";
 import { runSystemUpgrade } from "@/api/index";
 
 const FALLBACK_GITHUB_REPO = "https://github.com/abai569/flvx";
@@ -54,7 +57,7 @@ export function VersionFooter({
   showUpdateInfo = true,
   containerClassName,
   versionClassName,
-  //poweredClassName,
+  poweredClassName,
   updateBadgeClassName,
 }: VersionFooterProps) {
   const [channel, setChannel] = useState<UpdateReleaseChannel>(
@@ -66,6 +69,15 @@ export function VersionFooter({
   );
   const [upgrading, setUpgrading] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
+
+  // Manual upgrade modal state
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [releases, setReleases] = useState<PanelReleaseItem[]>([]);
+  const [releasesLoading, setReleasesLoading] = useState(false);
+  const [selectedVersion, setSelectedVersion] = useState("");
+  const [panelLatestVersion, setPanelLatestVersion] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     const handleChannelChange = () => {
@@ -126,6 +138,49 @@ export function VersionFooter({
     }
   }, [updateAvailable, showUpdateInfo]);
 
+  const loadReleases = async () => {
+    setReleasesLoading(true);
+    try {
+      const res = await getPanelReleases(channel);
+      if (res.code === 0 && res.data) {
+        setReleases(res.data);
+        if (!panelLatestVersion && res.data.length > 0) {
+          setPanelLatestVersion(res.data[0].version);
+        }
+      }
+    } catch (err) {
+      console.error("加载版本列表失败:", err);
+    } finally {
+      setReleasesLoading(false);
+    }
+  };
+
+  const handleOpenUpgradeModal = async () => {
+    setSelectedVersion("");
+    await loadReleases();
+    setUpgradeModalOpen(true);
+  };
+
+  const handleConfirmUpgrade = async () => {
+    setUpgrading(true);
+    try {
+      const res = await runSystemUpgrade(selectedVersion || undefined, channel);
+      if (res.code === 0) {
+        setUpgradeModalOpen(false);
+        toast.success(res.data?.message || "升级已触发，面板将自动重启");
+        setTimeout(() => {
+          window.location.reload();
+        }, 60000);
+      } else {
+        toast.error(res.msg || "升级失败");
+        setUpgrading(false);
+      }
+    } catch (err) {
+      toast.error("升级失败：" + (err as Error).message);
+      setUpgrading(false);
+    }
+  };
+
   const handleDirectUpgrade = async () => {
     setNotificationOpen(false);
     setUpgrading(true);
@@ -158,37 +213,57 @@ export function VersionFooter({
   return (
     <>
       <div className={containerClassName}>
-        <p className={versionClassName}>
-          {upgrading ? (
-            <span className="animate-pulse inline-flex items-center h-[18px] px-2 rounded dark:text-white text-[10px] font-semibold bg-primary text-primary-foreground">升级中...</span>
-          ) : (
-            <>
-              <span className="text-gray-500 dark:text-white">{version}</span>
-              {showUpdateInfo && updateAvailable && latestUpdateVersion && (
-                <>
-                  <span className="text-primary-600 dark:text-white">{"⮕"}</span>
-                  <span className={updateBadgeClassName} role="status">
-                    {latestUpdateVersion}
-                  </span>
-                </>
-              )}{" "}
-              {showUpdateInfo && updateAvailable && (
+        {upgrading ? (
+          <p className={versionClassName}>
+            <span className="animate-pulse inline-flex items-center h-[18px] px-2 rounded text-[10px] font-semibold bg-primary text-primary-foreground">
+              升级中...
+            </span>
+          </p>
+        ) : updateAvailable && latestUpdateVersion ? (
+          <div className="flex flex-col gap-0.5">
+            <p className={versionClassName}>
+              <span className="text-gray-600 dark:text-white">{version}</span>
+            </p>
+            <p className={versionClassName}>
+              <span className="text-blue-600 dark:text-white text-[10px]">⬇</span>
+            </p>
+            <p className={versionClassName}>
+              <span className={updateBadgeClassName} role="status">
+                {latestUpdateVersion}
+              </span>
+              {" "}
+              {showUpdateInfo && (
                 <Button
-                  className="inline-flex w-[12px] h-[16px] px-1.5 text-[9px] min-w-0 rounded-xs font-semibold [&>span]:text-[9px]"
+                  className="inline-flex w-[24px] h-[16px] px-0 text-[9px] min-w-0 rounded-xs font-semibold [&>span]:text-[9px]"
                   color="danger"
                   size="sm"
-                  onPress={() => setNotificationOpen(true)}
+                  onPress={handleOpenUpgradeModal}
                 >
-                  ⬆
+                  UP
                 </Button>
               )}
-            </>
-          )}
-        </p>
-        <p className="text-[12px] text-gray-500 dark:text-white {poweredClassName}">
+            </p>
+          </div>
+        ) : (
+          <p className={versionClassName}>
+            <span className="text-gray-600 dark:text-white">{version}</span>
+            {" "}
+            {showUpdateInfo && (
+              <Button
+                className="inline-flex w-[24px] h-[16px] px-0 text-[9px] min-w-0 rounded-xs font-semibold [&>span]:text-[9px]"
+                color="danger"
+                size="sm"
+                onPress={handleOpenUpgradeModal}
+              >
+                UP
+              </Button>
+            )}
+          </p>
+        )}
+        <p className={poweredClassName}>
           Powered by{" "}
           <a
-            className="text-[12px] text-gray-500 dark:text-white hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            className="text-gray-600 dark:text-white hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
             href={siteConfig.github_repo}
             rel="noopener noreferrer"
             target="_blank"
@@ -198,6 +273,7 @@ export function VersionFooter({
         </p>
       </div>
 
+      {/* Auto notification popup */}
       <Modal
         backdrop="blur"
         classNames={{
@@ -226,7 +302,7 @@ export function VersionFooter({
                     </div>
                     <div className="text-default-500 text-left">
                       最新版本：
-                      <span className="font-medium text-green-500 dark:text-green-400">
+                      <span className="font-medium text-primary">
                         {latestUpdateVersion ? `${latestUpdateVersion}` : "-"}
                       </span>
                     </div>
@@ -253,6 +329,100 @@ export function VersionFooter({
                   color="primary"
                   isLoading={upgrading}
                   onPress={handleDirectUpgrade}
+                >
+                  确认
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      {/* Manual upgrade modal with version selection */}
+      <Modal
+        backdrop="blur"
+        classNames={{
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
+        }}
+        isOpen={upgradeModalOpen}
+        placement="center"
+        scrollBehavior="outside"
+        size="md"
+        onOpenChange={setUpgradeModalOpen}
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                <h2 className="text-xl font-bold">升级面板</h2>
+              </ModalHeader>
+              <ModalBody>
+                {releasesLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Spinner size="lg" />
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm w-full">
+                      <div className="text-default-500 text-left">
+                        当前版本：
+                        <span className="font-medium text-default-900 dark:text-white">
+                          {version}
+                        </span>
+                      </div>
+                      <div className="text-default-500 text-left">
+                        目标版本：
+                        <span className="font-medium text-default-900 dark:text-white">
+                          {selectedVersion || (panelLatestVersion ? `${panelLatestVersion}` : "最新版本")}
+                        </span>
+                      </div>
+                    </div>
+                    <Select
+                      label="选择版本"
+                      placeholder="留空则使用当前通道最新版本"
+                      selectedKeys={selectedVersion ? [selectedVersion] : []}
+                      onSelectionChange={(keys) => {
+                        const selected = Array.from(keys)[0] as string;
+                        setSelectedVersion(selected || "");
+                      }}
+                    >
+                      {releases.map((r) => (
+                        <SelectItem key={r.version} textValue={r.version}>
+                          <div className="flex justify-between items-center">
+                            <span>{r.version}</span>
+                            <span className="text-xs text-default-400">
+                              {new Date(r.publishedAt).toLocaleDateString()}
+                              {r.channel === "dev" && (
+                                <div className="ml-1 shrink-0 whitespace-nowrap inline-flex items-center justify-center bg-warning-500/10 text-warning-600 dark:text-warning-400 px-1.5 py-0.5 rounded text-[11px] font-medium">
+                                  测试
+                                </div>
+                              )}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </Select>
+                    <div className="flex items-center text-center gap-1.5 mb-2 text-default-000">
+                      <span className="text-sm font-semibold">升级说明</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 list-disc list-outside pl-4 text-xs text-danger-600/80 dark:text-danger-400/80">
+                      <p className="list-item">升级将重启面板和后端服务</p>
+                      <p className="list-item">升级过程中面板将暂时不可用</p>
+                      <p className="list-item">升级失败会自动回滚到原版本</p>
+                      <p className="list-item">请确保服务器网络连接稳定</p>
+                    </div>
+                  </div>
+                )}
+              </ModalBody>
+              <ModalFooter>
+                <Button isDisabled={upgrading} variant="flat" onPress={onClose}>
+                  取消
+                </Button>
+                <Button
+                  color="primary"
+                  isDisabled={releasesLoading}
+                  isLoading={upgrading}
+                  onPress={handleConfirmUpgrade}
                 >
                   确认
                 </Button>

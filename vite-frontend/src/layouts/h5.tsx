@@ -713,7 +713,7 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
         {/* 底部版权信息 */}
         <div className="px-5 py-4 mt-auto flex-shrink-0 flex items-center overflow-hidden whitespace-nowrap box-border">
           <VersionFooter
-            poweredClassName="text-xs text-gray-400 dark:text-gray-500"
+            poweredClassName="text-xs text-gray-600 dark:text-white"
             showUpdateInfo={isAdmin}
             updateBadgeClassName="inline-flex items-center h-[16px] px-1.5 rounded-xs bg-green-500/90 text-[9px] font-semibold text-white"
             version={siteConfig.version}
