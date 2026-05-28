@@ -1558,11 +1558,11 @@ func (r *Repository) DeliverPackageToUser(userID int64, pkg *model.SubscriptionP
 			return err
 		}
 		// 2. Create new subscription
-		expireAt := time.Now().Unix() + int64(pkg.ValidityDays)*86400
+		expireAt := time.Now().UnixMilli() + int64(pkg.ValidityDays)*86400000
 		sub := &model.PackageSubscription{
 			UserID:    userID,
 			PackageID: pkg.ID,
-			StartAt:   time.Now().Unix(),
+			StartAt:   time.Now().UnixMilli(),
 			ExpireAt:  expireAt,
 			AutoRenew: pkg.AutoRenew,
 			Status:    1,
