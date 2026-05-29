@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 set -e
 
 # 解决 macOS 下 tr 可能出现的非法字节序列问题
