@@ -35,11 +35,6 @@ import {
 import { isAdmin } from "@/utils/auth";
 import { getCachedConfigs, configCache, updateSiteConfig } from "@/config/site";
 import {
-  type UpdateReleaseChannel,
-  getUpdateReleaseChannel,
-  setUpdateReleaseChannel,
-} from "@/utils/version-update";
-import {
   convertBrandAssetToPngDataURL,
   isPngDataURL,
   type BrandAssetKind,
@@ -116,12 +111,6 @@ const CONFIG_ITEMS: ConfigItem[] = [
     },
   */
   {
-    key: "captcha_enabled",
-    label: "启用验证码",
-    description: "开启后，用户登录时需要完成验证码验证",
-    type: "switch",
-  },
-  {
     key: "payment_enabled",
     label: "关闭商城系统",
     description: "打开后，将隐藏所有支付、套餐、订单、商城相关菜单项和页面，同时关闭用户注册",
@@ -137,6 +126,12 @@ const CONFIG_ITEMS: ConfigItem[] = [
     key: "login_monitor_link",
     label: "登录页探针入口",
     description: "开启后，登录页右上角显示探针入口按钮，点击可查看节点实时状态",
+    type: "switch",
+  },
+  {
+    key: "captcha_enabled",
+    label: "启用验证码",
+    description: "开启后，用户登录时需要完成验证码验证",
     type: "switch",
   },
   {
@@ -186,7 +181,7 @@ const getInitialConfigs = (): Record<string, string> => {
         initialConfigs[key] = cachedValue;
       }
     });
-  } catch {}
+  } catch { }
 
   return initialConfigs;
 };
@@ -215,9 +210,6 @@ export default function ConfigPage() {
   });
   const [announcementLoading, setAnnouncementLoading] = useState(true);
   const [announcementSaving, setAnnouncementSaving] = useState(false);
-  const [updateChannel, setUpdateChannel] = useState<UpdateReleaseChannel>(
-    getUpdateReleaseChannel(),
-  );
   const [previewLoadFailed, setPreviewLoadFailed] = useState<
     Partial<Record<BrandPreviewKey, boolean>>
   >({});
@@ -297,7 +289,7 @@ export default function ConfigPage() {
         setLicenseKey("");
         setLicenseDomain("");
       }
-    } catch {}
+    } catch { }
   };
   const handleLicenseSave = async () => {
     if (!licenseDomain.trim()) {
@@ -416,13 +408,6 @@ export default function ConfigPage() {
     } finally {
       setAnnouncementSaving(false);
     }
-  };
-  const handleUpdateChannelChange = (channel: UpdateReleaseChannel) => {
-    setUpdateChannel(channel);
-    setUpdateReleaseChannel(channel);
-    toast.success(
-      `更新通道已切换为${channel === "stable" ? "稳定版" : "开发版"}`,
-    );
   };
   const handleConfigChange = (key: string, value: string) => {
     const newConfigs = { ...configs, [key]: value };
@@ -638,11 +623,10 @@ export default function ConfigPage() {
 
     return (
       <div
-        className={`rounded-lg border p-3 ${
-          isChanged
+        className={`rounded-lg border p-3 ${isChanged
             ? "border-warning-300"
             : "border-default-200 dark:border-default-100/30"
-        }`}
+          }`}
       >
         <input
           ref={getBrandInputRef(key)}
@@ -997,38 +981,6 @@ export default function ConfigPage() {
                 </motion.div>
               )}
             </AnimatePresence>
-          </CardBody>
-        </Card>
-        <Card className="mt-6 shadow-md dark:bg-content1">
-          <CardHeader className="pb-6">
-            <h2 className="text-xl font-semibold">更新通道</h2>
-          </CardHeader>
-          <Divider />
-          <CardBody className="space-y-4 pt-8 md:pt-8">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              稳定版仅匹配纯数字版本；开发版匹配包含 alpha/beta/dev/rc 的版本。
-            </p>
-            <Select
-              selectedKeys={[updateChannel]}
-              size="md"
-              variant="bordered"
-              onSelectionChange={(keys) => {
-                const selected =
-                  (Array.from(keys)[0] as UpdateReleaseChannel) || "stable";
-
-                handleUpdateChannelChange(selected);
-              }}
-            >
-              <SelectItem key="stable" description="仅纯数字版本，如 2.1.4">
-                稳定版
-              </SelectItem>
-              <SelectItem
-                key="dev"
-                description="仅 alpha / beta / rc 关键字版本"
-              >
-                开发版
-              </SelectItem>
-            </Select>
           </CardBody>
         </Card>
       </div>

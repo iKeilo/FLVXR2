@@ -782,6 +782,7 @@ export default function AdminLayout({
             className={`transition-all duration-300 overflow-hidden flex items-center ${isCollapsed ? "max-w-0 opacity-0" : "max-w-[200px] opacity-100"}`}
           >
             <VersionFooter
+              isAdmin={isAdmin}
               poweredClassName="text-xs text-gray-600 dark:text-white"
               showUpdateInfo={isAdmin}
               updateBadgeClassName="inline-flex items-center h-[16px] px-1.5 rounded-xs bg-green-500/90 text-[9px] font-semibold text-white"
@@ -794,15 +795,15 @@ export default function AdminLayout({
           {!isMobile && (
             <Button
               isIconOnly
-              className="flex-shrink-0 text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 min-w-0 w-6 h-6 rounded-full ml-auto"
+              className="flex-shrink-0 text-gray-800 dark:text-gray-800 hover:text-gray-600 min-w-0 w-6 h-6 rounded-full ml-auto bg-gray-200 dark:bg-white dark:hover:text-gray-600"
               size="sm"
               variant="flat"
               onPress={toggleCollapse}
             >
               {isCollapsed ? (
-                <span className="text-xl text-gray-800">⮞</span>
+                <span className="text-xl">⮞</span>
               ) : (
-                <span className="text-xl text-gray-800">⮜</span>
+                <span className="text-xl">⮜</span>
               )}
             </Button>
           )}

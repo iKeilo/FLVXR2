@@ -18,6 +18,7 @@ import {
   getLatestVersionByChannel,
   getUpdateReleaseChannel,
   hasVersionUpdate,
+  setUpdateReleaseChannel,
 } from "@/utils/version-update";
 import { getPanelReleases, type PanelReleaseItem } from "@/api";
 import { runSystemUpgrade } from "@/api/index";
@@ -50,6 +51,7 @@ interface VersionFooterProps {
   versionClassName?: string;
   poweredClassName?: string;
   updateBadgeClassName?: string;
+  isAdmin?: boolean;
 }
 
 export function VersionFooter({
@@ -59,6 +61,7 @@ export function VersionFooter({
   versionClassName,
   poweredClassName,
   updateBadgeClassName,
+  isAdmin = false,
 }: VersionFooterProps) {
   const [channel, setChannel] = useState<UpdateReleaseChannel>(
     getUpdateReleaseChannel(),
@@ -219,7 +222,7 @@ export function VersionFooter({
               升级中...
             </span>
           </p>
-        ) : updateAvailable && latestUpdateVersion ? (
+        ) : showUpdateInfo && updateAvailable && latestUpdateVersion ? (
           <div className="flex flex-col gap-0.5">
             <p className={versionClassName}>
               <span className="text-gray-600 dark:text-white">{version}</span>
@@ -260,7 +263,35 @@ export function VersionFooter({
             )}
           </p>
         )}
-        <p className={poweredClassName}>
+        {isAdmin && (
+          <p className={[versionClassName, "mt-1"].filter(Boolean).join(" ")}>
+            <span className="inline-flex rounded-sm bg-gray-100 dark:bg-gray-800">
+              <button
+                className={`text-[10px] leading-none px-2 py-0.5 rounded-sm transition-colors cursor-pointer font-medium ${channel === "stable" ? "bg-primary text-primary-foreground shadow-sm" : "text-gray-400 dark:text-white hover:text-gray-600 dark:hover:text-gray-300"}`}
+                onClick={() => {
+                  if (channel !== "stable") {
+                    setUpdateReleaseChannel("stable");
+                    toast.success("已切换为稳定版");
+                  }
+                }}
+              >
+                稳定版
+              </button>
+              <button
+                className={`text-[10px] leading-none px-2 py-0.5 rounded-sm transition-colors cursor-pointer font-medium ${channel === "dev" ? "bg-primary text-primary-foreground shadow-sm" : "text-gray-400 dark:text-white hover:text-gray-600 dark:hover:text-gray-300"}`}
+                onClick={() => {
+                  if (channel !== "dev") {
+                    setUpdateReleaseChannel("dev");
+                    toast.success("已切换为开发版");
+                  }
+                }}
+              >
+                开发版
+              </button>
+            </span>
+          </p>
+        )}
+        <p className={[poweredClassName, "mt-1"].filter(Boolean).join(" ")}>
           Powered by{" "}
           <a
             className="text-gray-600 dark:text-white hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
