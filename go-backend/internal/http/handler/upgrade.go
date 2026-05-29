@@ -120,7 +120,9 @@ func fetchGitHubReleases(perPage int) ([]githubRelease, error) {
 	}
 
 	client := &http.Client{Timeout: 15 * time.Second}
-	resp, err := client.Get(fmt.Sprintf("%s/repos/%s/releases?per_page=%d", githubAPIBase, githubRepo, perPage))
+	url := fmt.Sprintf("%s/repos/%s/releases?per_page=%d", githubAPIBase, githubRepo, perPage)
+	url = fmt.Sprintf("%s/%s", strings.TrimRight(defaultGithubProxyURL, "/"), url)
+	resp, err := client.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("请求GitHub API失败: %v", err)
 	}

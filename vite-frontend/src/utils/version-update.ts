@@ -1,3 +1,5 @@
+import { getNodeReleases } from "@/api/index";
+
 export type UpdateReleaseChannel = "stable" | "dev";
 
 export const UPDATE_CHANNEL_STORAGE_KEY = "update-release-channel";
@@ -10,11 +12,6 @@ const stableVersionPattern = /^\d+(?:\.\d+)+$/;
 const testKeywordPattern = /(alpha|beta|rc)/i;
 
 const VERSION_CACHE_TTL_MS = 10 * 60 * 1000;
-
-type ReleaseItem = {
-  tag_name?: string;
-  draft?: boolean;
-};
 
 type LatestVersionCacheEntry = {
   value: string | null;
@@ -138,27 +135,9 @@ export const compareVersions = (left: string, right: string): number => {
   return 0;
 };
 
-const repoPathFromUrl = (repoUrl: string): string | null => {
-  try {
-    const parsed = new URL(repoUrl);
-    const segments = parsed.pathname
-      .replace(/\.git$/i, "")
-      .split("/")
-      .filter(Boolean);
-
-    if (segments.length < 2) {
-      return null;
-    }
-
-    return `${segments[0]}/${segments[1]}`;
-  } catch {
-    return null;
-  }
-};
-
 export const getLatestVersionByChannel = async (
   channel: UpdateReleaseChannel,
-  repoUrl: string,
+  _repoUrl: string,
 ): Promise<string | null> => {
   const normalizedChannel = normalizeChannel(channel);
   const now = Date.now();
@@ -168,36 +147,19 @@ export const getLatestVersionByChannel = async (
     return cached.value;
   }
 
-  const repoPath = repoPathFromUrl(repoUrl);
+  const releases = await getNodeReleases(normalizedChannel);
 
-  if (!repoPath) {
+  if (!Array.isArray(releases) || releases.length === 0) {
     return null;
   }
 
-  const response = await fetch(
-    `https://api.github.com/repos/${repoPath}/releases?per_page=50`,
-    {
-      headers: {
-        Accept: "application/vnd.github+json",
-      },
-    },
-  );
+  const latest = releases
+    .map((release) => (release.version || "").trim())
+    .find((version) => releaseChannelFromTag(version) === normalizedChannel);
 
-  if (!response.ok) {
+  if (!latest) {
     return null;
   }
-
-  const releases = (await response.json()) as ReleaseItem[];
-  const candidateTags = releases
-    .filter((release) => !release.draft && typeof release.tag_name === "string")
-    .map((release) => (release.tag_name || "").trim())
-    .filter((tag) => releaseChannelFromTag(tag) === normalizedChannel);
-
-  if (candidateTags.length === 0) {
-    return null;
-  }
-
-  const latest = candidateTags.sort((a, b) => compareVersions(b, a))[0];
 
   latestVersionCache[normalizedChannel] = {
     value: latest,
