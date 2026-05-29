@@ -1,3 +1,5 @@
+import type { OrderApiItem, UserPackageInfoApiData } from "@/api/types";
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
@@ -21,12 +23,14 @@ import {
   ModalBody,
   ModalFooter,
 } from "@/shadcn-bridge/heroui/modal";
-import { getOrderList, payOrder, cancelOrder } from "@/api";
-import type { OrderApiItem } from "@/api/types";
+import { getOrderList, payOrder, cancelOrder, getUserPackageInfo } from "@/api";
 import Network from "@/api/network";
 import { PageLoadingState } from "@/components/page-state";
 
-const statusMap: Record<number, { label: string; color: "warning" | "success" | "default" | "danger" }> = {
+const statusMap: Record<
+  number,
+  { label: string; color: "warning" | "success" | "default" | "danger" }
+> = {
   0: { label: "待支付", color: "warning" },
   1: { label: "已完成", color: "success" },
   2: { label: "已取消", color: "default" },
@@ -34,15 +38,32 @@ const statusMap: Record<number, { label: string; color: "warning" | "success" | 
 };
 
 const currencyLabel: Record<string, string> = {
-  BALANCE: "余额", USDT: "USDT", YIPAY: "易支付",
+  BALANCE: "余额",
+  USDT: "USDT",
+  YIPAY: "易支付",
 };
 
 export default function MyHomePage() {
   const navigate = useNavigate();
   const [pageLoading, setPageLoading] = useState(true);
   const [subData, setSubData] = useState<{
-    subscription: { id: number; packageId: number; startAt: number; expireAt: number; autoRenew: number; status: number } | null;
-    package: { id: number; name: string; description: string; trafficLimit: number; /* portCount: number; */ speedLimit: number; maxRules: number; maxConnections: number; /* maxIPAccess: number; */ } | null;
+    subscription: {
+      id: number;
+      packageId: number;
+      startAt: number;
+      expireAt: number;
+      autoRenew: number;
+      status: number;
+    } | null;
+    package: {
+      id: number;
+      name: string;
+      description: string;
+      trafficLimit: number;
+      /* portCount: number; */ speedLimit: number;
+      maxRules: number;
+      maxConnections: number /* maxIPAccess: number; */;
+    } | null;
   } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const isFirstLoad = useRef(true);
@@ -52,21 +73,46 @@ export default function MyHomePage() {
   const [statusFilter, setStatusFilter] = useState("-1");
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [currentOrder, setCurrentOrder] = useState<OrderApiItem | null>(null);
-  const [payResult, setPayResult] = useState<{ payUrl: string; payAddress: string; payAmount: string } | null>(null);
+  const [payResult, setPayResult] = useState<{
+    payUrl: string;
+    payAddress: string;
+    payAmount: string;
+  } | null>(null);
   const [payLoading, setPayLoading] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailOrder, setDetailOrder] = useState<OrderApiItem | null>(null);
+  const [userInfo, setUserInfo] = useState<{ balance: number; flow: number }>({
+    balance: 0,
+    flow: 0,
+  });
 
   const loadData = useCallback(async () => {
     if (!isFirstLoad.current) setRefreshing(true);
     try {
-      const [orderRes, subRes] = await Promise.all([
+      const [orderRes, subRes, pkgInfoRes] = await Promise.all([
         getOrderList({ page, size: 10, status: parseInt(statusFilter) }),
         Network.post<{
-          subscription: { id: number; packageId: number; startAt: number; expireAt: number; autoRenew: number; status: number } | null;
-          package: { id: number; name: string; description: string; trafficLimit: number; /* portCount: number; */ speedLimit: number; maxRules: number; maxConnections: number; /* maxIPAccess: number; */ } | null;
+          subscription: {
+            id: number;
+            packageId: number;
+            startAt: number;
+            expireAt: number;
+            autoRenew: number;
+            status: number;
+          } | null;
+          package: {
+            id: number;
+            name: string;
+            description: string;
+            trafficLimit: number;
+            /* portCount: number; */ speedLimit: number;
+            maxRules: number;
+            maxConnections: number /* maxIPAccess: number; */;
+          } | null;
         }>("/user/my-subscription"),
+        getUserPackageInfo(),
       ]);
+
       if (orderRes.code === 0) {
         setOrders(orderRes.data.list || []);
         setTotal(orderRes.data.total || 0);
@@ -75,6 +121,14 @@ export default function MyHomePage() {
       }
       if (subRes.code === 0) {
         setSubData(subRes.data);
+      }
+      if (pkgInfoRes.code === 0) {
+        const info = (pkgInfoRes.data as UserPackageInfoApiData)?.userInfo;
+
+        setUserInfo({
+          balance: typeof info?.balance === "number" ? info?.balance : 0,
+          flow: typeof info?.flow === "number" ? info?.flow : 0,
+        });
       }
     } catch {
       toast.error("获取数据失败");
@@ -85,41 +139,103 @@ export default function MyHomePage() {
     }
   }, [page, statusFilter]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   useEffect(() => {
-    if (isFirstLoad.current) { isFirstLoad.current = false; return; }
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false;
+
+      return;
+    }
     setRefreshing(true);
     (async () => {
-      const [orderRes, subRes] = await Promise.all([
+      const [orderRes, subRes, pkgInfoRes] = await Promise.all([
         getOrderList({ page, size: 10, status: parseInt(statusFilter) }),
         Network.post<{
-          subscription: { id: number; packageId: number; startAt: number; expireAt: number; autoRenew: number; status: number } | null;
-          package: { id: number; name: string; description: string; trafficLimit: number; /* portCount: number; */ speedLimit: number; maxRules: number; maxConnections: number; /* maxIPAccess: number; */ } | null;
+          subscription: {
+            id: number;
+            packageId: number;
+            startAt: number;
+            expireAt: number;
+            autoRenew: number;
+            status: number;
+          } | null;
+          package: {
+            id: number;
+            name: string;
+            description: string;
+            trafficLimit: number;
+            /* portCount: number; */ speedLimit: number;
+            maxRules: number;
+            maxConnections: number /* maxIPAccess: number; */;
+          } | null;
         }>("/user/my-subscription"),
+        getUserPackageInfo(),
       ]);
-      if (orderRes.code === 0) { setOrders(orderRes.data.list || []); setTotal(orderRes.data.total || 0); }
-      if (subRes.code === 0) { setSubData(subRes.data); }
+
+      if (orderRes.code === 0) {
+        setOrders(orderRes.data.list || []);
+        setTotal(orderRes.data.total || 0);
+      }
+      if (subRes.code === 0) {
+        setSubData(subRes.data);
+      }
+      if (pkgInfoRes.code === 0) {
+        const info = (pkgInfoRes.data as UserPackageInfoApiData)?.userInfo;
+
+        setUserInfo({
+          balance: typeof info?.balance === "number" ? info?.balance : 0,
+          flow: typeof info?.flow === "number" ? info?.flow : 0,
+        });
+      }
       setRefreshing(false);
     })();
   }, [statusFilter]);
 
   const handlePay = async (order: OrderApiItem) => {
-    setCurrentOrder(order); setPayResult(null); setPayLoading(true);
+    setCurrentOrder(order);
+    setPayResult(null);
+    setPayLoading(true);
     try {
       const res = await payOrder(order.id);
-      if (res.code === 0) { setPayResult(res.data); setPayModalOpen(true); }
-      else toast.error(res.msg || "获取支付信息失败");
-    } catch { toast.error("网络错误"); }
-    finally { setPayLoading(false); }
+
+      if (res.code === 0) {
+        setPayResult(res.data);
+        setPayModalOpen(true);
+      } else toast.error(res.msg || "获取支付信息失败");
+    } catch {
+      toast.error("网络错误");
+    } finally {
+      setPayLoading(false);
+    }
   };
 
   const handleCancel = async (id: number) => {
     try {
       const res = await cancelOrder(id);
-      if (res.code === 0) { toast.success("已取消"); loadData(); }
-      else toast.error(res.msg || "取消失败");
-    } catch { toast.error("网络错误"); }
+
+      if (res.code === 0) {
+        toast.success("已取消");
+        loadData();
+      } else toast.error(res.msg || "取消失败");
+    } catch {
+      toast.error("网络错误");
+    }
+  };
+
+  const formatFlow = (bytes: number) => {
+    if (bytes === 0) return "0 GB";
+    const gb = bytes / (1024 * 1024 * 1024);
+
+    if (gb >= 1024) return `${(gb / 1024).toFixed(1)} TB`;
+
+    return gb >= 100 ? `${Math.round(gb)} GB` : `${gb.toFixed(1)} GB`;
+  };
+
+  const formatBalance = (cents: number) => {
+    return `¥${(cents / 100).toFixed(2)}`;
   };
 
   if (pageLoading) return <PageLoadingState message="加载中..." />;
@@ -128,78 +244,149 @@ export default function MyHomePage() {
     <AnimatedPage className="px-3 lg:px-6 py-8">
       <h1 className="text-2xl font-bold mb-6">我的</h1>
 
-      {subData?.subscription ? (
-        <section className="mb-6">
-          <h2 className="text-lg font-semibold mb-3">套餐详情</h2>
-          <Card>
-          <CardHeader>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <Card className="border border-divider shadow-sm">
+          <CardHeader className="pb-2">
             <div className="flex justify-between items-center w-full">
-              <span className="font-medium text-lg">{subData.package?.name || "未知套餐"}</span>
-              <Chip color="success" size="sm" variant="flat">生效中</Chip>
+              <span className="font-medium text-lg">
+                {subData?.package?.name || "未知套餐"}
+              </span>
+              <Chip
+                color={subData?.subscription ? "success" : "default"}
+                size="sm"
+                variant="flat"
+              >
+                {subData?.subscription ? "生效中" : "未订阅"}
+              </Chip>
             </div>
           </CardHeader>
           <CardBody>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-              <div>
-                <span className="text-default-400">有效期</span>
-                <p className="font-medium">
-                  {subData.subscription.startAt > 0 ? new Date(subData.subscription.startAt).toLocaleDateString() : "-"}
-                  {" ~ "}
-                  {subData.subscription.expireAt > 0 ? new Date(subData.subscription.expireAt).toLocaleDateString() : "-"}
-                </p>
+            {subData?.subscription ? (
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className="text-default-400">有效期</span>
+                  <p className="font-medium">
+                    {subData.subscription.startAt > 0
+                      ? new Date(
+                          subData.subscription.startAt,
+                        ).toLocaleDateString()
+                      : "-"}
+                    {" ~ "}
+                    {subData.subscription.expireAt > 0
+                      ? new Date(
+                          subData.subscription.expireAt,
+                        ).toLocaleDateString()
+                      : "-"}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-default-400">剩余</span>
+                  <p className="font-medium">
+                    {subData.subscription.expireAt > 0
+                      ? Math.max(
+                          0,
+                          Math.ceil(
+                            (subData.subscription.expireAt - Date.now()) /
+                              86400000,
+                          ),
+                        )
+                      : "-"}{" "}
+                    天
+                  </p>
+                </div>
+                <div>
+                  <span className="text-default-400">流量</span>
+                  <p className="font-medium">
+                    {subData.package!.trafficLimit > 0
+                      ? `${subData.package!.trafficLimit} GB`
+                      : "不限"}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-default-400">限速</span>
+                  <p className="font-medium">
+                    {subData.package!.speedLimit > 0
+                      ? `${subData.package!.speedLimit} Mbps`
+                      : "不限"}
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-default-400">规则/连接</span>
+                  <p className="font-medium">
+                    {subData.package!.maxRules > 0
+                      ? subData.package!.maxRules
+                      : "∞"}{" "}
+                    /
+                    {subData.package!.maxConnections > 0
+                      ? subData.package!.maxConnections
+                      : "∞"}
+                  </p>
+                </div>
               </div>
-              <div>
-                <span className="text-default-400">剩余</span>
-                <p className="font-medium">
-                  {subData.subscription.expireAt > 0
-                    ? Math.max(0, Math.ceil((subData.subscription.expireAt - Date.now()) / 86400000)) : "-"} 天
-                </p>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-default-500 mb-2">暂无有效套餐</p>
+                <Button
+                  color="primary"
+                  size="sm"
+                  variant="flat"
+                  onPress={() => navigate("/shop")}
+                >
+                  前往商城购买
+                </Button>
               </div>
-              <div>
-                <span className="text-default-400">流量</span>
-                <p className="font-medium">{subData.package!.trafficLimit > 0 ? `${subData.package!.trafficLimit} GB` : "不限"}</p>
-              </div>
-              {/* <div>
-                <span className="text-default-400">端口</span>
-                <p className="font-medium">{subData.package!.portCount > 0 ? subData.package!.portCount : "不限"}</p>
-              </div> */}
-              <div>
-                <span className="text-default-400">限速</span>
-                <p className="font-medium">{subData.package!.speedLimit > 0 ? `${subData.package!.speedLimit} Mbps` : "不限"}</p>
-              </div>
-              <div>
-                <span className="text-default-400">规则/连接</span>
-                <p className="font-medium">
-                  {subData.package!.maxRules > 0 ? subData.package!.maxRules : "∞"} /
-                  {subData.package!.maxConnections > 0 ? subData.package!.maxConnections : "∞"}
-                  {/* {subData.package!.maxIPAccess > 0 ? subData.package!.maxIPAccess : "∞"} */}
-                </p>
-              </div>
-            </div>
+            )}
           </CardBody>
         </Card>
-        </section>
-      ) : (
-        <section className="mb-6">
-          <h2 className="text-lg font-semibold mb-3">套餐详情</h2>
-          <Card>
-          <CardBody className="text-center py-8">
-            <p className="text-default-500 mb-3">暂无有效套餐</p>
-            <Button color="primary" variant="flat" onPress={() => navigate("/shop")}>前往商城购买</Button>
+
+        <Card className="border border-divider shadow-sm">
+          <CardHeader className="pb-2">
+            <span className="font-medium">账户余额</span>
+          </CardHeader>
+          <CardBody className="flex flex-col items-center justify-center py-6">
+            <p className="text-3xl font-bold font-mono text-primary">
+              {formatBalance(userInfo.balance)}
+            </p>
+            <p className="text-xs text-default-400 mt-2">可用余额</p>
           </CardBody>
         </Card>
-        </section>
-      )}
+
+        <Card className="border border-divider shadow-sm">
+          <CardHeader className="pb-2">
+            <span className="font-medium">剩余流量</span>
+          </CardHeader>
+          <CardBody className="flex flex-col items-center justify-center py-6">
+            <p className="text-3xl font-bold font-mono text-primary">
+              {formatFlow(userInfo.flow)}
+            </p>
+            <p className="text-xs text-default-400 mt-2">可用流量</p>
+          </CardBody>
+        </Card>
+      </div>
 
       <h2 className="text-lg font-semibold mb-3">订单记录</h2>
       <div className="flex items-center gap-3 mb-4">
         <div className="flex flex-wrap gap-2">
           {["-1", "0", "1", "2", "3"].map((key) => {
-            const labels: Record<string, string> = { "-1": "全部", "0": "待支付", "1": "已完成", "2": "已取消", "3": "已退款" };
+            const labels: Record<string, string> = {
+              "-1": "全部",
+              "0": "待支付",
+              "1": "已完成",
+              "2": "已取消",
+              "3": "已退款",
+            };
+
             return (
-              <Button key={key} size="sm" variant={statusFilter === key ? "solid" : "flat"}
+              <Button
+                key={key}
                 color={statusFilter === key ? "primary" : "default"}
-                onPress={() => { setStatusFilter(key); setPage(1); }}>
+                size="sm"
+                variant={statusFilter === key ? "solid" : "flat"}
+                onPress={() => {
+                  setStatusFilter(key);
+                  setPage(1);
+                }}
+              >
                 {labels[key]}
               </Button>
             );
@@ -210,93 +397,184 @@ export default function MyHomePage() {
       <div className="relative overflow-x-auto rounded-xl border border-divider bg-content1 shadow-md">
         {refreshing && (
           <div className="absolute inset-0 bg-white/60 dark:bg-black/40 z-10 flex items-center justify-center">
-            <svg className="animate-spin h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            <svg
+              className="animate-spin h-6 w-6 text-primary"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                fill="currentColor"
+              />
             </svg>
           </div>
         )}
         <div style={{ minWidth: 700 }}>
-        <Table classNames={{ th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle", td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0", tr: "hover:bg-default-50/50 transition-colors" }}>
-          <TableHeader>
-            <TableColumn className="whitespace-nowrap">订单号</TableColumn>
-            <TableColumn className="whitespace-nowrap">商品</TableColumn>
-            <TableColumn className="whitespace-nowrap">金额</TableColumn>
-            <TableColumn className="whitespace-nowrap">支付方式</TableColumn>
-            <TableColumn className="whitespace-nowrap">状态</TableColumn>
-            <TableColumn className="whitespace-nowrap">时间</TableColumn>
-            <TableColumn className="whitespace-nowrap">操作</TableColumn>
-          </TableHeader>
-          <TableBody>
-            {orders.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center text-default-400 py-8">暂无订单</TableCell></TableRow>
-            ) : orders.map((order) => {
-              const st = statusMap[order.status] || { label: "未知", color: "default" };
-              return (
-                <TableRow key={order.id}>
-                  <TableCell className="font-mono text-xs whitespace-nowrap">{order.orderNo}</TableCell>
-                  <TableCell className="whitespace-nowrap">{order.productName}</TableCell>
-                  <TableCell className="whitespace-nowrap">{(order.amount / 100).toFixed(2)} 元</TableCell>
-                  <TableCell className="whitespace-nowrap">{currencyLabel[order.payCurrency] || order.payCurrency}</TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <Chip className="rounded" color={st.color} size="sm">{st.label}</Chip>
-                  </TableCell>
-                  <TableCell className="text-xs text-gray-400 whitespace-nowrap">
-                    {order.createdAt ? new Date(order.createdAt * 1000).toLocaleString() : "-"}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="flat" onPress={() => { setDetailOrder(order); setDetailModalOpen(true); }}>
-                        详情
-                      </Button>
-                      {order.status === 0 && order.payCurrency !== "BALANCE" && (
-                        <>
-                          <Button size="sm" color="primary" variant="flat"
-                            isLoading={payLoading && currentOrder?.id === order.id}
-                            onPress={() => handlePay(order)}>
-                            去支付
-                          </Button>
-                          <Button size="sm" color="danger" variant="flat" onPress={() => handleCancel(order.id)}>
-                            取消
-                          </Button>
-                        </>
-                      )}
-                      {order.status === 0 && order.payCurrency === "BALANCE" && (
-                        <span className="text-xs text-gray-400">处理中</span>
-                      )}
-                    </div>
+          <Table
+            classNames={{
+              th: "bg-default-100/50 text-default-600 text-foreground font-semibold text-sm border-b border-divider py-3 uppercase tracking-wider text-left align-middle",
+              td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
+              tr: "hover:bg-default-50/50 transition-colors",
+            }}
+          >
+            <TableHeader>
+              <TableColumn className="whitespace-nowrap">订单号</TableColumn>
+              <TableColumn className="whitespace-nowrap">商品</TableColumn>
+              <TableColumn className="whitespace-nowrap">金额</TableColumn>
+              <TableColumn className="whitespace-nowrap">支付方式</TableColumn>
+              <TableColumn className="whitespace-nowrap">状态</TableColumn>
+              <TableColumn className="whitespace-nowrap">时间</TableColumn>
+              <TableColumn className="whitespace-nowrap">操作</TableColumn>
+            </TableHeader>
+            <TableBody>
+              {orders.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    className="text-center text-default-400 py-8"
+                    colSpan={7}
+                  >
+                    暂无订单
                   </TableCell>
                 </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+              ) : (
+                orders.map((order) => {
+                  const st = statusMap[order.status] || {
+                    label: "未知",
+                    color: "default",
+                  };
+
+                  return (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-mono text-xs whitespace-nowrap">
+                        {order.orderNo}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {order.productName}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {(order.amount / 100).toFixed(2)} 元
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {currencyLabel[order.payCurrency] || order.payCurrency}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <Chip className="rounded" color={st.color} size="sm">
+                          {st.label}
+                        </Chip>
+                      </TableCell>
+                      <TableCell className="text-xs text-gray-400 whitespace-nowrap">
+                        {order.createdAt
+                          ? new Date(order.createdAt * 1000).toLocaleString()
+                          : "-"}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="flat"
+                            onPress={() => {
+                              setDetailOrder(order);
+                              setDetailModalOpen(true);
+                            }}
+                          >
+                            详情
+                          </Button>
+                          {order.status === 0 &&
+                            order.payCurrency !== "BALANCE" && (
+                              <>
+                                <Button
+                                  color="primary"
+                                  isLoading={
+                                    payLoading && currentOrder?.id === order.id
+                                  }
+                                  size="sm"
+                                  variant="flat"
+                                  onPress={() => handlePay(order)}
+                                >
+                                  去支付
+                                </Button>
+                                <Button
+                                  color="danger"
+                                  size="sm"
+                                  variant="flat"
+                                  onPress={() => handleCancel(order.id)}
+                                >
+                                  取消
+                                </Button>
+                              </>
+                            )}
+                          {order.status === 0 &&
+                            order.payCurrency === "BALANCE" && (
+                              <span className="text-xs text-gray-400">
+                                处理中
+                              </span>
+                            )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
         </div>
       </div>
 
       {total > 10 && (
         <div className="flex justify-center gap-2 mt-4">
-          <Button size="sm" variant="flat" isDisabled={page <= 1} onPress={() => setPage((p) => Math.max(1, p - 1))}>
+          <Button
+            isDisabled={page <= 1}
+            size="sm"
+            variant="flat"
+            onPress={() => setPage((p) => Math.max(1, p - 1))}
+          >
             上一页
           </Button>
           <span className="flex items-center text-sm text-gray-400">
             {page} / {Math.ceil(total / 10)}
           </span>
-          <Button size="sm" variant="flat" isDisabled={page >= Math.ceil(total / 10)} onPress={() => setPage((p) => p + 1)}>
+          <Button
+            isDisabled={page >= Math.ceil(total / 10)}
+            size="sm"
+            variant="flat"
+            onPress={() => setPage((p) => p + 1)}
+          >
             下一页
           </Button>
         </div>
       )}
 
-      <Modal isOpen={payModalOpen} placement="center" size="2xl"
-        onOpenChange={(open) => { if (!open) { setPayModalOpen(false); setPayResult(null); } }}>
+      <Modal
+        isOpen={payModalOpen}
+        placement="center"
+        size="2xl"
+        onOpenChange={(open) => {
+          if (!open) {
+            setPayModalOpen(false);
+            setPayResult(null);
+          }
+        }}
+      >
         <ModalContent>
           <ModalHeader>去支付</ModalHeader>
           <ModalBody>
             {payResult?.payUrl ? (
               <div>
                 <p className="mb-2">点击下方按钮跳转支付：</p>
-                <Button color="primary" className="w-full" onPress={() => window.open(payResult.payUrl, "_blank")}>
+                <Button
+                  className="w-full"
+                  color="primary"
+                  onPress={() => window.open(payResult.payUrl, "_blank")}
+                >
                   前去支付
                 </Button>
               </div>
@@ -308,47 +586,131 @@ export default function MyHomePage() {
                   {payResult.payAddress}
                 </div>
                 {payResult.payAmount ? (
-                  <p className="mt-2 text-sm">金额: <strong>{payResult.payAmount} USDT</strong></p>
+                  <p className="mt-2 text-sm">
+                    金额: <strong>{payResult.payAmount} USDT</strong>
+                  </p>
                 ) : null}
               </div>
             ) : null}
-            <p className="text-xs text-gray-400 mt-2">支付完成后页面会自动更新状态</p>
+            <p className="text-xs text-gray-400 mt-2">
+              支付完成后页面会自动更新状态
+            </p>
           </ModalBody>
           <ModalFooter>
-            <Button variant="flat" onPress={() => { setPayModalOpen(false); setPayResult(null); loadData(); }}>
+            <Button
+              variant="flat"
+              onPress={() => {
+                setPayModalOpen(false);
+                setPayResult(null);
+                loadData();
+              }}
+            >
               关闭
             </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
 
-      <Modal isOpen={detailModalOpen} placement="center" size="2xl"
-        onOpenChange={(open) => { if (!open) { setDetailModalOpen(false); setDetailOrder(null); } }}>
+      <Modal
+        isOpen={detailModalOpen}
+        placement="center"
+        size="2xl"
+        onOpenChange={(open) => {
+          if (!open) {
+            setDetailModalOpen(false);
+            setDetailOrder(null);
+          }
+        }}
+      >
         <ModalContent>
           <ModalHeader>订单详情</ModalHeader>
           <ModalBody>
             {detailOrder && (
               <div className="space-y-3 text-sm">
-                <div className="flex justify-between"><span className="text-gray-400 text-foreground">订单号</span><span className="font-mono">{detailOrder.orderNo}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400 text-foreground">商品</span><span>{detailOrder.productName}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400 text-foreground">金额</span><span>{(detailOrder.amount / 100).toFixed(2)} 元</span></div>
-                <div className="flex justify-between"><span className="text-gray-400 text-foreground">支付方式</span><span>{currencyLabel[detailOrder.payCurrency] || detailOrder.payCurrency}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400 text-foreground">状态</span><Chip className="rounded" color={statusMap[detailOrder.status]?.color || "default"} size="sm">{statusMap[detailOrder.status]?.label || "未知"}</Chip></div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400 text-foreground">订单号</span>
+                  <span className="font-mono">{detailOrder.orderNo}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400 text-foreground">商品</span>
+                  <span>{detailOrder.productName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400 text-foreground">金额</span>
+                  <span>{(detailOrder.amount / 100).toFixed(2)} 元</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400 text-foreground">
+                    支付方式
+                  </span>
+                  <span>
+                    {currencyLabel[detailOrder.payCurrency] ||
+                      detailOrder.payCurrency}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400 text-foreground">状态</span>
+                  <Chip
+                    className="rounded"
+                    color={statusMap[detailOrder.status]?.color || "default"}
+                    size="sm"
+                  >
+                    {statusMap[detailOrder.status]?.label || "未知"}
+                  </Chip>
+                </div>
                 {detailOrder.payTime > 0 && (
-                  <div className="flex justify-between"><span className="text-gray-400 text-foreground">支付时间</span><span>{new Date(detailOrder.payTime * 1000).toLocaleString()}</span></div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400 text-foreground">
+                      支付时间
+                    </span>
+                    <span>
+                      {new Date(detailOrder.payTime * 1000).toLocaleString()}
+                    </span>
+                  </div>
                 )}
                 {detailOrder.payAddress && (
-                  <div className="flex justify-between"><span className="text-gray-400 text-foreground">USDT 地址</span><span className="font-mono text-xs max-w-[200px] break-all text-right">{detailOrder.payAddress}</span></div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400 text-foreground">
+                      USDT 地址
+                    </span>
+                    <span className="font-mono text-xs max-w-[200px] break-all text-right">
+                      {detailOrder.payAddress}
+                    </span>
+                  </div>
                 )}
                 {detailOrder.txHash && (
-                  <div className="flex justify-between"><span className="text-gray-400 text-foreground">交易哈希</span><span className="font-mono text-xs max-w-[200px] break-all text-right">{detailOrder.txHash}</span></div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400 text-foreground">
+                      交易哈希
+                    </span>
+                    <span className="font-mono text-xs max-w-[200px] break-all text-right">
+                      {detailOrder.txHash}
+                    </span>
+                  </div>
                 )}
-                <div className="flex justify-between"><span className="text-gray-400 text-foreground">创建时间</span><span>{detailOrder.createdAt ? new Date(detailOrder.createdAt * 1000).toLocaleString() : "-"}</span></div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400 text-foreground">
+                    创建时间
+                  </span>
+                  <span>
+                    {detailOrder.createdAt
+                      ? new Date(detailOrder.createdAt * 1000).toLocaleString()
+                      : "-"}
+                  </span>
+                </div>
               </div>
             )}
           </ModalBody>
           <ModalFooter>
-            <Button variant="flat" onPress={() => { setDetailModalOpen(false); setDetailOrder(null); }}>关闭</Button>
+            <Button
+              variant="flat"
+              onPress={() => {
+                setDetailModalOpen(false);
+                setDetailOrder(null);
+              }}
+            >
+              关闭
+            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
