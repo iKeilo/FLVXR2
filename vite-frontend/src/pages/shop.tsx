@@ -175,8 +175,8 @@ export default function ShopPage() {
           const balancePkgs = packages.filter(p => p.type === "balance");
           const sections: { title: string; items: SubscriptionPackageApiItem[] }[] = [];
           if (subPkgs.length) sections.push({ title: "订阅套餐", items: subPkgs });
+          if (trafficPkgs.length) sections.push({ title: "流量快餐", items: trafficPkgs });
           if (balancePkgs.length) sections.push({ title: "余额充值", items: balancePkgs });
-          if (trafficPkgs.length) sections.push({ title: "流量包", items: trafficPkgs });
           return sections.map((section) => (
             <div key={section.title} className="mb-8">
               <h2 className="text-lg font-semibold mb-3">{section.title}</h2>
@@ -184,7 +184,7 @@ export default function ShopPage() {
                 {section.items.map((pkg) => (
                   <Card key={pkg.id} className="border border-divider shadow-sm hover:shadow-md transition-shadow">
                     <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-start justify-between w-full">
                         <div>
                           <h3 className="text-lg font-semibold">{pkg.name}</h3>
                           {pkg.description && (
@@ -194,11 +194,18 @@ export default function ShopPage() {
                       </div>
                       <div className="mt-2">
                         <span className="text-2xl font-bold font-mono">&yen;{(pkg.price / 100).toFixed(2)}</span>
-                        {pkg.type !== "balance" && <span className="text-sm text-gray-400 ml-1">/{pkg.validityDays}天</span>}
+                        {pkg.type === "subscription" && <span className="text-sm text-gray-400 ml-1">/{pkg.validityDays}天</span>}
                       </div>
                     </CardHeader>
                     <CardBody className="pt-0 space-y-2">
-                      {pkg.type !== "balance" ? (
+                      {pkg.type === "traffic" ? (
+                        <>
+                          <div className="flex flex-wrap gap-1">
+                            <Chip size="sm" variant="flat">{formatTraffic(pkg.trafficLimit)}</Chip>
+                          </div>
+                          <p className="text-xs text-orange-500">有效期跟随账户到期时间</p>
+                        </>
+                      ) : pkg.type !== "balance" ? (
                         <>
                           <div className="flex flex-wrap gap-1">
                             <Chip size="sm" variant="flat">{formatTraffic(pkg.trafficLimit)}</Chip>
@@ -209,10 +216,10 @@ export default function ShopPage() {
                           </div>
                         </>
                       ) : (
-                        <p className="text-sm text-gray-400">充值到账户余额</p>
+                        <p className="text-xs text-orange-500">充值到账户余额 不退款</p>
                       )}
                       {pkg.type === "subscription" && (
-                        <p className="text-xs text-orange-500">已有订阅套餐时新购将替换现有套餐</p>
+                        <p className="text-xs text-orange-500">重复购买将替换现有套餐</p>
                       )}
                       <Button
                         color="primary"
