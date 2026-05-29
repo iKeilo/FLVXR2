@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useReducer } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-hot-toast";
 
@@ -26,7 +26,6 @@ import {
   getMonitorAccess,
   updatePassword,
   getStoreStatus,
-  getConfigByName,
 } from "@/api";
 import { safeLogout } from "@/utils/logout";
 import { isRestricted } from "@/utils/session";
@@ -61,7 +60,7 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [username, setUsername] = useState("");
   const [storeEnabled, setStoreEnabled] = useState(true);
-  const [paymentEnabled, setPaymentEnabled] = useState(true);
+  const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
   const [monitorAllowed, setMonitorAllowed] = useState<boolean | null>(null);
   const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
   const restricted = isRestricted();
@@ -309,18 +308,11 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
       }
     });
 
-    getConfigByName("payment_enabled").then((res) => {
-      if (res.code === 0 && res.data) {
-        setPaymentEnabled(res.data.value !== "false");
-      }
-    });
-    const handlePaymentChange = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-
-      setPaymentEnabled(!!detail.enabled);
-    };
+    const handlePaymentChange = () => forceUpdate();
+    const handleConfigUpdate = () => forceUpdate();
 
     window.addEventListener("paymentEnabledChanged", handlePaymentChange);
+    window.addEventListener("configUpdated", handleConfigUpdate);
 
     const adminFlag = getAdminFlag();
 
@@ -341,6 +333,7 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
     return () => {
       clearInterval(licenseInterval);
       window.removeEventListener("paymentEnabledChanged", handlePaymentChange);
+      window.removeEventListener("configUpdated", handleConfigUpdate);
     };
   }, []);
 
@@ -437,6 +430,15 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
     });
   };
 
+  // 直接读 localStorage 兜底，避免事件监听竞态
+  const isPaymentEnabled = (() => {
+    try {
+      const cached = localStorage.getItem("vite_config_payment_enabled");
+      if (cached !== null) return cached !== "false";
+    } catch {}
+    return true;
+  })();
+
   const filteredMenuItems = menuItems.filter(
     (item) =>
       (!item.adminOnly || isAdmin) &&
@@ -444,7 +446,7 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
       !(item.path === "/monitor" && monitorAllowed !== true) &&
       !(item.path === "/shop" && !isAdmin && !storeEnabled) &&
       !(
-        !paymentEnabled &&
+        !isPaymentEnabled &&
         [
           "/shop",
           "/admin/plans",

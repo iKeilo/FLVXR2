@@ -26,7 +26,7 @@ import {
   type DashboardNodeExpiryItem,
   type DashboardUserTunnel as UserTunnel,
 } from "@/pages/dashboard/use-dashboard-data";
-import { toggleUserAutoRenew, getConfigByName } from "@/api";
+import { toggleUserAutoRenew } from "@/api";
 
 export default function DashboardPage() {
   const [quotaHistoryModalOpen, setQuotaHistoryModalOpen] = useState(false);
@@ -49,7 +49,13 @@ export default function DashboardPage() {
   const [autoRenewOverride, setAutoRenewOverride] = useState<number | null>(
     null,
   );
-  const [paymentEnabled, setPaymentEnabled] = useState(true);
+  const isPaymentEnabled = (() => {
+    try {
+      const cached = localStorage.getItem("vite_config_payment_enabled");
+      if (cached !== null) return cached !== "false";
+    } catch {}
+    return true; // 默认开启
+  })();
 
   const handleToggleAutoRenew = async (enabled: boolean) => {
     if (!userInfo.id || autoRenewSwitchLoading) return;
@@ -75,23 +81,7 @@ export default function DashboardPage() {
     fetchQuotaHistory();
   }, [fetchQuotaHistory]);
 
-  useEffect(() => {
-    const cached = localStorage.getItem("vite_config_payment_enabled");
-    if (cached !== null) {
-      setPaymentEnabled(cached !== "false");
-    }
-    getConfigByName("payment_enabled").then((res) => {
-      if (res.code === 0 && res.data) {
-        setPaymentEnabled(res.data.value !== "false");
-      }
-    });
-    const handler = (e: Event) => {
-      const d = (e as CustomEvent).detail;
-      setPaymentEnabled(!!d.enabled);
-    };
-    window.addEventListener("paymentEnabledChanged", handler);
-    return () => window.removeEventListener("paymentEnabledChanged", handler);
-  }, []);
+
   const handleDeleteHistory = async () => {
     if (historyToDelete) {
       await deleteQuotaHistory(historyToDelete);
@@ -581,7 +571,7 @@ export default function DashboardPage() {
             <div className="order-5 flex flex-col [&>*]:flex-1">
               <MetricCard
                 bottomContent={
-                  paymentEnabled ? (
+                  isPaymentEnabled ? (
                     <div className="mt-1 flex items-center gap-1">
                       <div className="w-1.5 h-1.5 rounded-full bg-success" />
                       <span

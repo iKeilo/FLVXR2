@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useReducer } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { AnimatePresence, motion } from "framer-motion";
@@ -27,7 +27,6 @@ import {
   getMonitorAccess,
   updatePassword,
   getStoreStatus,
-  getConfigByName,
 } from "@/api";
 import { safeLogout } from "@/utils/logout";
 import { isRestricted } from "@/utils/session";
@@ -92,7 +91,7 @@ export default function AdminLayout({
   const isMobile = useMobileBreakpoint();
   const restricted = isRestricted();
   const [storeEnabled, setStoreEnabled] = useState(true);
-  const [paymentEnabled, setPaymentEnabled] = useState(true);
+  const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
 
   useEffect(() => {
     getStoreStatus().then((res) => {
@@ -100,21 +99,16 @@ export default function AdminLayout({
         setStoreEnabled(!!res.data.enabled);
       }
     });
-    getConfigByName("payment_enabled").then((res) => {
-      if (res.code === 0 && res.data) {
-        setPaymentEnabled(res.data.value !== "false");
-      }
-    });
-    const handlePaymentChange = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-
-      setPaymentEnabled(!!detail.enabled);
-    };
+    const handlePaymentChange = () => forceUpdate();
+    const handleConfigUpdate = () => forceUpdate();
 
     window.addEventListener("paymentEnabledChanged", handlePaymentChange);
+    window.addEventListener("configUpdated", handleConfigUpdate);
 
-    return () =>
+    return () => {
       window.removeEventListener("paymentEnabledChanged", handlePaymentChange);
+      window.removeEventListener("configUpdated", handleConfigUpdate);
+    };
   }, []);
 
   // 免费版横幅关闭状态
@@ -616,7 +610,15 @@ export default function AdminLayout({
     });
   };
 
-  // 过滤菜单项（根据权限 & 监控权限）
+  // 纯 localStorage 读取，事件触发 forceUpdate 后自动重新计算
+  const isPaymentEnabled = (() => {
+    try {
+      const cached = localStorage.getItem("vite_config_payment_enabled");
+      if (cached !== null) return cached !== "false";
+    } catch {}
+    return true;
+  })();
+
   const filteredMenuItems = menuItems.filter(
     (item) =>
       !(item.adminOnly && !isAdmin) &&
@@ -624,7 +626,7 @@ export default function AdminLayout({
       !(item.path === "/monitor" && monitorAllowed !== true) &&
       !(item.path === "/shop" && !isAdmin && !storeEnabled) &&
       !(
-        !paymentEnabled &&
+        !isPaymentEnabled &&
         [
           "/shop",
           "/admin/plans",

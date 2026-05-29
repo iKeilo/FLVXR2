@@ -59,6 +59,12 @@ const BRAND_FILE_ACCEPT = "image/png,image/jpeg,image/webp,image/svg+xml";
 const toBrandAssetKind = (key: BrandPreviewKey): BrandAssetKind => {
   return key === "app_logo" ? "logo" : "favicon";
 };
+// 快捷开关（直接生效，不受保存按钮控制）
+const STANDALONE_SWITCH_KEYS = [
+  "payment_enabled",
+  "registration_enabled",
+  "login_monitor_link",
+];
 // 网站配置项定义
 const CONFIG_ITEMS: ConfigItem[] = [
   {
@@ -111,6 +117,12 @@ const CONFIG_ITEMS: ConfigItem[] = [
     },
   */
   {
+    key: "captcha_enabled",
+    label: "启用验证码",
+    description: "开启后，用户登录时需要完成验证码验证",
+    type: "switch",
+  },
+  {
     key: "payment_enabled",
     label: "关闭商城系统",
     description: "打开后，将隐藏所有支付、套餐、订单、商城相关菜单项和页面，同时关闭用户注册",
@@ -126,12 +138,6 @@ const CONFIG_ITEMS: ConfigItem[] = [
     key: "login_monitor_link",
     label: "登录页探针入口",
     description: "开启后，登录页右上角显示探针入口按钮，点击可查看节点实时状态",
-    type: "switch",
-  },
-  {
-    key: "captcha_enabled",
-    label: "启用验证码",
-    description: "开启后，用户登录时需要完成验证码验证",
     type: "switch",
   },
   {
@@ -181,7 +187,7 @@ const getInitialConfigs = (): Record<string, string> => {
         initialConfigs[key] = cachedValue;
       }
     });
-  } catch { }
+  } catch {}
 
   return initialConfigs;
 };
@@ -289,7 +295,7 @@ export default function ConfigPage() {
         setLicenseKey("");
         setLicenseDomain("");
       }
-    } catch { }
+    } catch {}
   };
   const handleLicenseSave = async () => {
     if (!licenseDomain.trim()) {
@@ -425,6 +431,55 @@ export default function ConfigPage() {
       );
 
     setHasChanges(hasChangesNow);
+  };
+  // 快捷开关直接生效（不经过保存按钮）
+  const handleDirectSwitchChange = async (key: string, checked: boolean) => {
+    const newValue =
+      key === "payment_enabled"
+        ? !checked
+          ? "true"
+          : "false"
+        : checked
+          ? "true"
+          : "false";
+
+    const payload: Record<string, string> = { [key]: newValue };
+    // 关闭商城系统时联动关闭注册
+    if (key === "payment_enabled" && newValue === "false") {
+      payload.registration_enabled = "0";
+    }
+
+    // 立即更新本地状态
+    const newConfigs = { ...configs, ...payload };
+    setConfigs(newConfigs);
+    setOriginalConfigs((prev) => ({ ...prev, ...payload }));
+    setHasChanges(false);
+
+    try {
+      await updateConfigs(payload);
+      // 更新本地缓存
+      Object.entries(payload).forEach(([k, v]) => {
+        configCache.set(k, v);
+        localStorage.setItem("vite_config_" + k, v);
+      });
+      updateSiteConfig(payload);
+      // 触发事件通知其他组件
+      window.dispatchEvent(
+        new CustomEvent("configUpdated", { detail: { changedKeys: Object.keys(payload) } }),
+      );
+      if (key === "payment_enabled") {
+        window.dispatchEvent(
+          new CustomEvent("paymentEnabledChanged", {
+            detail: { enabled: newValue !== "false" },
+          }),
+        );
+      }
+      toast.success("设置已更新");
+    } catch {
+      toast.error("保存失败");
+      // 回滚
+      setConfigs(configs);
+    }
   };
   // 保存配置
   const handleSave = async () => {
@@ -626,10 +681,11 @@ export default function ConfigPage() {
 
     return (
       <div
-        className={`rounded-lg border p-3 ${isChanged
+        className={`rounded-lg border p-3 ${
+          isChanged
             ? "border-warning-300"
             : "border-default-200 dark:border-default-100/30"
-          }`}
+        }`}
       >
         <input
           ref={getBrandInputRef(key)}
@@ -879,9 +935,13 @@ export default function ConfigPage() {
               if (!shouldShowItem(item)) {
                 return null;
               }
+              // 快捷开关独立展示，不在基本设置中重复渲染
+              if (STANDALONE_SWITCH_KEYS.includes(item.key)) {
+                return null;
+              }
               // 计算是否是最后一个显示的项目（用于决定是否显示分隔线）
               const remainingItems = CONFIG_ITEMS.slice(index + 1).filter(
-                shouldShowItem,
+                (i) => shouldShowItem(i) && !STANDALONE_SWITCH_KEYS.includes(i.key),
               );
               const isLastItem = remainingItems.length === 0;
 
@@ -984,6 +1044,55 @@ export default function ConfigPage() {
                 </motion.div>
               )}
             </AnimatePresence>
+          </CardBody>
+        </Card>
+
+        {/* 快捷开关：即开即生效，不经过保存按钮 */}
+        <Card className="shadow-md dark:bg-content1 mt-6">
+          <CardHeader className="pb-4">
+            <div>
+              <h2 className="text-lg font-semibold">快捷开关</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                开关即生效，无需点击保存
+              </p>
+            </div>
+          </CardHeader>
+          <Divider />
+          <CardBody className="py-3">
+            <div className="flex flex-col gap-1">
+              {CONFIG_ITEMS.filter(
+                (item) =>
+                  STANDALONE_SWITCH_KEYS.includes(item.key) && shouldShowItem(item),
+              ).map((item) => (
+                <div
+                  key={item.key}
+                  className="flex justify-between items-center py-1"
+                >
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      {item.label}
+                    </span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">
+                      {item.description}
+                    </span>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <Switch
+                      color="primary"
+                      isSelected={
+                        item.key === "payment_enabled"
+                          ? configs[item.key] === "false"
+                          : configs[item.key] === "true"
+                      }
+                      size="sm"
+                      onValueChange={(checked) =>
+                        handleDirectSwitchChange(item.key, checked)
+                      }
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardBody>
         </Card>
       </div>
