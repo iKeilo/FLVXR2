@@ -1415,7 +1415,9 @@ func (h *Handler) tunnelCreate(w http.ResponseWriter, r *http.Request) {
 	for _, inNode := range runtimeState.InNodes {
 		if inNode.NodeID > 0 {
 			if currentStatus, _, _, _, _, _ := h.repo.GetNodeStatusFields(inNode.NodeID); currentStatus == 1 {
-				_ = h.applyNodeProtocolChange(inNode.NodeID, httpVal, tlsVal, socksVal, blockOtherVal)
+				if err := h.applyNodeProtocolChange(inNode.NodeID, httpVal, tlsVal, socksVal, blockOtherVal); err != nil {
+					log.Printf("SetProtocol failed for node %d: %v", inNode.NodeID, err)
+				}
 			}
 		}
 	}
@@ -1693,7 +1695,9 @@ func (h *Handler) tunnelUpdate(w http.ResponseWriter, r *http.Request) {
 	for _, nodeID := range newEntryNodeIDs {
 		if nodeID > 0 {
 			if currentStatus, _, _, _, _, _ := h.repo.GetNodeStatusFields(nodeID); currentStatus == 1 {
-				_ = h.applyNodeProtocolChange(nodeID, httpVal, tlsVal, socksVal, blockOtherVal)
+				if err := h.applyNodeProtocolChange(nodeID, httpVal, tlsVal, socksVal, blockOtherVal); err != nil {
+					log.Printf("SetProtocol failed for node %d: %v", nodeID, err)
+				}
 			}
 		}
 	}

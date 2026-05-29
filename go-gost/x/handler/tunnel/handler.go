@@ -212,9 +212,11 @@ func (h *tunnelHandler) Handle(ctx context.Context, conn net.Conn, opts ...handl
 	}
 
 	req := relay.Request{}
+	xservice.SkipDetection(conn)
 	if _, err := req.ReadFrom(conn); err != nil {
 		return err
 	}
+	xservice.ResetDetection(conn)
 
 	conn.SetReadDeadline(time.Time{})
 

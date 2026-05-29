@@ -22,6 +22,7 @@ import (
 	rate_limiter "github.com/go-gost/x/limiter/rate"
 	cache_limiter "github.com/go-gost/x/limiter/traffic/cache"
 	"github.com/go-gost/x/registry"
+	xservice "github.com/go-gost/x/service"
 	"github.com/google/uuid"
 )
 
@@ -158,9 +159,11 @@ func (h *routerHandler) Handle(ctx context.Context, conn net.Conn, opts ...handl
 	}
 
 	req := relay.Request{}
+	xservice.SkipDetection(conn)
 	if _, err := req.ReadFrom(conn); err != nil {
 		return err
 	}
+	xservice.ResetDetection(conn)
 
 	conn.SetReadDeadline(time.Time{})
 

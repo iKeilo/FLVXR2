@@ -478,48 +478,61 @@ func wrapConnPDetection(conn net.Conn) net.Conn {
 
 type detectConn struct {
 	net.Conn
-	reader   *bufio.Reader
-	detected bool
+	reader        *bufio.Reader
+	detected      bool
+	skipDetection bool // skip detection on next reads (used to skip relay header)
 }
 
 func (c *detectConn) Read(b []byte) (int, error) {
 	n, err := c.reader.Read(b)
-	if n > 0 && !c.detected {
+	if n > 0 && !c.detected && !c.skipDetection {
 		c.detected = true
 		if detectProtocol(b[:n], c.Conn) {
+			c.Conn.Close()
 			return 0, fmt.Errorf("connection blocked")
 		}
 	}
 	return n, err
 }
 
+func SkipDetection(conn net.Conn) {
+	if dc, ok := conn.(*detectConn); ok {
+		dc.skipDetection = true
+	}
+}
+
+func ResetDetection(conn net.Conn) {
+	if dc, ok := conn.(*detectConn); ok {
+		dc.detected = false
+		dc.skipDetection = false
+	}
+}
+
 func detectProtocol(data []byte, conn net.Conn) (blocked bool) {
-	// 如果是 UDP，则不检测，直接放行
-	if conn.RemoteAddr().Network() == "udp" || conn.RemoteAddr().Network() == "udp4" || conn.RemoteAddr().Network() == "udp6" {
+	if conn != nil && (conn.RemoteAddr().Network() == "udp" || conn.RemoteAddr().Network() == "udp4" || conn.RemoteAddr().Network() == "udp6") {
 		return false
 	}
+	return IsProtocolBlocked(data)
+}
 
+func IsProtocolBlocked(data []byte) bool {
 	if isHttp == 1 && detectHTTP(data) {
-		conn.Close()
 		return true
 	}
-
 	if isTls == 1 && detectTLS(data) {
-		conn.Close()
 		return true
 	}
-
 	if isSocks == 1 && detectSOCKS(data) {
-		conn.Close()
 		return true
 	}
-
 	if isBlockOther == 1 {
-		conn.Close()
 		return true
 	}
-
 	return false
+}
+
+func GetProtocolBlockFlags() (http, tls, socks, blockOther int) {
+	return isHttp, isTls, isSocks, isBlockOther
 }
 
 func detectHTTP(data []byte) bool {

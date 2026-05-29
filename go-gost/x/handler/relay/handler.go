@@ -25,6 +25,7 @@ import (
 	stats_wrapper "github.com/go-gost/x/observer/stats/wrapper"
 	xrecorder "github.com/go-gost/x/recorder"
 	"github.com/go-gost/x/registry"
+	xservice "github.com/go-gost/x/service"
 )
 
 var (
@@ -159,9 +160,11 @@ func (h *relayHandler) Handle(ctx context.Context, conn net.Conn, opts ...handle
 	}
 
 	req := relay.Request{}
+	xservice.SkipDetection(conn)
 	if _, err := req.ReadFrom(conn); err != nil {
 		return err
 	}
+	xservice.ResetDetection(conn)
 
 	conn.SetReadDeadline(time.Time{})
 

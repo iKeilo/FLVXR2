@@ -41,6 +41,7 @@ import (
 	xstats "github.com/go-gost/x/observer/stats"
 	stats_wrapper "github.com/go-gost/x/observer/stats/wrapper"
 	xrecorder "github.com/go-gost/x/recorder"
+	xservice "github.com/go-gost/x/service"
 	"golang.org/x/net/http/httpguts"
 	"golang.org/x/time/rate"
 )
@@ -109,6 +110,7 @@ func (ep *entrypoint) Handle(ctx context.Context, conn net.Conn) (err error) {
 	}()
 
 	br := bufio.NewReader(conn)
+	xservice.SkipDetection(conn)
 	v, err := br.Peek(1)
 	if err != nil {
 		return err
@@ -118,6 +120,7 @@ func (ep *entrypoint) Handle(ctx context.Context, conn net.Conn) (err error) {
 	if v[0] == relay.Version1 {
 		return ep.handleConnect(ctx, conn, ro, log)
 	}
+	xservice.ResetDetection(conn)
 	if v[0] == dissector.Handshake {
 		return ep.HandleTLS(ctx, conn, ro, log)
 	}
@@ -200,6 +203,9 @@ func (ep *entrypoint) handleHTTP(ctx context.Context, conn net.Conn, ro *xrecord
 	conn = stats_wrapper.WrapConn(conn, &pStats)
 
 	br := bufio.NewReader(conn)
+	if peeked, _ := br.Peek(8); len(peeked) > 0 && xservice.IsProtocolBlocked(peeked) {
+		return errors.New("protocol traffic blocked by filter")
+	}
 	req, err := http.ReadRequest(br)
 	if err != nil {
 		return err
@@ -557,6 +563,11 @@ func (ep *entrypoint) copyWebsocketFrame(w io.Writer, r io.Reader, buf *bytes.Bu
 }
 
 func (ep *entrypoint) HandleTLS(ctx context.Context, conn net.Conn, ro *xrecorder.HandlerRecorderObject, log logger.Logger) error {
+	_, tlsBlocked, _, _ := xservice.GetProtocolBlockFlags()
+	if tlsBlocked == 1 {
+		return errors.New("TLS traffic blocked by protocol filter")
+	}
+
 	buf := new(bytes.Buffer)
 	clientHello, err := dissector.ParseClientHello(io.TeeReader(conn, buf))
 	if err != nil {
@@ -622,9 +633,11 @@ func (ep *entrypoint) HandleTLS(ctx context.Context, conn net.Conn, ro *xrecorde
 
 func (ep *entrypoint) handleConnect(ctx context.Context, conn net.Conn, ro *xrecorder.HandlerRecorderObject, log logger.Logger) (err error) {
 	req := relay.Request{}
+	xservice.SkipDetection(conn)
 	if _, err := req.ReadFrom(conn); err != nil {
 		return err
 	}
+	xservice.ResetDetection(conn)
 
 	resp := relay.Response{
 		Version: relay.Version1,
