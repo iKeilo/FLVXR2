@@ -575,6 +575,10 @@ export default function UserPage() {
       const res = await updateConfig("registration_enabled", enabled ? "1" : "0");
       if (res.code === 0) {
         setRegOpen(enabled);
+        try {
+          localStorage.setItem("vite_config_registration_enabled", enabled ? "1" : "0");
+        } catch {}
+        window.dispatchEvent(new CustomEvent("configUpdated"));
         toast.success(enabled ? "注册已开启" : "注册已关闭");
       } else {
         toast.error(res.msg || "操作失败");
@@ -2764,6 +2768,56 @@ export default function UserPage() {
                   }}
                 />
               </div>
+              <div className="grid grid-cols-3 gap-4 pt-3 mt-3 border-t border-divider">
+                <div>
+                  <RadioGroup
+                    label="自动续费"
+                    orientation="horizontal"
+                    value={userForm.autoRenew.toString()}
+                    onValueChange={(value: string) =>
+                      setUserForm((prev) => ({
+                        ...prev,
+                        autoRenew: Number(value),
+                      }))
+                    }
+                  >
+                    <Radio value="1">启用</Radio>
+                    <Radio value="0">禁用</Radio>
+                  </RadioGroup>
+                </div>
+                <div>
+                  <RadioGroup
+                    label="自动购流"
+                    orientation="horizontal"
+                    value={userForm.autoBuyTraffic.toString()}
+                    onValueChange={(value: string) =>
+                      setUserForm((prev) => ({
+                        ...prev,
+                        autoBuyTraffic: Number(value),
+                      }))
+                    }
+                  >
+                    <Radio value="1">启用</Radio>
+                    <Radio value="0">禁用</Radio>
+                  </RadioGroup>
+                </div>
+                <div>
+                  <RadioGroup
+                    label="用户状态"
+                    orientation="horizontal"
+                    value={userForm.status.toString()}
+                    onValueChange={(value: string) =>
+                      setUserForm((prev) => ({
+                        ...prev,
+                        status: Number(value),
+                      }))
+                    }
+                  >
+                    <Radio value="1">启用</Radio>
+                    <Radio value="0">禁用</Radio>
+                  </RadioGroup>
+                </div>
+              </div>
               {userForm.autoBuyTraffic === 1 && (
                 <div className="pt-3 mt-3 space-y-3">
                   <RadioGroup
@@ -2827,57 +2881,7 @@ export default function UserPage() {
                     </div>
                   )}
                 </div>
-              )}
-              <div className="grid grid-cols-3 gap-4 pt-3 mt-3 border-t border-divider">
-                <div>
-                  <RadioGroup
-                    label="自动续费"
-                    orientation="horizontal"
-                    value={userForm.autoRenew.toString()}
-                    onValueChange={(value: string) =>
-                      setUserForm((prev) => ({
-                        ...prev,
-                        autoRenew: Number(value),
-                      }))
-                    }
-                  >
-                    <Radio value="1">启用</Radio>
-                    <Radio value="0">禁用</Radio>
-                  </RadioGroup>
-                </div>
-                <div>
-                  <RadioGroup
-                    label="自动购流"
-                    orientation="horizontal"
-                    value={userForm.autoBuyTraffic.toString()}
-                    onValueChange={(value: string) =>
-                      setUserForm((prev) => ({
-                        ...prev,
-                        autoBuyTraffic: Number(value),
-                      }))
-                    }
-                  >
-                    <Radio value="1">启用</Radio>
-                    <Radio value="0">禁用</Radio>
-                  </RadioGroup>
-                </div>
-                <div>
-                  <RadioGroup
-                    label="用户状态"
-                    orientation="horizontal"
-                    value={userForm.status.toString()}
-                    onValueChange={(value: string) =>
-                      setUserForm((prev) => ({
-                        ...prev,
-                        status: Number(value),
-                      }))
-                    }
-                  >
-                    <Radio value="1">启用</Radio>
-                    <Radio value="0">禁用</Radio>
-                  </RadioGroup>
-                </div>
-              </div>
+              )}              
             </div>
           </ModalBody>
           <ModalFooter>
