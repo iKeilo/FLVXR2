@@ -119,7 +119,7 @@ const CONFIG_ITEMS: ConfigItem[] = [
   */
   {
     key: "captcha_enabled",
-    label: "启用验证码",
+    label: "登录验证码",
     description: "开启后，用户登录时需要完成验证码验证",
     type: "switch",
   },

@@ -1436,7 +1436,7 @@ export default function ForwardPage() {
   // filterTunnelId removed
   // 拖拽排序相关状态
   const [forwardOrder, setForwardOrder] = useState<number[]>([]);
-  // 模态框状态
+  // 弹窗状态
   const [modalOpen, setModalOpen] = useState(false);
   // isFilterModalOpen removed
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -5247,7 +5247,7 @@ export default function ForwardPage() {
           </CardBody>
         </Card>
       )}
-      {/* 新增/编辑模态框 */}
+      {/* 新增/编辑弹窗 */}
       <Modal
         backdrop="blur"
         classNames={{
@@ -5606,7 +5606,7 @@ export default function ForwardPage() {
           )}
         </ModalContent>
       </Modal>
-      {/* 删除确认模态框 */}
+      {/* 删除确认弹窗 */}
       <Modal
         backdrop="blur"
         classNames={{
@@ -5693,7 +5693,7 @@ export default function ForwardPage() {
           </ModalBody>
         </ModalContent>
       </Modal>
-      {/* 导出数据模态框 */}
+      {/* 导出数据弹窗 */}
       <Modal
         backdrop="blur"
         classNames={{
@@ -5859,7 +5859,7 @@ export default function ForwardPage() {
           </ModalFooter>
         </ModalContent>
       </Modal>
-      {/* 导入数据模态框 */}
+      {/* 导入数据弹窗 */}
       <Modal
         backdrop="blur"
         classNames={{
@@ -6082,7 +6082,7 @@ export default function ForwardPage() {
           </ModalFooter>
         </ModalContent>
       </Modal>
-      {/* 诊断结果模态框 */}
+      {/* 诊断结果弹窗 */}
       <Modal
         backdrop="blur"
         classNames={{
@@ -6624,7 +6624,7 @@ export default function ForwardPage() {
           )}
         </ModalContent>
       </Modal>
-      {/* 批量归零流量确认模态框 */}
+      {/* 批量归零流量确认弹窗 */}
       <Modal
         classNames={{
           base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
@@ -6680,7 +6680,7 @@ export default function ForwardPage() {
           )}
         </ModalContent>
       </Modal>
-      {/* 流量归零日志模态框 */}
+      {/* 流量归零日志弹窗 */}
       <Modal
         classNames={{
           base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
@@ -6792,7 +6792,7 @@ export default function ForwardPage() {
         </ModalContent>
       </Modal>
 
-      {/* 删除日志确认模态框 */}
+      {/* 删除日志确认弹窗 */}
       <Modal
         backdrop="blur"
         classNames={{
@@ -6822,7 +6822,7 @@ export default function ForwardPage() {
         </ModalContent>
       </Modal>
 
-      {/* 批量删除确认模态框 */}
+      {/* 批量删除确认弹窗 */}
       <Modal
         classNames={{
           base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
@@ -6855,7 +6855,7 @@ export default function ForwardPage() {
           )}
         </ModalContent>
       </Modal>
-      {/* 批量换隧道模态框 */}
+      {/* 批量换隧道弹窗 */}
       <Modal
         classNames={{
           base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",

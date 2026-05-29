@@ -360,7 +360,7 @@ export default function TunnelPage() {
     "",
   );
   const [isSearchVisible, setIsSearchVisible] = useState(false);
-  // 模态框状态
+  // 弹窗状态
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [diagnosisModalOpen, setDiagnosisModalOpen] = useState(false);
@@ -2781,7 +2781,7 @@ export default function TunnelPage() {
           </CardBody>
         </Card>
       )}
-      {/* 新增/编辑模态框 */}
+      {/* 新增/编辑弹窗 */}
       <Modal
         backdrop="blur"
         classNames={{
@@ -4018,7 +4018,7 @@ export default function TunnelPage() {
           )}
         </ModalContent>
       </Modal>
-      {/* 删除确认模态框 */}
+      {/* 删除确认弹窗 */}
       <Modal
         backdrop="blur"
         classNames={{
@@ -4198,7 +4198,7 @@ export default function TunnelPage() {
           )}
         </ModalContent>
       </Modal>
-      {/* 诊断结果模态框 */}
+      {/* 诊断结果弹窗 */}
       <Modal
         backdrop="blur"
         classNames={{

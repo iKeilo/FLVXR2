@@ -168,7 +168,7 @@ const theme: ThemePackage = {
 | `Switch` | `shadcn-bridge/heroui/switch` | 开关 |
 | `Checkbox` | `shadcn-bridge/heroui/checkbox` | 复选框 |
 | `Chip` | `shadcn-bridge/heroui/chip` | 标签/芯片 |
-| `Modal`, `ModalContent`, `ModalHeader`, `ModalBody`, `ModalFooter` | `shadcn-bridge/heroui/modal` | 模态框 |
+| `Modal`, `ModalContent`, `ModalHeader`, `ModalBody`, `ModalFooter` | `shadcn-bridge/heroui/modal` | 弹窗 |
 | `Table`, `TableHeader`, `TableBody`, `TableRow`, `TableCell`, `TableColumn` | `shadcn-bridge/heroui/table` | 表格 |
 | `Tabs`, `Tab` | `shadcn-bridge/heroui/tabs` | 标签页 |
 | `Progress` | `shadcn-bridge/heroui/progress` | 进度条 |

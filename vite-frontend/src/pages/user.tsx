@@ -2572,7 +2572,7 @@ export default function UserPage() {
           </div>
         </div>
       )}
-      {/* 用户表单模态框 */}
+      {/* 用户表单弹窗 */}
       <Modal
         backdrop="blur"
         classNames={{
@@ -3004,7 +3004,7 @@ export default function UserPage() {
           </ModalFooter>
         </ModalContent>
       </Modal>
-      {/* 隧道权限管理模态框 */}
+      {/* 隧道权限管理弹窗 */}
       <Modal
         backdrop="blur"
         classNames={{
@@ -3518,7 +3518,7 @@ export default function UserPage() {
           </ModalFooter>
         </ModalContent>
       </Modal>
-      {/* 编辑隧道权限模态框 */}
+      {/* 编辑隧道权限弹窗 */}
       <Modal
         backdrop="blur"
         classNames={{
@@ -4044,7 +4044,7 @@ export default function UserPage() {
           </ModalFooter>
         </ModalContent>
       </Modal>
-      {/* 流量历史弹窗 */}
+      {/* 流量归零日志弹窗 */}
       <Modal
         backdrop="blur"
         classNames={{
@@ -4057,7 +4057,7 @@ export default function UserPage() {
         <ModalContent>
           <ModalHeader className="flex items-center justify-between">
             <span className="text-base font-semibold">
-              流量历史 - {historyModalUser?.name || historyModalUser?.user}
+              流量归零日志 - {historyModalUser?.name || historyModalUser?.user}
             </span>
             <Button
               isIconOnly

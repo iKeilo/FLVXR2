@@ -3177,7 +3177,7 @@ export default function NodePage() {
           </ModalFooter>
         </ModalContent>
       </Modal>
-      {/* 删除确认模态框 */}
+      {/* 删除确认弹窗 */}
       <Modal
         backdrop="blur"
         classNames={{
@@ -3271,7 +3271,7 @@ export default function NodePage() {
           )}
         </ModalContent>
       </Modal>
-      {/* 安装命令模态框 */}
+      {/* 安装命令弹窗 */}
       <Modal
         backdrop="blur"
         classNames={{
@@ -3360,7 +3360,7 @@ export default function NodePage() {
           </ModalFooter> */}
         </ModalContent>
       </Modal>
-      {/* 批量更新模态框 */}
+      {/* 批量更新弹窗 */}
       <Modal
         backdrop="blur"
         classNames={{
@@ -3477,7 +3477,7 @@ export default function NodePage() {
           }}
         </ModalContent>
       </Modal>
-      {/* 批量归零流量确认模态框 */}
+      {/* 批量归零流量确认弹窗 */}
       <Modal
         backdrop="blur"
         classNames={{
@@ -3537,7 +3537,7 @@ export default function NodePage() {
           )}
         </ModalContent>
       </Modal>
-      {/* 节点流量归零日志模态框 */}
+      {/* 节点流量归零日志弹窗 */}
       <Modal
         backdrop="blur"
         classNames={{
@@ -3698,7 +3698,7 @@ export default function NodePage() {
         </ModalContent>
       </Modal>
 
-      {/* 删除日志确认模态框 */}
+      {/* 删除日志确认弹窗 */}
       <Modal
         backdrop="blur"
         classNames={{
@@ -3728,7 +3728,7 @@ export default function NodePage() {
         </ModalContent>
       </Modal>
 
-      {/* 批量删除确认模态框 */}
+      {/* 批量删除确认弹窗 */}
       <Modal
         backdrop="blur"
         classNames={{
@@ -3833,7 +3833,7 @@ export default function NodePage() {
           )}
         </ModalContent>
       </Modal>
-      {/* 离线部署模态框 */}
+      {/* 离线部署弹窗 */}
       <Modal
         isOpen={offlineModalOpen}
         size="lg"
