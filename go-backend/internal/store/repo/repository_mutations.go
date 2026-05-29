@@ -668,17 +668,19 @@ func (r *Repository) VerifyAllBalances() ([]interface{}, error) {
 	return mismatches, nil
 }
 
-func (r *Repository) UpdateUserBuyTrafficConfig(userID int64, autoBuyTraffic int, buyTrafficAmount, buyTrafficPrice int64) error {
+func (r *Repository) UpdateUserBuyTrafficConfig(userID int64, autoBuyTraffic int, buyTrafficAmount, buyTrafficPrice, autoBuyTrafficPackageID int64) error {
 	if r == nil || r.db == nil {
 		return errors.New("repository not initialized")
 	}
+	updates := map[string]interface{}{
+		"auto_buy_traffic":   autoBuyTraffic,
+		"buy_traffic_amount": buyTrafficAmount,
+		"buy_traffic_price":  buyTrafficPrice,
+		"auto_buy_traffic_package_id": autoBuyTrafficPackageID,
+	}
 	return r.db.Model(&model.User{}).
 		Where("id = ?", userID).
-		Updates(map[string]interface{}{
-			"auto_buy_traffic":   autoBuyTraffic,
-			"buy_traffic_amount": buyTrafficAmount,
-			"buy_traffic_price":  buyTrafficPrice,
-		}).Error
+		Updates(updates).Error
 }
 
 func (r *Repository) ResetUserFlowToBase(userID, baseFlow, now int64) error {
@@ -700,9 +702,42 @@ func (r *Repository) ListAutoBuyTrafficCandidates(nowMs int64) ([]model.User, er
 		return nil, errors.New("repository not initialized")
 	}
 	var users []model.User
-	err := r.db.Where("status = 1 AND exp_time > ? AND auto_buy_traffic = 1 AND buy_traffic_amount > 0 AND buy_traffic_price > 0", nowMs).
+	err := r.db.Where("status = 1 AND exp_time > ? AND auto_buy_traffic = 1 AND ((auto_buy_traffic_package_id > 0) OR (buy_traffic_amount > 0 AND buy_traffic_price > 0))", nowMs).
 		Find(&users).Error
 	return users, err
+}
+
+func (r *Repository) UpdatePackageAutoBuyTrafficEnabled(packageID int64, enabled int) error {
+	if r == nil || r.db == nil {
+		return errors.New("repository not initialized")
+	}
+	if err := r.db.Model(&model.SubscriptionPackage{}).Where("id = ?", packageID).
+		Update("auto_buy_traffic_enabled", enabled).Error; err != nil {
+		return err
+	}
+	if enabled == 0 {
+		_ = r.db.Model(&model.User{}).Where("auto_buy_traffic_package_id = ?", packageID).
+			Update("auto_buy_traffic_package_id", 0).Error
+	}
+	return nil
+}
+
+func (r *Repository) UpdateUserAutoBuyTrafficPackage(userID int64, packageID int64) error {
+	if r == nil || r.db == nil {
+		return errors.New("repository not initialized")
+	}
+	return r.db.Model(&model.User{}).Where("id = ?", userID).
+		Update("auto_buy_traffic_package_id", packageID).Error
+}
+
+func (r *Repository) ListAutoBuyTrafficPackages() ([]*model.SubscriptionPackage, error) {
+	if r == nil || r.db == nil {
+		return nil, errors.New("repository not initialized")
+	}
+	var pkgs []*model.SubscriptionPackage
+	err := r.db.Where("type = 'traffic' AND auto_buy_traffic_enabled = 1 AND enabled = 1").
+		Order("sort_order ASC, id ASC").Find(&pkgs).Error
+	return pkgs, err
 }
 
 func (r *Repository) RefreshNodeExpiryReminder(nodeID int64) error {
@@ -1513,7 +1548,7 @@ func (r *Repository) CompletePackageOrder(userID int64, userName string, order *
 			"flow":            newFlow,
 			"num":             newNum,
 			"exp_time":        newExpTime,
-			"flow_reset_time": expireAt,
+			"flow_reset_time": time.Now().Day(),
 			"renewal_amount":  pkg.Price,
 			"speed_limit":     newSpeedLimit,
 			"max_connections": newMaxConns,
@@ -1616,7 +1651,7 @@ func (r *Repository) DeliverPackageToUser(userID int64, pkg *model.SubscriptionP
 			"flow":            newFlow,
 			"num":             newNum,
 			"exp_time":        newExpTime,
-			"flow_reset_time": expireAt,
+			"flow_reset_time": time.Now().Day(),
 			"renewal_amount":  pkg.Price,
 			"speed_limit":     newSpeedLimit,
 			"max_connections": newMaxConns,
