@@ -1001,7 +1001,7 @@ export default function UserPage() {
       buyTrafficAmount: user.buyTrafficAmount ?? 0,
       buyTrafficPrice: user.buyTrafficPrice ?? 0,
       autoBuyTrafficPackageId: user.autoBuyTrafficPackageId ?? 0,
-      autoBuyTrafficPackageType: user.autoBuyTrafficPackageId > 0 ? "package" : "custom",
+      autoBuyTrafficPackageType: (user.autoBuyTrafficPackageId ?? 0) > 0 ? "package" : "custom",
     });
     onUserModalOpen();
   };
