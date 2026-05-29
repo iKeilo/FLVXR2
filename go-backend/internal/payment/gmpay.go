@@ -109,9 +109,6 @@ func (g *gmpayGateway) CreateInvoice(order *model.Order) (*PaymentResult, error)
 	if g.config.ReturnURL != "" {
 		signParams["redirect_url"] = g.config.ReturnURL
 	}
-	if order.ProductName != "" {
-		signParams["name"] = order.ProductName
-	}
 
 	retry := 0
 	for {
@@ -130,9 +127,6 @@ func (g *gmpayGateway) CreateInvoice(order *model.Order) (*PaymentResult, error)
 		}
 		if g.config.ReturnURL != "" {
 			bodyParams["redirect_url"] = g.config.ReturnURL
-		}
-		if order.ProductName != "" {
-			bodyParams["name"] = order.ProductName
 		}
 
 		body, _ := json.Marshal(bodyParams)
