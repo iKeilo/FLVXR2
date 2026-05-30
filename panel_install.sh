@@ -590,6 +590,8 @@ update_panel() {
   
   check_docker
 
+  LICENSE_SERVER_URL=https://sq.abai.eu.org
+
   if [[ ! -f ".env" ]]; then
     echo "⚠️ 未找到 .env，默认按 SQLite 模式更新"
   fi
