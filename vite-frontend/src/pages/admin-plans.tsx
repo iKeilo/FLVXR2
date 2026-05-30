@@ -46,7 +46,7 @@ import { PageLoadingState } from "@/components/page-state";
 
 const typeOptions = [
   { value: "subscription", label: "订阅套餐" },
-  { value: "traffic", label: "流量包" },
+  { value: "traffic", label: "流量快餐" },
   { value: "balance", label: "余额充值" },
 ];
 
@@ -428,7 +428,7 @@ export default function AdminPlansPage() {
                           localStorageKey,
                           localStorageValue,
                         );
-                      } catch {}
+                      } catch { }
                       window.dispatchEvent(
                         new CustomEvent("paymentEnabledChanged", {
                           detail: { enabled },
@@ -548,7 +548,10 @@ export default function AdminPlansPage() {
                 名称
               </TableColumn>
               <TableColumn className="whitespace-nowrap min-w-[140px]">
-                价格 / 有效期
+                价格
+              </TableColumn>
+              <TableColumn className="whitespace-nowrap min-w-[140px]">
+                有效期
               </TableColumn>
               <TableColumn className="whitespace-nowrap min-w-[100px]">
                 隧道组
@@ -557,7 +560,7 @@ export default function AdminPlansPage() {
                 限制
               </TableColumn>
               <TableColumn className="whitespace-nowrap min-w-[70px]">
-                启用
+                启用状态
               </TableColumn>
               <TableColumn className="whitespace-nowrap min-w-[90px]">
                 商店可见
@@ -585,7 +588,12 @@ export default function AdminPlansPage() {
                   </TableCell>
                   <TableCell>
                     <div className="text-sm whitespace-nowrap">
-                      ¥{(item.price / 100).toFixed(2)} /{" "}
+                      ¥{(item.price / 100).toFixed(2)} 
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm whitespace-nowrap">
+                      {" "}
                       {durationLabel(item.validityDays)}
                     </div>
                   </TableCell>
@@ -728,7 +736,7 @@ export default function AdminPlansPage() {
         </div>
       )}
 
-      {/* ── 流量包表格 ── */}
+      {/* ── 流量快餐表格 ── */}
       {activeTab === "traffic" && (
         <div className="overflow-x-auto rounded-xl border border-divider bg-content1 shadow-md">
           <Table
@@ -750,16 +758,16 @@ export default function AdminPlansPage() {
                 流量
               </TableColumn>
               <TableColumn className="whitespace-nowrap min-w-[70px]">
-                启用
+                启用状态
               </TableColumn>
               <TableColumn className="whitespace-nowrap min-w-[90px]">
                 商店可见
               </TableColumn>
+              <TableColumn className="whitespace-nowrap min-w-[100px]">
+                自动购流选择
+              </TableColumn>
               <TableColumn className="whitespace-nowrap min-w-[80px]">
                 库存
-              </TableColumn>
-              <TableColumn className="whitespace-nowrap min-w-[100px]">
-                自动购流来源
               </TableColumn>
               <TableColumn className="whitespace-nowrap min-w-[80px]">
                 操作
@@ -807,17 +815,6 @@ export default function AdminPlansPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="text-sm">
-                      {item.stock === -1 ? (
-                        <span className="text-default-400">不限</span>
-                      ) : item.stock === 0 ? (
-                        <span className="text-red-500 font-medium">已售罄</span>
-                      ) : (
-                        <span>{item.stock}</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
                     <div className="flex flex-row gap-1 shrink-0">
                       {item.autoBuyTrafficEnabled === 1 ? (
                         <span
@@ -833,6 +830,17 @@ export default function AdminPlansPage() {
                       )}
                     </div>
                   </TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      {item.stock === -1 ? (
+                        <span className="text-default-400">不限</span>
+                      ) : item.stock === 0 ? (
+                        <span className="text-red-500 font-medium">已售罄</span>
+                      ) : (
+                        <span>{item.stock}</span>
+                      )}
+                    </div>
+                  </TableCell>                  
                   <TableCell>
                     <div className="flex gap-1">
                       <Button
@@ -888,7 +896,7 @@ export default function AdminPlansPage() {
                     className="py-10 text-center text-gray-400"
                     colSpan={8}
                   >
-                    暂无流量包
+                    暂无流量快餐
                   </TableCell>
                 </TableRow>
               )}
@@ -916,7 +924,7 @@ export default function AdminPlansPage() {
                 充值金额
               </TableColumn>
               <TableColumn className="whitespace-nowrap min-w-[70px]">
-                启用
+                启用状态
               </TableColumn>
               <TableColumn className="whitespace-nowrap min-w-[90px]">
                 商店可见
@@ -1093,7 +1101,7 @@ export default function AdminPlansPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <Input
-                  label="库存 (-1=不限, 0=售罄, >0=剩余)"
+                  label="库存 (-1不限，0售罄)"
                   min="-1"
                   type="number"
                   value={String(pkgForm.stock)}

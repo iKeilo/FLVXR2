@@ -9,7 +9,6 @@ import { useNavigate } from "react-router-dom";
 
 import { AnimatedPage } from "@/components/animated-page";
 import { Button } from "@/shadcn-bridge/heroui/button";
-import { Input } from "@/shadcn-bridge/heroui/input";
 import { Card, CardBody, CardHeader } from "@/shadcn-bridge/heroui/card";
 import {
   Modal,
@@ -339,83 +338,87 @@ export default function ShopPage() {
                           </div>
                         </>
                       ) : (
-                        <p className="text-xs text-orange-500">
+                        <p className="text-sm text-orange-500 mb-3">
                           充值到账户余额 不退款
                         </p>
+                      )}
+                      {pkg.type === "balance" && (
+                        <div className="flex items-center justify-between mt-2">
+                          <div className="inline-flex items-center gap-1 rounded-lg border border-divider bg-default-50 px-1 py-0.5">
+                            <Button
+                              isIconOnly
+                              size="sm"
+                              variant="light"
+                              className="h-6 w-6 rounded"
+                              isDisabled={pkgQuantity <= 1}
+                              onPress={() =>
+                                setPkgQuantity((q) => Math.max(1, q - 1))
+                              }
+                            >
+                              <svg
+                                className="w-3.5 h-3.5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M20 12H4"
+                                />
+                              </svg>
+                            </Button>
+                            <input
+                              type="number"
+                              className="w-12 text-center text-sm font-semibold outline-none bg-transparent [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                              min="1"
+                              value={pkgQuantity}
+                              onChange={(e) => {
+                                const v = parseInt(
+                                  e.target.value.replace(/\D/g, ""),
+                                );
+                                if (v >= 1) setPkgQuantity(v);
+                              }}
+                            />
+                            <Button
+                              isIconOnly
+                              size="sm"
+                              variant="light"
+                              className="h-6 w-6 rounded"
+                              onPress={() =>
+                                setPkgQuantity((q) =>
+                                  Math.min(
+                                    pkg.stock > 0 ? pkg.stock : 100,
+                                    q + 1,
+                                  ),
+                                )
+                              }
+                            >
+                              <svg
+                                className="w-3.5 h-3.5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 4v16m8-8H4"
+                                />
+                              </svg>
+                            </Button>
+                          </div>
+                          <span className="text-base font-semibold">
+                            ¥{((pkg.price / 100) * pkgQuantity).toFixed(2)}
+                          </span>
+                        </div>
                       )}
                       {pkg.type === "subscription" && (
                         <p className="text-xs text-orange-500">
                           重复购买将替换现有套餐
                         </p>
-                      )}
-                      {pkg.type === "balance" && (
-                        <div className="flex items-center gap-2 mt-2">
-                          <Button
-                            isIconOnly
-                            isDisabled={pkgQuantity <= 1}
-                            size="sm"
-                            variant="flat"
-                            onPress={() =>
-                              setPkgQuantity((q) => Math.max(1, q - 1))
-                            }
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                d="M20 12H4"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                              />
-                            </svg>
-                          </Button>
-                          <Input
-                            className="w-16 text-center"
-                            min="1"
-                            type="number"
-                            value={String(pkgQuantity)}
-                            variant="bordered"
-                            onChange={(e) => {
-                              const v = parseInt(e.target.value);
-
-                              if (v >= 1) setPkgQuantity(v);
-                            }}
-                          />
-                          <Button
-                            isIconOnly
-                            size="sm"
-                            variant="flat"
-                            onPress={() =>
-                              setPkgQuantity((q) =>
-                                Math.min(
-                                  pkg.stock > 0 ? pkg.stock : 100,
-                                  q + 1,
-                                ),
-                              )
-                            }
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                d="M12 4v16m8-8H4"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                              />
-                            </svg>
-                          </Button>
-                          <span className="text-xs text-default-400 ml-1">
-                            ¥{((pkg.price / 100) * pkgQuantity).toFixed(2)}
-                          </span>
-                        </div>
                       )}
                       <div className="mt-2">
                         {pkg.stock === 0 ? (

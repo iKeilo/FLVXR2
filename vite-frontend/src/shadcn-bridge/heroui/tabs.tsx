@@ -66,17 +66,17 @@ export function Tabs({ children, onSelectionChange, selectedKey }: TabsProps) {
         onSelectionChange?.(nextValue);
       }}
     >
-      <TabsList
-        className="grid w-full"
-        style={{
-          gridTemplateColumns: `repeat(${Math.max(tabs.length, 1)}, minmax(0, 1fr))`,
-        }}
-      >
+      <TabsList className="w-fit">
         {tabs.map((item) => (
-          <TabsTrigger key={item.key} value={item.key}>
+          <TabsTrigger
+            key={item.key}
+            value={item.key}
+            className="px-4 py-2 text-base font-semibold"
+          >
             {item.title}
           </TabsTrigger>
         ))}
+
       </TabsList>
       {tabs.map((item) => (
         <TabsContent key={item.key} value={item.key}>

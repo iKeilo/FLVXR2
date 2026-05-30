@@ -225,13 +225,10 @@ export default function MyHomePage() {
     }
   };
 
-  const formatFlow = (bytes: number) => {
-    if (bytes === 0) return "0 GB";
-    const gb = bytes / (1024 * 1024 * 1024);
-
+  const formatFlow = (gb: number) => {
+    if (gb === 0) return "0 GB";
     if (gb >= 1024) return `${(gb / 1024).toFixed(1)} TB`;
-
-    return gb >= 100 ? `${Math.round(gb)} GB` : `${gb.toFixed(1)} GB`;
+    return `${gb} GB`;
   };
 
   const formatBalance = (cents: number) => {
@@ -268,14 +265,14 @@ export default function MyHomePage() {
                   <p className="font-medium">
                     {subData.subscription.startAt > 0
                       ? new Date(
-                          subData.subscription.startAt,
-                        ).toLocaleDateString()
+                        subData.subscription.startAt,
+                      ).toLocaleDateString()
                       : "-"}
                     {" ~ "}
                     {subData.subscription.expireAt > 0
                       ? new Date(
-                          subData.subscription.expireAt,
-                        ).toLocaleDateString()
+                        subData.subscription.expireAt,
+                      ).toLocaleDateString()
                       : "-"}
                   </p>
                 </div>
@@ -284,12 +281,12 @@ export default function MyHomePage() {
                   <p className="font-medium">
                     {subData.subscription.expireAt > 0
                       ? Math.max(
-                          0,
-                          Math.ceil(
-                            (subData.subscription.expireAt - Date.now()) /
-                              86400000,
-                          ),
-                        )
+                        0,
+                        Math.ceil(
+                          (subData.subscription.expireAt - Date.now()) /
+                          86400000,
+                        ),
+                      )
                       : "-"}{" "}
                     天
                   </p>
@@ -338,28 +335,26 @@ export default function MyHomePage() {
             )}
           </CardBody>
         </Card>
-
         <Card className="border border-divider shadow-sm">
           <CardHeader className="pb-2">
-            <span className="font-medium">账户余额</span>
-          </CardHeader>
-          <CardBody className="flex flex-col items-center justify-center py-6">
-            <p className="text-3xl font-bold font-mono text-primary">
-              {formatBalance(userInfo.balance)}
-            </p>
-            <p className="text-xs text-default-400 mt-2">可用余额</p>
-          </CardBody>
-        </Card>
-
-        <Card className="border border-divider shadow-sm">
-          <CardHeader className="pb-2">
-            <span className="font-medium">剩余流量</span>
+            <span className="font-medium">流量快餐</span>
           </CardHeader>
           <CardBody className="flex flex-col items-center justify-center py-6">
             <p className="text-3xl font-bold font-mono text-primary">
               {formatFlow(userInfo.flow)}
             </p>
-            <p className="text-xs text-default-400 mt-2">可用流量</p>
+            {/* <p className="text-xs text-default-400 mt-2">可用流量</p> */}
+          </CardBody>
+        </Card>
+        <Card className="border border-divider shadow-sm">
+          <CardHeader className="pb-2">
+            <span className="font-medium">可用余额</span>
+          </CardHeader>
+          <CardBody className="flex flex-col items-center justify-center py-6">
+            <p className="text-3xl font-bold font-mono text-primary">
+              {formatBalance(userInfo.balance)}
+            </p>
+            {/* <p className="text-xs text-default-400 mt-2">相关描述</p> */}
           </CardBody>
         </Card>
       </div>
