@@ -265,6 +265,7 @@ export interface UserPackageInfoApiData {
   userInfo: {
     id: number;
     flow: number;
+    trafficFlow: number;
     inFlow: number;
     outFlow: number;
     num: number;

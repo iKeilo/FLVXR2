@@ -59,6 +59,7 @@ export default function MyHomePage() {
       id: number;
       name: string;
       description: string;
+      price: number;
       trafficLimit: number;
       /* portCount: number; */ speedLimit: number;
       maxRules: number;
@@ -81,9 +82,14 @@ export default function MyHomePage() {
   const [payLoading, setPayLoading] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailOrder, setDetailOrder] = useState<OrderApiItem | null>(null);
-  const [userInfo, setUserInfo] = useState<{ balance: number; flow: number }>({
+  const [userInfo, setUserInfo] = useState<{
+    balance: number;
+    flow: number;
+    trafficFlow: number;
+  }>({
     balance: 0,
     flow: 0,
+    trafficFlow: 0,
   });
 
   const loadData = useCallback(async () => {
@@ -120,14 +126,14 @@ export default function MyHomePage() {
         toast.error(orderRes.msg || "获取订单失败");
       }
       if (subRes.code === 0) {
-        setSubData(subRes.data);
+        setSubData(subRes.data as any);
       }
       if (pkgInfoRes.code === 0) {
         const info = (pkgInfoRes.data as UserPackageInfoApiData)?.userInfo;
-
         setUserInfo({
           balance: typeof info?.balance === "number" ? info?.balance : 0,
           flow: typeof info?.flow === "number" ? info?.flow : 0,
+          trafficFlow: typeof info?.trafficFlow === "number" ? info?.trafficFlow : 0,
         });
       }
     } catch {
@@ -180,7 +186,7 @@ export default function MyHomePage() {
         setTotal(orderRes.data.total || 0);
       }
       if (subRes.code === 0) {
-        setSubData(subRes.data);
+        setSubData(subRes.data as any);
       }
       if (pkgInfoRes.code === 0) {
         const info = (pkgInfoRes.data as UserPackageInfoApiData)?.userInfo;
@@ -188,6 +194,8 @@ export default function MyHomePage() {
         setUserInfo({
           balance: typeof info?.balance === "number" ? info?.balance : 0,
           flow: typeof info?.flow === "number" ? info?.flow : 0,
+          trafficFlow:
+            typeof info?.trafficFlow === "number" ? info?.trafficFlow : 0,
         });
       }
       setRefreshing(false);
@@ -228,6 +236,7 @@ export default function MyHomePage() {
   const formatFlow = (gb: number) => {
     if (gb === 0) return "0 GB";
     if (gb >= 1024) return `${(gb / 1024).toFixed(1)} TB`;
+
     return `${gb} GB`;
   };
 
@@ -241,13 +250,27 @@ export default function MyHomePage() {
     <AnimatedPage className="px-3 lg:px-6 py-8">
       <h1 className="text-2xl font-bold mb-6">我的</h1>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <Card className="border border-divider shadow-sm">
-          <CardHeader className="pb-2">
-            <div className="flex justify-between items-center w-full">
-              <span className="font-medium text-lg">
-                {subData?.package?.name || "未知套餐"}
-              </span>
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+        <Card className="sm:col-span-2 border border-divider shadow-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+                  <svg
+                    className="w-5 h-5 text-primary"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <span className="font-semibold text-base">订阅套餐</span>
+                  <p className="text-xs text-default-400 leading-tight">
+                    {subData?.package?.name || "未订阅"}
+                  </p>
+                </div>
+              </div>
               <Chip
                 color={subData?.subscription ? "success" : "default"}
                 size="sm"
@@ -257,28 +280,52 @@ export default function MyHomePage() {
               </Chip>
             </div>
           </CardHeader>
-          <CardBody>
+          <CardBody className="pt-2">
             {subData?.subscription ? (
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-default-400">有效期</span>
-                  <p className="font-medium">
-                    {subData.subscription.startAt > 0
-                      ? new Date(
-                        subData.subscription.startAt,
-                      ).toLocaleDateString()
-                      : "-"}
-                    {" ~ "}
-                    {subData.subscription.expireAt > 0
-                      ? new Date(
-                        subData.subscription.expireAt,
-                      ).toLocaleDateString()
-                      : "-"}
+              <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
+                <div className="p-3 bg-green-50 dark:bg-green-900/10 rounded-lg">                 
+                  <span className="text-sm font-semibold text-foreground">
+                    价格
+                  </span>
+                  <p className="font-bold text-green-500 mt-1 text-lg">
+                    {(subData.package!.price / 100).toFixed(2)} 元
+                  </p>
+                </div>                
+                <div className="p-3 bg-warning-50 dark:bg-warning-900/10 rounded-lg">                 
+                  <span className="text-sm font-semibold text-foreground">
+                    规则
+                  </span>
+                  <p className="font-bold text-warning-500 mt-1 text-lg">
+                    {subData.package!.maxRules > 0
+                      ? subData.package!.maxRules
+                      : ""} 个
                   </p>
                 </div>
-                <div>
-                  <span className="text-default-400">剩余</span>
-                  <p className="font-medium">
+                <div className="p-3 bg-primary-50 dark:bg-primary-900/10 rounded-lg">
+                  <span className="text-sm font-semibold text-foreground">
+                    流量
+                  </span>
+                  <p className="font-bold text-primary-500 mt-1 text-lg">
+                    {subData.package!.trafficLimit > 0
+                      ? `${subData.package!.trafficLimit} GB`
+                      : "不限"}
+                  </p>
+                </div>
+                <div className="p-3 bg-success-50 dark:bg-success-900/10 rounded-lg">
+                  <span className="text-sm font-semibold text-foreground">
+                    限速
+                  </span>
+                  <p className="font-bold text-success-500 mt-1 text-lg">
+                    {subData.package!.speedLimit > 0
+                      ? `${subData.package!.speedLimit} Mbps`
+                      : "不限"}
+                  </p>
+                </div>
+                <div className="p-3 bg-yellow-50 dark:bg-yellow-900/10 rounded-lg">
+                  <span className="text-sm font-semibold text-foreground">
+                    剩余
+                  </span>
+                  <p className="font-bold text-yellow-500 mt-1 text-lg">
                     {subData.subscription.expireAt > 0
                       ? Math.max(
                         0,
@@ -287,36 +334,20 @@ export default function MyHomePage() {
                           86400000,
                         ),
                       )
-                      : "-"}{" "}
+                      : "-"}
                     天
                   </p>
                 </div>
-                <div>
-                  <span className="text-default-400">流量</span>
-                  <p className="font-medium">
-                    {subData.package!.trafficLimit > 0
-                      ? `${subData.package!.trafficLimit} GB`
-                      : "不限"}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-default-400">限速</span>
-                  <p className="font-medium">
-                    {subData.package!.speedLimit > 0
-                      ? `${subData.package!.speedLimit} Mbps`
-                      : "不限"}
-                  </p>
-                </div>
-                <div className="col-span-2">
-                  <span className="text-default-400">规则/连接</span>
-                  <p className="font-medium">
-                    {subData.package!.maxRules > 0
-                      ? subData.package!.maxRules
-                      : "∞"}{" "}
-                    /
-                    {subData.package!.maxConnections > 0
-                      ? subData.package!.maxConnections
-                      : "∞"}
+                <div className="p-3 bg-rose-50 dark:bg-rose-900/10 rounded-lg">
+                  <span className="text-sm font-semibold text-foreground">
+                    有效期
+                  </span>
+                  <p className="font-bold text-rose-500 mt-1 text-lg">
+                    {subData.subscription.expireAt > 0
+                      ? new Date(
+                        subData.subscription.expireAt,
+                      ).toLocaleDateString()
+                      : "-"}
                   </p>
                 </div>
               </div>
@@ -335,30 +366,64 @@ export default function MyHomePage() {
             )}
           </CardBody>
         </Card>
-        <Card className="border border-divider shadow-sm">
-          <CardHeader className="pb-2">
-            <span className="font-medium">流量快餐</span>
+        <Card className="sm:col-span-1 border border-divider shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                <svg
+                  className="w-5 h-5 text-orange-500 dark:text-orange-400"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path d="M5.5 16a3.5 3.5 0 01-.369-6.98 4 4 0 117.753-1.977A4.5 4.5 0 1113.5 16h-8z" />
+                </svg>
+              </div>
+              <span className="font-semibold">流量快餐</span>
+            </div>
           </CardHeader>
-          <CardBody className="flex flex-col items-center justify-center py-6">
-            <p className="text-3xl font-bold font-mono text-primary">
-              {formatFlow(userInfo.flow)}
-            </p>
-            {/* <p className="text-xs text-default-400 mt-2">可用流量</p> */}
+          <CardBody className="flex flex-col items-center justify-center py-6 pt-2">
+            <div className="p-3 bg-purple-50 dark:bg-purple-900/10 rounded-lg">
+              <span className="text-sm font-semibold text-foreground">
+                累计购买流量
+              </span>
+              <p className="font-bold text-purple-500 mt-1 text-lg">
+                {formatFlow(userInfo.trafficFlow ?? 0)}
+              </p>
+            </div>
           </CardBody>
         </Card>
-        <Card className="border border-divider shadow-sm">
-          <CardHeader className="pb-2">
-            <span className="font-medium">可用余额</span>
+        <Card className="sm:col-span-1 border border-divider shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                <svg
+                  className="w-5 h-5 text-green-500 dark:text-green-400"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
+                  <path
+                    clipRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.942a2.235 2.235 0 011.296-.577c.588-.266.705-.599.705-.767 0-.168-.117-.501-.705-.767a2.235 2.235 0 01-1.296-.577v-.093c.657-.197 1.165-.474 1.536-.812.617-.56 1.036-1.3 1.036-2.136 0-.836-.42-1.576-1.037-2.136A4.535 4.535 0 0011 5.092V5z"
+                    fillRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <span className="font-semibold">账户余额</span>
+            </div>
           </CardHeader>
-          <CardBody className="flex flex-col items-center justify-center py-6">
-            <p className="text-3xl font-bold font-mono text-primary">
-              {formatBalance(userInfo.balance)}
-            </p>
-            {/* <p className="text-xs text-default-400 mt-2">相关描述</p> */}
+          <CardBody className="flex flex-col items-center justify-center py-6 pt-2">
+            <div className="p-3 bg-pink-50 dark:bg-pink-900/10 rounded-lg">
+              <span className="text-sm font-semibold text-foreground">
+                可用余额
+              </span>
+              <p className="font-bold text-pink-500 mt-1 text-lg">
+                {formatBalance(userInfo.balance)}
+              </p>
+            </div>
           </CardBody>
         </Card>
       </div>
-
       <h2 className="text-lg font-semibold mb-3">订单记录</h2>
       <div className="flex items-center gap-3 mb-4">
         <div className="flex flex-wrap gap-2">

@@ -428,7 +428,7 @@ export default function AdminPlansPage() {
                           localStorageKey,
                           localStorageValue,
                         );
-                      } catch { }
+                      } catch {}
                       window.dispatchEvent(
                         new CustomEvent("paymentEnabledChanged", {
                           detail: { enabled },
@@ -588,7 +588,7 @@ export default function AdminPlansPage() {
                   </TableCell>
                   <TableCell>
                     <div className="text-sm whitespace-nowrap">
-                      ¥{(item.price / 100).toFixed(2)} 
+                      ¥{(item.price / 100).toFixed(2)}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -840,7 +840,7 @@ export default function AdminPlansPage() {
                         <span>{item.stock}</span>
                       )}
                     </div>
-                  </TableCell>                  
+                  </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
                       <Button

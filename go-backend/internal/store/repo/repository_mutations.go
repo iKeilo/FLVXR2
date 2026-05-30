@@ -533,9 +533,10 @@ func (r *Repository) BuyTrafficWithBalance(userID, buyPrice, buyAmount, flowBefo
 	err = tx.Model(&model.User{}).
 		Where("id = ?", userID).
 		Updates(map[string]interface{}{
-			"balance":      user.Balance - buyPrice,
-			"flow":         newFlow,
-			"updated_time": sql.NullInt64{Int64: now, Valid: true},
+			"balance":       user.Balance - buyPrice,
+			"flow":          newFlow,
+			"traffic_flow":  gorm.Expr("traffic_flow + ?", buyAmount),
+			"updated_time":  sql.NullInt64{Int64: now, Valid: true},
 		}).Error
 	if err != nil {
 		return err
@@ -1519,7 +1520,8 @@ func (r *Repository) CompletePackageOrder(userID int64, userName string, order *
 			if err := tx.Model(&model.User{}).
 				Where("id = ?", userID).
 				Updates(map[string]interface{}{
-					"flow":              gorm.Expr("flow + ?", trafficGB),
+					"flow":               gorm.Expr("flow + ?", trafficGB),
+					"traffic_flow":       gorm.Expr("traffic_flow + ?", trafficGB),
 					"buy_traffic_price":  pkg.Price,
 					"buy_traffic_amount": trafficGB,
 					"updated_time":      now,
@@ -1787,6 +1789,7 @@ func (r *Repository) DeliverTrafficPackageToUser(userID int64, trafficGB int64, 
 		Where("id = ?", userID).
 		Updates(map[string]interface{}{
 			"flow":              gorm.Expr("flow + ?", totalGB),
+			"traffic_flow":      gorm.Expr("traffic_flow + ?", totalGB),
 			"buy_traffic_price":  price,
 			"buy_traffic_amount": totalGB,
 			"updated_time":      time.Now().UnixMilli(),
@@ -1812,7 +1815,10 @@ func (r *Repository) RefundTrafficPackage(userID int64, trafficGB int64) error {
 	}
 	return r.db.Model(&model.User{}).
 		Where("id = ?", userID).
-		Update("flow", gorm.Expr("flow - ?", trafficGB)).Error
+		Updates(map[string]interface{}{
+			"flow":         gorm.Expr("flow - ?", trafficGB),
+			"traffic_flow": gorm.Expr("traffic_flow - ?", trafficGB),
+		}).Error
 }
 
 // ListExpiredPackageSubscriptions returns active subscriptions that have expired.

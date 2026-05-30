@@ -48,7 +48,7 @@ interface ConfigItem {
   description?: string;
   type: "input" | "switch" | "select";
   options?: { label: string; value: string; description?: string }[];
-  dependsOn?: string; // 依赖的配置项key
+  dependsOn?: string | string[]; // 依赖的配置项key，数组时为 OR 逻辑
   dependsValue?: string; // 依赖的配置项值
 }
 const BRAND_PREVIEW_KEYS = ["app_logo", "app_favicon"] as const;
@@ -154,7 +154,7 @@ const CONFIG_ITEMS: ConfigItem[] = [
     placeholder: "请输入 Cloudflare Site Key",
     description: "Cloudflare Turnstile 站点密钥",
     type: "input",
-    dependsOn: "captcha_enabled",
+    dependsOn: ["captcha_enabled", "register_captcha_enabled"],
     dependsValue: "true",
   },
   {
@@ -163,7 +163,7 @@ const CONFIG_ITEMS: ConfigItem[] = [
     placeholder: "请输入 Cloudflare Secret Key",
     description: "Cloudflare Turnstile 密钥",
     type: "input",
-    dependsOn: "captcha_enabled",
+    dependsOn: ["captcha_enabled", "register_captcha_enabled"],
     dependsValue: "true",
   },
 ];
@@ -519,6 +519,17 @@ export default function ConfigPage() {
       changedKeys.forEach((key) => {
         changedPayload[key] = configs[key] || "";
       });
+      // 验证码开启时必须填写 Site Key 和 Secret Key
+      if (
+        (configs.captcha_enabled === "true" ||
+          configs.register_captcha_enabled === "true") &&
+        (!configs.cloudflare_site_key || !configs.cloudflare_secret_key)
+      ) {
+        toast.error("开启验证码时必须填写 Cloudflare Site Key 和 Secret Key");
+        setSaving(false);
+
+        return;
+      }
       // 商城关闭时联动关闭注册
       if (
         changedKeys.includes("payment_enabled") &&
@@ -586,7 +597,11 @@ export default function ConfigPage() {
       return true;
     }
 
-    return configs[item.dependsOn] === item.dependsValue;
+    const keys = Array.isArray(item.dependsOn)
+      ? item.dependsOn
+      : [item.dependsOn];
+
+    return keys.some((k) => configs[k] === item.dependsValue);
   };
   const getBrandInputRef = (key: BrandPreviewKey) => {
     return key === "app_logo" ? logoFileInputRef : faviconFileInputRef;

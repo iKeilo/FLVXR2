@@ -70,13 +70,12 @@ export function Tabs({ children, onSelectionChange, selectedKey }: TabsProps) {
         {tabs.map((item) => (
           <TabsTrigger
             key={item.key}
-            value={item.key}
             className="px-4 py-2 text-base font-semibold"
+            value={item.key}
           >
             {item.title}
           </TabsTrigger>
         ))}
-
       </TabsList>
       {tabs.map((item) => (
         <TabsContent key={item.key} value={item.key}>

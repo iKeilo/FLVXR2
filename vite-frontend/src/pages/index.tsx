@@ -17,12 +17,7 @@ import { siteConfig } from "@/config/site";
 import { title } from "@/components/primitives";
 import { VersionFooter } from "@/components/version-footer";
 import DefaultLayout from "@/layouts/default";
-import {
-  login,
-  register,
-  LoginData,
-  getConfigByName,
-} from "@/api";
+import { login, register, LoginData, getConfigByName } from "@/api";
 import { writeLoginSession } from "@/utils/session";
 import { useWebViewMode } from "@/hooks/useWebViewMode";
 
@@ -95,6 +90,7 @@ export default function IndexPage() {
 
   const validateForm = (): boolean => {
     const newErrors: Partial<LoginForm> = {};
+
     if (!form.username.trim()) {
       newErrors.username = "请输入用户名";
     }
@@ -104,6 +100,7 @@ export default function IndexPage() {
       newErrors.password = "密码长度至少6位";
     }
     setErrors(newErrors);
+
     return Object.keys(newErrors).length === 0;
   };
 
@@ -129,6 +126,7 @@ export default function IndexPage() {
         if (captchaEnabled && siteKey) {
           setLoginCaptchaToken("");
         }
+
         return;
       }
 
@@ -136,6 +134,7 @@ export default function IndexPage() {
         writeLoginSession(response.data);
         toast.success("检测到默认密码，即将跳转到修改密码页面");
         window.location.href = "/change-password";
+
         return;
       }
 
@@ -154,6 +153,7 @@ export default function IndexPage() {
 
     if (captchaEnabled && siteKey && !loginCaptchaToken) {
       setShowLoginCaptcha(true);
+
       return;
     }
 
@@ -194,6 +194,7 @@ export default function IndexPage() {
 
   const handleRegister = async () => {
     const errs: Partial<typeof registerForm> = {};
+
     if (!registerForm.user.trim()) errs.user = "请输入用户名";
     if (!registerForm.password) errs.password = "请输入密码";
     else if (registerForm.password.length < 6)
@@ -205,6 +206,7 @@ export default function IndexPage() {
 
     if (regCaptchaEnabled && regSiteKey && !regCaptchaId) {
       setShowRegCaptcha(true);
+
       return;
     }
 
@@ -219,6 +221,7 @@ export default function IndexPage() {
     ) {
       return "dark";
     }
+
     return "light";
   };
 
@@ -248,7 +251,9 @@ export default function IndexPage() {
                   placeholder="请输入用户名"
                   value={form.username}
                   variant="bordered"
-                  onChange={(e) => handleInputChange("username", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("username", e.target.value)
+                  }
                   onKeyDown={handleKeyPress}
                 />
                 <Input
@@ -259,7 +264,9 @@ export default function IndexPage() {
                   type="password"
                   value={form.password}
                   variant="bordered"
-                  onChange={(e) => handleInputChange("password", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("password", e.target.value)
+                  }
                   onKeyDown={handleKeyPress}
                 />
                 <Button

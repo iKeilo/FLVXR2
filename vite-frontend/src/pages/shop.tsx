@@ -294,6 +294,15 @@ export default function ShopPage() {
                             </p>
                           )}
                         </div>
+                        <div className="flex-shrink-0 ml-2">
+                          {pkg.stock === -1 ? (
+                            <span className="text-xs text-gray-400">不限</span>
+                          ) : pkg.stock === 0 ? (
+                            <span className="text-xs text-red-500 font-medium">已售罄</span>
+                          ) : (
+                            <span className="text-xs text-blue-500 font-medium">库存: {pkg.stock}</span>
+                          )}
+                        </div>
                       </div>
                       <div className="mt-2">
                         <span className="text-2xl font-bold font-mono">
@@ -309,27 +318,42 @@ export default function ShopPage() {
                     <CardBody className="pt-0 space-y-2">
                       {pkg.type === "traffic" ? (
                         <>
-                          <div className="flex flex-wrap gap-1">
-                            <Chip size="sm" variant="flat">
-                              {formatTraffic(pkg.trafficLimit)}
-                            </Chip>
-                          </div>
+                           <div className="flex flex-wrap gap-1">
+                             <Chip
+                               className="rounded-none"
+                               color="primary"
+                               size="sm"
+                               variant="solid"
+                             >
+                               {formatTraffic(pkg.trafficLimit)}
+                             </Chip>
+                           </div>
                           <p className="text-xs text-orange-500">
                             有效期跟随账户到期时间
                           </p>
                         </>
                       ) : pkg.type !== "balance" ? (
                         <>
-                          <div className="flex flex-wrap gap-1">
-                            <Chip size="sm" variant="flat">
-                              {formatTraffic(pkg.trafficLimit)}
-                            </Chip>
-                            <Chip size="sm" variant="flat">
-                              {pkg.speedLimit > 0
-                                ? `${pkg.speedLimit} Mbps`
-                                : "不限速"}
-                            </Chip>
-                          </div>
+                      <div className="flex flex-wrap gap-1 rounded-sm">
+                        <Chip
+                          className="rounded-xs"
+                          color="primary"
+                          size="sm"
+                          variant="solid"
+                        >
+                          {formatTraffic(pkg.trafficLimit)}
+                        </Chip>
+                        <Chip
+                          className="rounded-xs"
+                          color="success"
+                          size="sm"
+                          variant="solid"
+                        >
+                          {pkg.speedLimit > 0
+                            ? `${pkg.speedLimit} Mbps`
+                            : "不限速"}
+                        </Chip>
+                      </div>
                           <div className="text-xs text-gray-400 space-y-0.5">
                             <div>
                               规则 {pkg.maxRules || "不限"} &middot; 连接{" "}
@@ -347,10 +371,10 @@ export default function ShopPage() {
                           <div className="inline-flex items-center gap-1 rounded-lg border border-divider bg-default-50 px-1 py-0.5">
                             <Button
                               isIconOnly
-                              size="sm"
-                              variant="light"
                               className="h-6 w-6 rounded"
                               isDisabled={pkgQuantity <= 1}
+                              size="sm"
+                              variant="light"
                               onPress={() =>
                                 setPkgQuantity((q) => Math.max(1, q - 1))
                               }
@@ -362,30 +386,31 @@ export default function ShopPage() {
                                 viewBox="0 0 24 24"
                               >
                                 <path
+                                  d="M20 12H4"
                                   strokeLinecap="round"
                                   strokeLinejoin="round"
                                   strokeWidth={2}
-                                  d="M20 12H4"
                                 />
                               </svg>
                             </Button>
                             <input
-                              type="number"
                               className="w-12 text-center text-sm font-semibold outline-none bg-transparent [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                               min="1"
+                              type="number"
                               value={pkgQuantity}
                               onChange={(e) => {
                                 const v = parseInt(
                                   e.target.value.replace(/\D/g, ""),
                                 );
+
                                 if (v >= 1) setPkgQuantity(v);
                               }}
                             />
                             <Button
                               isIconOnly
+                              className="h-6 w-6 rounded"
                               size="sm"
                               variant="light"
-                              className="h-6 w-6 rounded"
                               onPress={() =>
                                 setPkgQuantity((q) =>
                                   Math.min(
@@ -402,10 +427,10 @@ export default function ShopPage() {
                                 viewBox="0 0 24 24"
                               >
                                 <path
+                                  d="M12 4v16m8-8H4"
                                   strokeLinecap="round"
                                   strokeLinejoin="round"
                                   strokeWidth={2}
-                                  d="M12 4v16m8-8H4"
                                 />
                               </svg>
                             </Button>
@@ -425,23 +450,6 @@ export default function ShopPage() {
                           <Button isDisabled className="w-full" color="default">
                             已售罄
                           </Button>
-                        ) : pkg.stock > 0 && pkg.stock <= 10 ? (
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1">
-                              <Button
-                                className="w-full"
-                                color="primary"
-                                onPress={() => handleBuyPackage(pkg)}
-                              >
-                                {pkg.type === "balance"
-                                  ? "立即充值"
-                                  : "立即购买"}
-                              </Button>
-                            </div>
-                            <span className="text-xs text-red-500 whitespace-nowrap">
-                              仅剩 {pkg.stock} 份
-                            </span>
-                          </div>
                         ) : (
                           <Button
                             className="w-full"
