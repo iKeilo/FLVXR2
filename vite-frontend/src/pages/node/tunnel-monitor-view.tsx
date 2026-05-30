@@ -490,7 +490,7 @@ export function TunnelMonitorView({
       const saved = localStorage.getItem("tunnel-monitor-quality-range");
 
       if (saved) return Number(saved);
-    } catch { }
+    } catch {}
 
     return 60 * 60 * 1000;
   });
@@ -501,7 +501,7 @@ export function TunnelMonitorView({
         "tunnel-monitor-quality-range",
         String(qualityRangeMs),
       );
-    } catch { }
+    } catch {}
   }, [qualityRangeMs]);
 
   // Tunnel traffic metrics for chart
@@ -515,7 +515,7 @@ export function TunnelMonitorView({
       const saved = localStorage.getItem("tunnel-monitor-traffic-range");
 
       if (saved) return Number(saved);
-    } catch { }
+    } catch {}
 
     return 60 * 60 * 1000;
   });
@@ -526,7 +526,7 @@ export function TunnelMonitorView({
         "tunnel-monitor-traffic-range",
         String(tunnelRangeMs),
       );
-    } catch { }
+    } catch {}
   }, [tunnelRangeMs]);
 
   // --- Load tunnel list ---
@@ -852,9 +852,9 @@ export function TunnelMonitorView({
           <CardBody className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-3 px-4">
             <div className="flex items-center gap-4">
               <Button
+                className="bg-default-100 hover:bg-default-200 font-medium"
                 size="sm"
                 variant="flat"
-                className="bg-default-100 hover:bg-default-200 font-medium"
                 onPress={() => {
                   setDetailTunnelId(null);
                   setQualityHistory([]);
@@ -864,12 +864,14 @@ export function TunnelMonitorView({
                 <ArrowLeft className="w-4 h-4 mr-1" />
                 返回列表
               </Button>
-              <div className="w-[1px] h-5 bg-divider hidden sm:block"></div>
+              <div className="w-[1px] h-5 bg-divider hidden sm:block" />
               <div className="flex items-center gap-2.5">
                 <ArrowRightLeft
                   className={`w-5 h-5 ${detailTunnel.status === 1 ? "text-success" : "text-default-400"}`}
                 />
-                <h3 className="text-lg font-bold text-foreground">{detailTunnel.name}</h3>
+                <h3 className="text-lg font-bold text-foreground">
+                  {detailTunnel.name}
+                </h3>
                 <Chip
                   className="rounded-md font-medium"
                   color={detailTunnel.status === 1 ? "success" : "danger"}
@@ -1193,8 +1195,12 @@ export function TunnelMonitorView({
             }}
           >
             <TableHeader>
-              <TableColumn align="center" className="w-[60px] text-center">状态</TableColumn>
-              <TableColumn align="center" className="w-[100px] text-center">查看</TableColumn>
+              <TableColumn align="center" className="w-[60px] text-center">
+                状态
+              </TableColumn>
+              <TableColumn align="center" className="w-[100px] text-center">
+                查看
+              </TableColumn>
               <TableColumn align="start">
                 隧道监控名称
                 <span className="text-primary-600 font-bold text-[10px] ml-1">
@@ -1203,7 +1209,9 @@ export function TunnelMonitorView({
               </TableColumn>
               <TableColumn align="start">入口→出口</TableColumn>
               <TableColumn align="start">出口→Bing</TableColumn>
-              <TableColumn align="center" className="text-center">更新时间</TableColumn>
+              <TableColumn align="center" className="text-center">
+                更新时间
+              </TableColumn>
             </TableHeader>
             <TableBody emptyContent="暂无隧道">
               {tunnels.map((tunnel) => {

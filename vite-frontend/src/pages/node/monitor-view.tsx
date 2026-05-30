@@ -589,7 +589,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
       const saved = localStorage.getItem("monitor-metric-type");
 
       if (saved) return saved as MetricType;
-    } catch { }
+    } catch {}
 
     return "cpu";
   });
@@ -597,7 +597,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
   useEffect(() => {
     try {
       localStorage.setItem("monitor-metric-type", activeMetricType);
-    } catch { }
+    } catch {}
   }, [activeMetricType]);
 
   useEffect(() => {
@@ -612,7 +612,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
       const saved = localStorage.getItem("monitor-metrics-range");
 
       if (saved) return Number(saved);
-    } catch { }
+    } catch {}
 
     return 60 * 60 * 1000;
   });
@@ -620,7 +620,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
   useEffect(() => {
     try {
       localStorage.setItem("monitor-metrics-range", String(metricsRangeMs));
-    } catch { }
+    } catch {}
   }, [metricsRangeMs]);
 
   const [serviceMonitors, setServiceMonitors] = useState<
@@ -658,7 +658,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
         const saved = localStorage.getItem("monitor-service-range");
 
         if (saved) return Number(saved);
-      } catch { }
+      } catch {}
 
       return 60 * 60 * 1000;
     },
@@ -670,7 +670,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
         "monitor-service-range",
         String(serviceMonitorRangeMs),
       );
-    } catch { }
+    } catch {}
   }, [serviceMonitorRangeMs]);
 
   const [accessDenied, setAccessDenied] = useState<string | null>(null);
@@ -681,7 +681,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
       const saved = localStorage.getItem("monitor-results-limit");
 
       if (saved) return Number(saved);
-    } catch { }
+    } catch {}
 
     return 20;
   });
@@ -689,7 +689,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
   useEffect(() => {
     try {
       localStorage.setItem("monitor-results-limit", String(resultsLimit));
-    } catch { }
+    } catch {}
   }, [resultsLimit]);
   const [resultsLoading, setResultsLoading] = useState(false);
 
@@ -1389,8 +1389,8 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
   const detailServiceMonitors =
     detailNodeId != null
       ? serviceMonitors.filter(
-        (m) => m.nodeId === detailNodeId || m.nodeId === 0,
-      )
+          (m) => m.nodeId === detailNodeId || m.nodeId === 0,
+        )
       : serviceMonitors;
 
   return (
@@ -1500,16 +1500,24 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                 }}
               >
                 <TableHeader>
-                  <TableColumn align="center" className="w-[60px]">状态</TableColumn>
-                  <TableColumn align="center" className="w-[60px]">查看</TableColumn>
+                  <TableColumn align="center" className="w-[60px]">
+                    状态
+                  </TableColumn>
+                  <TableColumn align="center" className="w-[60px]">
+                    查看
+                  </TableColumn>
                   <TableColumn align="center">
                     节点监控名称
-                    <span className="text-primary-600 font-bold text-[10px] ml-1">^{nodes.length}个</span>
+                    <span className="text-primary-600 font-bold text-[10px] ml-1">
+                      ^{nodes.length}个
+                    </span>
                   </TableColumn>
                   <TableColumn align="center">速率</TableColumn>
                   <TableColumn align="center">流量</TableColumn>
                   <TableColumn align="center">开机时长</TableColumn>
-                  <TableColumn align="center" className="min-w-[90px]">连接数</TableColumn>
+                  <TableColumn align="center" className="min-w-[90px]">
+                    连接数
+                  </TableColumn>
                   <TableColumn align="center">CPU</TableColumn>
                   <TableColumn align="center">RAM</TableColumn>
                   <TableColumn align="center">存储</TableColumn>
@@ -1530,7 +1538,9 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                       >
                         <TableCell>
                           <div className="flex justify-center w-full">
-                            <div className={`w-2 h-2 rounded-full ${isOnline ? "bg-success" : "bg-danger"}`} />
+                            <div
+                              className={`w-2 h-2 rounded-full ${isOnline ? "bg-success" : "bg-danger"}`}
+                            />
                           </div>
                         </TableCell>
                         <TableCell>
@@ -1556,8 +1566,8 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                               style={{
                                 color: isOnline
                                   ? getDistroColor(
-                                    parseDistroFromVersion(node.version),
-                                  )
+                                      parseDistroFromVersion(node.version),
+                                    )
                                   : undefined,
                               }}
                             />
@@ -1706,15 +1716,15 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
             <CardBody className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-3 px-4">
               <div className="flex items-center gap-4">
                 <Button
+                  className="bg-default-100 hover:bg-default-200 font-medium"
                   size="sm"
                   variant="flat"
-                  className="bg-default-100 hover:bg-default-200 font-medium"
                   onPress={() => setDetailNodeId(null)}
                 >
                   <ArrowLeft className="w-4 h-4 mr-1" />
                   返回列表
                 </Button>
-                <div className="w-[1px] h-5 bg-divider hidden sm:block"></div>
+                <div className="w-[1px] h-5 bg-divider hidden sm:block" />
                 <div className="flex items-center gap-2.5">
                   <DistroIcon
                     className="w-5 h-5"
@@ -1722,7 +1732,9 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                     style={{
                       color:
                         detailNode?.connectionStatus === "online"
-                          ? getDistroColor(parseDistroFromVersion(detailNode?.version))
+                          ? getDistroColor(
+                              parseDistroFromVersion(detailNode?.version),
+                            )
                           : undefined,
                     }}
                   />
@@ -1731,11 +1743,17 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                   </h3>
                   <Chip
                     className="rounded-md font-medium"
-                    color={detailNode?.connectionStatus === "online" ? "success" : "danger"}
+                    color={
+                      detailNode?.connectionStatus === "online"
+                        ? "success"
+                        : "danger"
+                    }
                     size="sm"
                     variant="flat"
                   >
-                    {detailNode?.connectionStatus === "online" ? "在线" : "离线"}
+                    {detailNode?.connectionStatus === "online"
+                      ? "在线"
+                      : "离线"}
                   </Chip>
                 </div>
               </div>
@@ -1743,10 +1761,16 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                 {wsConnected ? (
                   <LiveDot />
                 ) : (
-                  <div className={`w-2 h-2 rounded-full ${wsConnecting ? "bg-warning" : "bg-default-300"}`} />
+                  <div
+                    className={`w-2 h-2 rounded-full ${wsConnecting ? "bg-warning" : "bg-default-300"}`}
+                  />
                 )}
                 <span className="font-medium">
-                  {wsConnected ? "实时已连接" : wsConnecting ? "实时连接中" : "实时未连接"}
+                  {wsConnected
+                    ? "实时已连接"
+                    : wsConnecting
+                      ? "实时连接中"
+                      : "实时未连接"}
                 </span>
               </div>
             </CardBody>
@@ -1940,7 +1964,8 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                               }}
                             >
                               <div
-                                className={`w-2 h-2 rounded-full shrink-0 mr-1 ${monitor.enabled !== 1
+                                className={`w-2 h-2 rounded-full shrink-0 mr-1 ${
+                                  monitor.enabled !== 1
                                     ? "bg-default-300"
                                     : !lr
                                       ? "bg-default-400"
@@ -1951,7 +1976,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                                         : isActive
                                           ? "bg-white"
                                           : "bg-danger"
-                                  }`}
+                                }`}
                               />
                               {monitor.name}
                             </Button>
@@ -1973,7 +1998,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                               每秒测试，30秒上报
                             </span>
                             {activeLatestResult &&
-                              Number.isFinite(activeLatestResult.latencyMs) ? (
+                            Number.isFinite(activeLatestResult.latencyMs) ? (
                               <span className="font-mono text-xs font-semibold text-success">
                                 {activeLatestResult.latencyMs.toFixed(0)}ms
                               </span>
@@ -2320,7 +2345,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                 description={`最小 ${resolvedServiceMonitorLimits.minIntervalSec}s（扫描周期 ${resolvedServiceMonitorLimits.checkerScanIntervalSec}s）`}
                 errorMessage={
                   monitorForm.intervalSec <
-                    resolvedServiceMonitorLimits.minIntervalSec
+                  resolvedServiceMonitorLimits.minIntervalSec
                     ? `不能小于 ${resolvedServiceMonitorLimits.minIntervalSec}s`
                     : undefined
                 }
@@ -2345,16 +2370,16 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                 errorMessage={
                   monitorForm.timeoutSec <
                     resolvedServiceMonitorLimits.minTimeoutSec ||
-                    monitorForm.timeoutSec >
+                  monitorForm.timeoutSec >
                     resolvedServiceMonitorLimits.maxTimeoutSec
                     ? `需在 ${resolvedServiceMonitorLimits.minTimeoutSec}-${resolvedServiceMonitorLimits.maxTimeoutSec}s 范围内`
                     : undefined
                 }
                 isInvalid={
                   monitorForm.timeoutSec <
-                  resolvedServiceMonitorLimits.minTimeoutSec ||
+                    resolvedServiceMonitorLimits.minTimeoutSec ||
                   monitorForm.timeoutSec >
-                  resolvedServiceMonitorLimits.maxTimeoutSec
+                    resolvedServiceMonitorLimits.maxTimeoutSec
                 }
                 label="超时时间(秒)"
                 type="number"

@@ -145,6 +145,7 @@ export function VersionFooter({
     setReleasesLoading(true);
     try {
       const res = await getPanelReleases(channel);
+
       if (res.code === 0 && res.data) {
         setReleases(res.data);
         if (!panelLatestVersion && res.data.length > 0) {
@@ -168,6 +169,7 @@ export function VersionFooter({
     setUpgrading(true);
     try {
       const res = await runSystemUpgrade(selectedVersion || undefined, channel);
+
       if (res.code === 0) {
         setUpgradeModalOpen(false);
         toast.success(res.data?.message || "升级已触发，面板将自动重启");
@@ -228,13 +230,14 @@ export function VersionFooter({
               <span className="text-gray-600 dark:text-white">{version}</span>
             </p>
             <p className={versionClassName}>
-              <span className="text-blue-600 dark:text-white text-[10px]">⬇</span>
+              <span className="text-blue-600 dark:text-white text-[10px]">
+                ⬇
+              </span>
             </p>
             <p className={versionClassName}>
               <span className={updateBadgeClassName} role="status">
                 {latestUpdateVersion}
-              </span>
-              {" "}
+              </span>{" "}
               {showUpdateInfo && (
                 <Button
                   className="inline-flex w-[24px] h-[16px] px-0 text-[9px] min-w-0 rounded-xs font-semibold [&>span]:text-[9px]"
@@ -249,8 +252,7 @@ export function VersionFooter({
           </div>
         ) : (
           <p className={versionClassName}>
-            <span className="text-gray-600 dark:text-white">{version}</span>
-            {" "}
+            <span className="text-gray-600 dark:text-white">{version}</span>{" "}
             {showUpdateInfo && (
               <Button
                 className="inline-flex w-[24px] h-[16px] px-0 text-[9px] min-w-0 rounded-xs font-semibold [&>span]:text-[9px]"
@@ -404,7 +406,10 @@ export function VersionFooter({
                       <div className="text-default-500 text-left">
                         目标版本：
                         <span className="font-medium text-default-900 dark:text-white">
-                          {selectedVersion || (panelLatestVersion ? `${panelLatestVersion}` : "最新版本")}
+                          {selectedVersion ||
+                            (panelLatestVersion
+                              ? `${panelLatestVersion}`
+                              : "最新版本")}
                         </span>
                       </div>
                     </div>
@@ -414,6 +419,7 @@ export function VersionFooter({
                       selectedKeys={selectedVersion ? [selectedVersion] : []}
                       onSelectionChange={(keys) => {
                         const selected = Array.from(keys)[0] as string;
+
                         setSelectedVersion(selected || "");
                       }}
                     >

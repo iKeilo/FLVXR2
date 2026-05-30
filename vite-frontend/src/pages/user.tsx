@@ -287,14 +287,26 @@ export default function UserPage() {
     autoBuyTrafficPackageType: "custom",
   });
   const [userFormLoading, setUserFormLoading] = useState(false);
-  const [autoBuyPackages, setAutoBuyPackages] = useState<{ id: number; name: string; trafficLimit: number; price: number; }[]>([]);
+  const [autoBuyPackages, setAutoBuyPackages] = useState<
+    { id: number; name: string; trafficLimit: number; price: number }[]
+  >([]);
   const loadAutoBuyPackages = useCallback(async () => {
     try {
       const res = await listAutoBuyTrafficPackages();
+
       if (res.code === 0 && Array.isArray(res.data)) {
-        setAutoBuyPackages(res.data.map((p: any) => ({ id: p.id, name: p.name, trafficLimit: p.trafficLimit, price: p.price })));
+        setAutoBuyPackages(
+          res.data.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            trafficLimit: p.trafficLimit,
+            price: p.price,
+          })),
+        );
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, []);
   const editingUser = useMemo(
     () =>
@@ -323,7 +335,9 @@ export default function UserPage() {
     useState<User | null>(null);
   const [renewalLogs, setRenewalLogs] = useState<UserRenewalLog[]>([]);
   const [renewalLogLoading, setRenewalLogLoading] = useState(false);
-  const [renewalLogToDelete, setRenewalLogToDelete] = useState<number | null>(null);
+  const [renewalLogToDelete, setRenewalLogToDelete] = useState<number | null>(
+    null,
+  );
   const [regOpen, setRegOpen] = useState(true);
   const [regLoading, setRegLoading] = useState(false);
   // --- 监控权限相关状态 (来自 user 新) ---
@@ -574,11 +588,18 @@ export default function UserPage() {
   const handleRegToggle = async (enabled: boolean) => {
     setRegLoading(true);
     try {
-      const res = await updateConfig("registration_enabled", enabled ? "1" : "0");
+      const res = await updateConfig(
+        "registration_enabled",
+        enabled ? "1" : "0",
+      );
+
       if (res.code === 0) {
         setRegOpen(enabled);
         try {
-          localStorage.setItem("vite_config_registration_enabled", enabled ? "1" : "0");
+          localStorage.setItem(
+            "vite_config_registration_enabled",
+            enabled ? "1" : "0",
+          );
         } catch {}
         window.dispatchEvent(new CustomEvent("configUpdated"));
         toast.success(enabled ? "注册已开启" : "注册已关闭");
@@ -841,14 +862,18 @@ export default function UserPage() {
   }, [loadUsers]);
   useEffect(() => {
     const loadReg = () => {
-      getConfigByName("registration_enabled").then((res) => {
-        if (res.code === 0 && res.data) {
-          setRegOpen(res.data.value !== "0");
-        }
-      }).catch(() => {});
+      getConfigByName("registration_enabled")
+        .then((res) => {
+          if (res.code === 0 && res.data) {
+            setRegOpen(res.data.value !== "0");
+          }
+        })
+        .catch(() => {});
     };
+
     loadReg();
     window.addEventListener("configUpdated", loadReg);
+
     return () => window.removeEventListener("configUpdated", loadReg);
   }, []);
   usePullToRefresh(loadUsers);
@@ -1012,7 +1037,8 @@ export default function UserPage() {
       buyTrafficAmount: user.buyTrafficAmount ?? 0,
       buyTrafficPrice: user.buyTrafficPrice ?? 0,
       autoBuyTrafficPackageId: user.autoBuyTrafficPackageId ?? 0,
-      autoBuyTrafficPackageType: (user.autoBuyTrafficPackageId ?? 0) > 0 ? "package" : "custom",
+      autoBuyTrafficPackageType:
+        (user.autoBuyTrafficPackageId ?? 0) > 0 ? "package" : "custom",
     });
     onUserModalOpen();
   };
@@ -1178,6 +1204,7 @@ export default function UserPage() {
   const handleDeleteRenewalLog = async (id: number) => {
     try {
       const res = await deleteUserRenewalLog(id);
+
       if (res.code === 0) {
         toast.success("删除成功");
         if (selectedRenewalLogUser) {
@@ -1194,6 +1221,7 @@ export default function UserPage() {
               }),
             });
             const refreshData = await refreshRes.json();
+
             if (refreshData.code === 0) {
               setRenewalLogs(refreshData.data || []);
             }
@@ -1831,11 +1859,11 @@ export default function UserPage() {
               )}
               <div className="ml-auto">
                 <Switch
-                  title="开启后允许用户自助注册账号"
                   className="data-[state=unchecked]:bg-default-300"
                   isDisabled={regLoading}
                   isSelected={regOpen}
                   size="sm"
+                  title="开启后允许用户自助注册账号"
                   onValueChange={handleRegToggle}
                 >
                   开放注册
@@ -2867,9 +2895,19 @@ export default function UserPage() {
                     onValueChange={(value: string) => {
                       if (value === "package") {
                         loadAutoBuyPackages();
-                        setUserForm((prev) => ({ ...prev, autoBuyTrafficPackageType: "package", autoBuyTrafficPackageId: 0 }));
+                        setUserForm((prev) => ({
+                          ...prev,
+                          autoBuyTrafficPackageType: "package",
+                          autoBuyTrafficPackageId: 0,
+                        }));
                       } else {
-                        setUserForm((prev) => ({ ...prev, autoBuyTrafficPackageType: "custom", autoBuyTrafficPackageId: 0, buyTrafficAmount: 0, buyTrafficPrice: 0 }));
+                        setUserForm((prev) => ({
+                          ...prev,
+                          autoBuyTrafficPackageType: "custom",
+                          autoBuyTrafficPackageId: 0,
+                          buyTrafficAmount: 0,
+                          buyTrafficPrice: 0,
+                        }));
                       }
                     }}
                   >
@@ -2879,17 +2917,24 @@ export default function UserPage() {
                   {userForm.autoBuyTrafficPackageType === "package" ? (
                     <Select
                       label="自动购流套餐"
-                      variant="bordered"
                       selectedKeys={[String(userForm.autoBuyTrafficPackageId)]}
+                      variant="bordered"
                       onSelectionChange={(keys) => {
                         const val = Array.from(keys)[0] as string;
+
                         if (val) {
-                          setUserForm((prev) => ({ ...prev, autoBuyTrafficPackageId: Number(val) }));
+                          setUserForm((prev) => ({
+                            ...prev,
+                            autoBuyTrafficPackageId: Number(val),
+                          }));
                         }
                       }}
                     >
                       {autoBuyPackages.map((p) => (
-                        <SelectItem key={String(p.id)}>{p.name} ({p.trafficLimit}GB / ¥{(p.price / 100).toFixed(2)})</SelectItem>
+                        <SelectItem key={String(p.id)}>
+                          {p.name} ({p.trafficLimit}GB / ¥
+                          {(p.price / 100).toFixed(2)})
+                        </SelectItem>
                       ))}
                     </Select>
                   ) : (
@@ -2900,10 +2945,18 @@ export default function UserPage() {
                         placeholder="选填"
                         step="1"
                         type="number"
-                        value={userForm.buyTrafficAmount > 0 ? userForm.buyTrafficAmount.toString() : ""}
+                        value={
+                          userForm.buyTrafficAmount > 0
+                            ? userForm.buyTrafficAmount.toString()
+                            : ""
+                        }
                         onChange={(e) => {
                           const value = Number(e.target.value);
-                          setUserForm((prev) => ({ ...prev, buyTrafficAmount: Math.round(value) }));
+
+                          setUserForm((prev) => ({
+                            ...prev,
+                            buyTrafficAmount: Math.round(value),
+                          }));
                         }}
                       />
                       <Input
@@ -2912,16 +2965,24 @@ export default function UserPage() {
                         placeholder="选填"
                         step="1"
                         type="number"
-                        value={userForm.buyTrafficPrice > 0 ? userForm.buyTrafficPrice.toString() : ""}
+                        value={
+                          userForm.buyTrafficPrice > 0
+                            ? userForm.buyTrafficPrice.toString()
+                            : ""
+                        }
                         onChange={(e) => {
                           const value = Number(e.target.value);
-                          setUserForm((prev) => ({ ...prev, buyTrafficPrice: Math.round(value) }));
+
+                          setUserForm((prev) => ({
+                            ...prev,
+                            buyTrafficPrice: Math.round(value),
+                          }));
                         }}
                       />
                     </div>
                   )}
                 </div>
-              )}              
+              )}
             </div>
           </ModalBody>
           <ModalFooter>
@@ -4223,7 +4284,7 @@ export default function UserPage() {
                           ? "admin"
                           : "系统自动"}
                       </span>
-        <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="text-xs text-default-500">
                           {formatDate(item.resetTime)}
                         </span>

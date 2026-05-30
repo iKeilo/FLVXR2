@@ -89,8 +89,11 @@ export interface LoginResponse {
 export const login = (data: LoginData) =>
   Network.post<LoginResponse>("/user/login", data);
 
-export const register = (data: { user: string; password: string; captchaId?: string }) =>
-  Network.post<LoginResponse>("/user/register", data);
+export const register = (data: {
+  user: string;
+  password: string;
+  captchaId?: string;
+}) => Network.post<LoginResponse>("/user/register", data);
 
 // 用户CRUD操作 - 全部使用POST请求
 export const createUser = (data: UserMutationPayload) =>
@@ -102,8 +105,18 @@ export const updateUser = (data: UserMutationPayload) =>
 export const deleteUser = (id: number) => Network.post("/user/delete", { id });
 export const toggleUserAutoRenew = (id: number, autoRenew: number) =>
   Network.post("/user/toggle-auto-renew", { id, autoRenew });
-export const toggleUserAutoBuyTraffic = (id: number, autoBuyTraffic: number, autoBuyTrafficPackageId?: number) =>
-  Network.post("/user/toggle-auto-buy-traffic", { id, autoBuyTraffic, ...(autoBuyTrafficPackageId !== undefined ? { autoBuyTrafficPackageId } : {}) });
+export const toggleUserAutoBuyTraffic = (
+  id: number,
+  autoBuyTraffic: number,
+  autoBuyTrafficPackageId?: number,
+) =>
+  Network.post("/user/toggle-auto-buy-traffic", {
+    id,
+    autoBuyTraffic,
+    ...(autoBuyTrafficPackageId !== undefined
+      ? { autoBuyTrafficPackageId }
+      : {}),
+  });
 export const getUserPackageInfo = () =>
   Network.post<UserPackageInfoApiData>("/user/package");
 
@@ -1045,8 +1058,10 @@ export const assignPackageToUser = (data: {
   packageId: number;
 }) => Network.post("/package/assign", data);
 
-export const togglePackageAutoBuyTraffic = (data: { id: number; enabled: number }) =>
-  Network.post("/package/toggle-auto-buy-traffic", data);
+export const togglePackageAutoBuyTraffic = (data: {
+  id: number;
+  enabled: number;
+}) => Network.post("/package/toggle-auto-buy-traffic", data);
 
 export const listAutoBuyTrafficPackages = () =>
   Network.post<SubscriptionPackageApiItem[]>("/package/auto-buy-traffic/list");
