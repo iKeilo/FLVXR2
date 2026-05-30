@@ -564,6 +564,12 @@ EOF
   echo "📚 文档地址：https://tes.cc/guide.html"
   echo "⚠️  请妥善保管管理员密码！"
 
+  # 上报安装统计
+  local install_count=$(curl -fsSL --max-time 3 "${LICENSE_SERVER_URL}/api/stats/install" 2>/dev/null | grep -o '"total":[0-9]*' | grep -o '[0-9]*')
+  if [[ -n "$install_count" ]]; then
+    echo ""
+    echo "📊 累计安装次数：${install_count}"
+  fi
 
 }
 
@@ -688,6 +694,13 @@ update_panel() {
   fi
 
   echo "✅ 更新完成"
+
+  # 上报安装统计
+  local install_count=$(curl -fsSL --max-time 3 "${LICENSE_SERVER_URL}/api/stats/install" 2>/dev/null | grep -o '"total":[0-9]*' | grep -o '[0-9]*')
+  if [[ -n "$install_count" ]]; then
+    echo ""
+    echo "📊 累计安装次数：${install_count}"
+  fi
 }
 
 
