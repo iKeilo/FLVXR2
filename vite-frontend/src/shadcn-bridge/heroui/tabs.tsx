@@ -56,11 +56,12 @@ function parseTabs(children: React.ReactNode) {
 export function Tabs({ children, onSelectionChange, selectedKey }: TabsProps) {
   const tabs = React.useMemo(() => parseTabs(children), [children]);
   const fallback = tabs[0]?.key ?? "";
-  const value = selectedKey ? String(selectedKey) : fallback;
+  const isControlled = selectedKey !== undefined;
+  const value = isControlled ? String(selectedKey) : fallback;
 
   return (
     <BaseTabs
-      value={value}
+      {...(isControlled ? { value } : { defaultValue: fallback })}
       onValueChange={(nextValue) => {
         onSelectionChange?.(nextValue);
       }}

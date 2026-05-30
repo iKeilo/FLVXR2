@@ -19,6 +19,7 @@ import {
   ModalFooter,
 } from "@/shadcn-bridge/heroui/modal";
 import { Chip } from "@/shadcn-bridge/heroui/chip";
+import { Tabs, Tab } from "@/shadcn-bridge/heroui/tabs";
 import {
   getPaymentConfigs,
   getPackageList,
@@ -42,8 +43,32 @@ export default function ShopPage() {
   const [confirmReplaceOpen, setConfirmReplaceOpen] = useState(false);
   const [pendingBuyPkg, setPendingBuyPkg] =
     useState<SubscriptionPackageApiItem | null>(null);
-  const [expandedType, setExpandedType] = useState<string | null>(null);
   const [pkgQuantity, setPkgQuantity] = useState(1);
+
+  const subPkgs = packages.filter((p) => p.type === "subscription" || !p.type);
+  const trafficPkgs = packages.filter((p) => p.type === "traffic");
+  const balancePkgs = packages.filter((p) => p.type === "balance");
+
+  const typeSections = [
+    {
+      type: "subscription" as const,
+      icon: "📦",
+      title: "订阅套餐",
+      items: subPkgs,
+    },
+    {
+      type: "traffic" as const,
+      icon: "⚡",
+      title: "流量快餐",
+      items: trafficPkgs,
+    },
+    {
+      type: "balance" as const,
+      icon: "💰",
+      title: "余额充值",
+      items: balancePkgs,
+    },
+  ].filter((s) => s.items.length > 0);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -226,286 +251,211 @@ export default function ShopPage() {
           <p className="text-lg">暂无可用套餐</p>
           <p className="text-sm mt-1">请联系管理员</p>
         </div>
+      ) : typeSections.length === 0 ? (
+        <div className="text-center py-20 text-gray-400">
+          <p className="text-lg">暂无可用套餐</p>
+          <p className="text-sm mt-1">请联系管理员</p>
+        </div>
       ) : (
-        (() => {
-          const subPkgs = packages.filter(
-            (p) => p.type === "subscription" || !p.type,
-          );
-          const trafficPkgs = packages.filter((p) => p.type === "traffic");
-          const balancePkgs = packages.filter((p) => p.type === "balance");
-          const typeSections = [
-            {
-              type: "subscription",
-              icon: "📦",
-              title: "订阅套餐",
-              desc: "按月/年订阅，享受完整服务",
-              items: subPkgs,
-              color: "primary" as const,
-            },
-            {
-              type: "traffic",
-              icon: "⚡",
-              title: "流量快餐",
-              desc: "额外流量包，用完即止",
-              items: trafficPkgs,
-              color: "warning" as const,
-            },
-            {
-              type: "balance",
-              icon: "💰",
-              title: "余额充值",
-              desc: "充值到账户余额，不退款",
-              items: balancePkgs,
-              color: "success" as const,
-            },
-          ].filter((s) => s.items.length > 0);
-
-          const getPriceRange = (items: SubscriptionPackageApiItem[]) => {
-            const prices = items.map((i) => i.price);
-            const min = Math.min(...prices);
-            const max = Math.max(...prices);
-
-            if (min === max) return `¥${(min / 100).toFixed(2)}`;
-
-            return `¥${(min / 100).toFixed(2)} - ¥${(max / 100).toFixed(2)}`;
-          };
-
-          return (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                {typeSections.map((s) => {
-                  const isExpanded = expandedType === s.type;
-
-                  return (
-                    <Card
-                      key={s.type}
-                      className={`border transition-all cursor-pointer select-none ${
-                        isExpanded
-                          ? "border-primary shadow-md"
-                          : "border-divider hover:shadow-md"
-                      }`}
-                      onClick={() =>
-                        setExpandedType(isExpanded ? null : s.type)
-                      }
-                    >
-                      <CardBody className="flex flex-col items-center text-center py-6 gap-2">
-                        <span className="text-4xl">{s.icon}</span>
-                        <h3 className="text-lg font-semibold">{s.title}</h3>
-                        <p className="text-xs text-gray-400">{s.desc}</p>
-                        <div className="flex items-center gap-3 mt-1 text-sm">
-                          <Chip size="sm" variant="flat">
-                            {s.items.length}个套餐
-                          </Chip>
-                          <span className="text-default-500 font-mono text-xs">
-                            {getPriceRange(s.items)}
+        <Tabs>
+          {typeSections.map((s) => (
+            <Tab
+              key={s.type}
+              title={
+                <span className="flex items-center gap-1.5">
+                  <span>{s.icon}</span>
+                  <span>{s.title}</span>
+                  <span className="text-xs text-gray-400">
+                    ({s.items.length})
+                  </span>
+                </span>
+              }
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                {s.items.map((pkg) => (
+                  <Card
+                    key={pkg.id}
+                    className="border border-divider shadow-sm hover:shadow-md transition-shadow relative overflow-visible"
+                  >
+                    {s.type === "subscription" &&
+                      s.items.indexOf(pkg) === 0 && (
+                        <div className="absolute -top-2 -right-2 z-10">
+                          <span className="bg-primary text-primary-foreground text-[10px] px-2 py-0.5 rounded-full font-semibold">
+                            推荐
                           </span>
                         </div>
-                        <Button
-                          className="mt-2"
-                          color={s.color}
-                          size="sm"
-                          variant={isExpanded ? "flat" : "light"}
-                        >
-                          {isExpanded ? "收起 ▲" : "查看全部 ▼"}
-                        </Button>
-                      </CardBody>
-                    </Card>
-                  );
-                })}
+                      )}
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between w-full">
+                        <div>
+                          <h3 className="text-lg font-semibold">{pkg.name}</h3>
+                          {pkg.description && (
+                            <p className="text-xs text-gray-400 mt-1">
+                              {pkg.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-2">
+                        <span className="text-2xl font-bold font-mono">
+                          &yen;{(pkg.price / 100).toFixed(2)}
+                        </span>
+                        {pkg.type === "subscription" && (
+                          <span className="text-sm text-gray-400 ml-1">
+                            /{pkg.validityDays}天
+                          </span>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardBody className="pt-0 space-y-2">
+                      {pkg.type === "traffic" ? (
+                        <>
+                          <div className="flex flex-wrap gap-1">
+                            <Chip size="sm" variant="flat">
+                              {formatTraffic(pkg.trafficLimit)}
+                            </Chip>
+                          </div>
+                          <p className="text-xs text-orange-500">
+                            有效期跟随账户到期时间
+                          </p>
+                        </>
+                      ) : pkg.type !== "balance" ? (
+                        <>
+                          <div className="flex flex-wrap gap-1">
+                            <Chip size="sm" variant="flat">
+                              {formatTraffic(pkg.trafficLimit)}
+                            </Chip>
+                            <Chip size="sm" variant="flat">
+                              {pkg.speedLimit > 0
+                                ? `${pkg.speedLimit} Mbps`
+                                : "不限速"}
+                            </Chip>
+                          </div>
+                          <div className="text-xs text-gray-400 space-y-0.5">
+                            <div>
+                              规则 {pkg.maxRules || "不限"} &middot; 连接{" "}
+                              {pkg.maxConnections || "不限"}
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-xs text-orange-500">
+                          充值到账户余额 不退款
+                        </p>
+                      )}
+                      {pkg.type === "subscription" && (
+                        <p className="text-xs text-orange-500">
+                          重复购买将替换现有套餐
+                        </p>
+                      )}
+                      {pkg.type === "balance" && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <Button
+                            isIconOnly
+                            isDisabled={pkgQuantity <= 1}
+                            size="sm"
+                            variant="flat"
+                            onPress={() =>
+                              setPkgQuantity((q) => Math.max(1, q - 1))
+                            }
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                d="M20 12H4"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                              />
+                            </svg>
+                          </Button>
+                          <Input
+                            className="w-16 text-center"
+                            min="1"
+                            type="number"
+                            value={String(pkgQuantity)}
+                            variant="bordered"
+                            onChange={(e) => {
+                              const v = parseInt(e.target.value);
+
+                              if (v >= 1) setPkgQuantity(v);
+                            }}
+                          />
+                          <Button
+                            isIconOnly
+                            size="sm"
+                            variant="flat"
+                            onPress={() =>
+                              setPkgQuantity((q) =>
+                                Math.min(
+                                  pkg.stock > 0 ? pkg.stock : 100,
+                                  q + 1,
+                                ),
+                              )
+                            }
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                d="M12 4v16m8-8H4"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                              />
+                            </svg>
+                          </Button>
+                          <span className="text-xs text-default-400 ml-1">
+                            ¥{((pkg.price / 100) * pkgQuantity).toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="mt-2">
+                        {pkg.stock === 0 ? (
+                          <Button isDisabled className="w-full" color="default">
+                            已售罄
+                          </Button>
+                        ) : pkg.stock > 0 && pkg.stock <= 10 ? (
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1">
+                              <Button
+                                className="w-full"
+                                color="primary"
+                                onPress={() => handleBuyPackage(pkg)}
+                              >
+                                {pkg.type === "balance"
+                                  ? "立即充值"
+                                  : "立即购买"}
+                              </Button>
+                            </div>
+                            <span className="text-xs text-red-500 whitespace-nowrap">
+                              仅剩 {pkg.stock} 份
+                            </span>
+                          </div>
+                        ) : (
+                          <Button
+                            className="w-full"
+                            color="primary"
+                            onPress={() => handleBuyPackage(pkg)}
+                          >
+                            {pkg.type === "balance" ? "立即充值" : "立即购买"}
+                          </Button>
+                        )}
+                      </div>
+                    </CardBody>
+                  </Card>
+                ))}
               </div>
-
-              {typeSections.map((s) => {
-                if (expandedType !== s.type) return null;
-
-                return (
-                  <div key={s.type} className="mb-8">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                      {s.items.map((pkg) => (
-                        <Card
-                          key={pkg.id}
-                          className="border border-divider shadow-sm hover:shadow-md transition-shadow"
-                        >
-                          <CardHeader className="pb-2">
-                            <div className="flex items-start justify-between w-full">
-                              <div>
-                                <h3 className="text-lg font-semibold">
-                                  {pkg.name}
-                                </h3>
-                                {pkg.description && (
-                                  <p className="text-xs text-gray-400 mt-1">
-                                    {pkg.description}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <div className="mt-2">
-                              <span className="text-2xl font-bold font-mono">
-                                &yen;{(pkg.price / 100).toFixed(2)}
-                              </span>
-                              {pkg.type === "subscription" && (
-                                <span className="text-sm text-gray-400 ml-1">
-                                  /{pkg.validityDays}天
-                                </span>
-                              )}
-                            </div>
-                          </CardHeader>
-                          <CardBody className="pt-0 space-y-2">
-                            {pkg.type === "traffic" ? (
-                              <>
-                                <div className="flex flex-wrap gap-1">
-                                  <Chip size="sm" variant="flat">
-                                    {formatTraffic(pkg.trafficLimit)}
-                                  </Chip>
-                                </div>
-                                <p className="text-xs text-orange-500">
-                                  有效期跟随账户到期时间
-                                </p>
-                              </>
-                            ) : pkg.type !== "balance" ? (
-                              <>
-                                <div className="flex flex-wrap gap-1">
-                                  <Chip size="sm" variant="flat">
-                                    {formatTraffic(pkg.trafficLimit)}
-                                  </Chip>
-                                  <Chip size="sm" variant="flat">
-                                    {pkg.speedLimit > 0
-                                      ? `${pkg.speedLimit} Mbps`
-                                      : "不限速"}
-                                  </Chip>
-                                </div>
-                                <div className="text-xs text-gray-400 space-y-0.5">
-                                  <div>
-                                    规则 {pkg.maxRules || "不限"} &middot; 连接{" "}
-                                    {pkg.maxConnections || "不限"}
-                                  </div>
-                                </div>
-                              </>
-                            ) : (
-                              <p className="text-xs text-orange-500">
-                                充值到账户余额 不退款
-                              </p>
-                            )}
-                            {pkg.type === "subscription" && (
-                              <p className="text-xs text-orange-500">
-                                重复购买将替换现有套餐
-                              </p>
-                            )}
-                            {pkg.type === "balance" && (
-                              <div className="flex items-center gap-2 mt-2">
-                                <Button
-                                  isIconOnly
-                                  size="sm"
-                                  variant="flat"
-                                  isDisabled={pkgQuantity <= 1}
-                                  onPress={() =>
-                                    setPkgQuantity((q) => Math.max(1, q - 1))
-                                  }
-                                >
-                                  <svg
-                                    className="w-4 h-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M20 12H4"
-                                    />
-                                  </svg>
-                                </Button>
-                                <Input
-                                  className="w-16 text-center"
-                                  min="1"
-                                  type="number"
-                                  value={String(pkgQuantity)}
-                                  variant="bordered"
-                                  onChange={(e) => {
-                                    const v = parseInt(e.target.value);
-                                    if (v >= 1) setPkgQuantity(v);
-                                  }}
-                                />
-                                <Button
-                                  isIconOnly
-                                  size="sm"
-                                  variant="flat"
-                                  onPress={() =>
-                                    setPkgQuantity((q) =>
-                                      Math.min(
-                                        pkg.stock > 0 ? pkg.stock : 100,
-                                        q + 1,
-                                      ),
-                                    )
-                                  }
-                                >
-                                  <svg
-                                    className="w-4 h-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M12 4v16m8-8H4"
-                                    />
-                                  </svg>
-                                </Button>
-                                <span className="text-xs text-default-400 ml-1">
-                                  ¥{(pkg.price / 100 * pkgQuantity).toFixed(2)}
-                                </span>
-                              </div>
-                            )}
-                            <div className="mt-2">
-                              {pkg.stock === 0 ? (
-                                <Button
-                                  className="w-full"
-                                  color="default"
-                                  isDisabled
-                                >
-                                  已售罄
-                                </Button>
-                              ) : pkg.stock > 0 && pkg.stock <= 10 ? (
-                                <div className="flex items-center gap-2">
-                                  <div className="flex-1">
-                                    <Button
-                                      className="w-full"
-                                      color="primary"
-                                      onPress={() => handleBuyPackage(pkg)}
-                                    >
-                                      {pkg.type === "balance"
-                                        ? "立即充值"
-                                        : "立即购买"}
-                                    </Button>
-                                  </div>
-                                  <span className="text-xs text-red-500 whitespace-nowrap">
-                                    仅剩 {pkg.stock} 份
-                                  </span>
-                                </div>
-                              ) : (
-                                <Button
-                                  className="w-full"
-                                  color="primary"
-                                  onPress={() => handleBuyPackage(pkg)}
-                                >
-                                  {pkg.type === "balance"
-                                    ? "立即充值"
-                                    : "立即购买"}
-                                </Button>
-                              )}
-                            </div>
-                          </CardBody>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </>
-          );
-        })()
+            </Tab>
+          ))}
+        </Tabs>
       )}
 
       <Modal
