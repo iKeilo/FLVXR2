@@ -550,7 +550,7 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
                   />
                 </svg>
                 <span className="truncate">
-                  免费版：已限制最多5个节点、5个隧道、1个用户，授权请联系作者
+                  基础版：节点、隧道、端口与转发数量不受授权限制，商业结算与分发能力需单独授权
                 </span>
                 <a
                   className="text-blue-600 dark:text-blue-400 flex-shrink-0 underline whitespace-nowrap"

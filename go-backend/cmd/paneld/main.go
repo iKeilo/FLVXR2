@@ -13,11 +13,10 @@ import (
 
 	"go-backend/internal/app"
 	"go-backend/internal/config"
+	"go-backend/internal/license"
 	"go-backend/internal/middleware"
 	"go-backend/internal/store/repo"
 )
-
-const defaultLicenseServerURL = "https://sq.abai.eu.org"
 
 func main() {
 	cfg := config.FromEnv()
@@ -25,10 +24,10 @@ func main() {
 		log.Println("warning: JWT_SECRET is empty")
 	}
 
-	// 容错逻辑：如果环境变量未配置授权，尝试从数据库回退读取
-	// 这解决了升级或重启后 .env 丢失但数据库仍有配置的问题
+	// If license env values are missing, recover persisted config from the DB.
+	// This keeps upgrades and restarts working when .env has lost those values.
 	if cfg.LicenseKey == "" {
-		log.Println("🔍 环境变量未配置授权，尝试从数据库恢复...")
+		log.Println("license env is not configured, trying to restore from database")
 		tempRepo, err := getTempRepository(cfg)
 		if err == nil && tempRepo != nil {
 			cfg1, _ := tempRepo.GetConfigByName("license_server_url")
@@ -45,32 +44,34 @@ func main() {
 			if cfg1 != nil && cfg1.Value != "" {
 				cfg.LicenseServerURL = cfg1.Value
 			} else if cfg.LicenseKey != "" {
-				// 如果只有 key 没有 url，使用默认值
-				cfg.LicenseServerURL = defaultLicenseServerURL
-				log.Println("ℹ️  数据库中未找到授权服务器地址，使用默认值")
+				cfg.LicenseServerURL = license.DefaultServerURL
+				log.Println("license server URL restored from compiled default")
 			}
 			if cfg.LicenseKey != "" {
-				log.Println("✅ 授权配置已从数据库恢复")
+				log.Println("license config restored from database")
 			}
 		}
 	}
+	if cfg.LicenseKey != "" && cfg.LicenseServerURL == "" {
+		cfg.LicenseServerURL = license.DefaultServerURL
+	}
 
-	// 授权验证
+	// Verify license at startup.
 	if cfg.LicenseServerURL != "" && cfg.LicenseKey != "" {
-		log.Printf("🔐 开始验证授权...")
+		log.Printf("starting license verification")
 		domain := middleware.GetServerDomain()
 		if err := middleware.StartLicenseVerification(cfg.LicenseServerURL, cfg.LicenseKey, domain, domain, "https:"); err != nil {
-			log.Printf("⚠️  授权验证失败：%v", err)
+			log.Printf("license verification failed: %v", err)
 		} else {
 			valid, expireTime, reason, _ := middleware.GetLicenseState()
 			if valid {
-				log.Printf("✅ 授权验证成功，有效期至：%s", time.UnixMilli(expireTime).Format("2006-01-02"))
+				log.Printf("license verification succeeded, expires at %s", time.UnixMilli(expireTime).Format("2006-01-02"))
 			} else {
-				log.Printf("⚠️  授权无效：%s", reason)
+				log.Printf("license is invalid: %s", reason)
 			}
 		}
 	} else {
-		log.Println("⚠️  未配置授权服务，将进入体验模式")
+		log.Println("license server is not configured, running in evaluation mode")
 	}
 
 	log.Printf("starting go-backend on %s (db=%s, version=%s)", cfg.Addr, cfg.DBPath, cfg.FluxVersion)

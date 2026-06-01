@@ -38,22 +38,41 @@ type VerifyRequest struct {
 
 // VerifyResponse is the response body for license verification
 type VerifyResponse struct {
-	Valid      bool   `json:"valid"`
-	ExpireTime int64  `json:"expire_time,omitempty"`
-	Username   string `json:"username,omitempty"`
-	Reason     string `json:"reason,omitempty"`
-	IsTrial    bool   `json:"is_trial"`
-	Signature  string `json:"signature,omitempty"`
+	Valid          bool                   `json:"valid"`
+	ExpireTime     int64                  `json:"expire_time,omitempty"`
+	Username       string                 `json:"username,omitempty"`
+	Reason         string                 `json:"reason,omitempty"`
+	IsTrial        bool                   `json:"is_trial"`
+	PlanName       string                 `json:"plan_name,omitempty"`
+	LicenseProfile string                 `json:"license_profile,omitempty"`
+	Entitlements   CommercialEntitlements `json:"entitlements"`
+	Signature      string                 `json:"signature,omitempty"`
+}
+
+type CommercialEntitlements struct {
+	PersonalUseOnly    bool   `json:"personal_use_only"`
+	CommercialAllowed  bool   `json:"commercial_allowed"`
+	ResaleAllowed      bool   `json:"resale_allowed"`
+	MultiTenantAllowed bool   `json:"multi_tenant_allowed"`
+	WhiteLabelAllowed  bool   `json:"white_label_allowed"`
+	APIAccessAllowed   bool   `json:"api_access_allowed"`
+	BillingAllowed     bool   `json:"billing_allowed"`
+	DeploymentScope    string `json:"deployment_scope"`
+	SupportLevel       string `json:"support_level"`
+	TeamSizeLimit      int    `json:"team_size_limit"`
 }
 
 // licenseState stores the current license state
 type licenseState struct {
-	valid      bool
-	expireTime int64
-	reason     string
-	isTrial    bool
-	LastCheck  time.Time
-	mu         sync.RWMutex
+	valid          bool
+	expireTime     int64
+	reason         string
+	isTrial        bool
+	planName       string
+	licenseProfile string
+	entitlements   CommercialEntitlements
+	LastCheck      time.Time
+	mu             sync.RWMutex
 }
 
 // ObscuredHMACKey returns the HMAC secret key used to verify license server signatures.
@@ -74,6 +93,77 @@ func VerifyResponseSignature(resp *VerifyResponse, secret string) bool {
 }
 
 var globalLicenseState = &licenseState{}
+
+func normalizeLicenseProfile(profile string) string {
+	switch strings.ToLower(strings.TrimSpace(profile)) {
+	case "", "trial", "evaluation", "eval":
+		return "evaluation"
+	case "personal", "community", "selfhost":
+		return "personal"
+	case "business", "commercial", "pro":
+		return "business"
+	case "enterprise", "corp":
+		return "enterprise"
+	case "channel", "reseller", "partner":
+		return "channel"
+	default:
+		return "business"
+	}
+}
+
+func defaultEntitlementsForProfile(profile string) CommercialEntitlements {
+	switch normalizeLicenseProfile(profile) {
+	case "personal", "evaluation":
+		return CommercialEntitlements{
+			PersonalUseOnly:    true,
+			CommercialAllowed:  false,
+			ResaleAllowed:      false,
+			MultiTenantAllowed: false,
+			WhiteLabelAllowed:  false,
+			APIAccessAllowed:   false,
+			BillingAllowed:     false,
+			DeploymentScope:    "self_hosted",
+			SupportLevel:       "community",
+			TeamSizeLimit:      1,
+		}
+	case "enterprise":
+		return CommercialEntitlements{
+			CommercialAllowed:  true,
+			ResaleAllowed:      false,
+			MultiTenantAllowed: true,
+			WhiteLabelAllowed:  true,
+			APIAccessAllowed:   true,
+			BillingAllowed:     true,
+			DeploymentScope:    "single_company",
+			SupportLevel:       "enterprise",
+			TeamSizeLimit:      20,
+		}
+	case "channel":
+		return CommercialEntitlements{
+			CommercialAllowed:  true,
+			ResaleAllowed:      true,
+			MultiTenantAllowed: true,
+			WhiteLabelAllowed:  true,
+			APIAccessAllowed:   true,
+			BillingAllowed:     true,
+			DeploymentScope:    "multi_customer",
+			SupportLevel:       "partner",
+			TeamSizeLimit:      50,
+		}
+	default:
+		return CommercialEntitlements{
+			CommercialAllowed:  true,
+			ResaleAllowed:      false,
+			MultiTenantAllowed: false,
+			WhiteLabelAllowed:  false,
+			APIAccessAllowed:   true,
+			BillingAllowed:     true,
+			DeploymentScope:    "single_company",
+			SupportLevel:       "standard",
+			TeamSizeLimit:      5,
+		}
+	}
+}
 
 // NewLicenseVerifier creates a new LicenseVerifier instance
 func NewLicenseVerifier(serverURL, licenseKey, domain, accessDomain, accessProtocol string) *LicenseVerifier {
@@ -201,6 +291,8 @@ func StartLicenseVerification(serverURL, licenseKey, domain, accessDomain, acces
 		globalLicenseState.mu.Lock()
 		globalLicenseState.valid = false
 		globalLicenseState.reason = "未配置授权服务"
+		globalLicenseState.licenseProfile = "personal"
+		globalLicenseState.entitlements = defaultEntitlementsForProfile("personal")
 		globalLicenseState.LastCheck = time.Now()
 		globalLicenseState.mu.Unlock()
 		return nil
@@ -259,6 +351,8 @@ func ForceSyncCheck() {
 		globalLicenseState.mu.Lock()
 		globalLicenseState.valid = false
 		globalLicenseState.reason = "未配置授权服务"
+		globalLicenseState.licenseProfile = "personal"
+		globalLicenseState.entitlements = defaultEntitlementsForProfile("personal")
 		globalLicenseState.LastCheck = time.Now()
 		globalLicenseState.mu.Unlock()
 		return
@@ -275,11 +369,19 @@ func ForceSyncCheck() {
 	if err != nil {
 		globalLicenseState.valid = false
 		globalLicenseState.reason = fmt.Sprintf("同步验证失败: %v", err)
+		globalLicenseState.licenseProfile = "personal"
+		globalLicenseState.entitlements = defaultEntitlementsForProfile("personal")
 	} else {
 		globalLicenseState.valid = resp.Valid
 		globalLicenseState.expireTime = resp.ExpireTime
 		globalLicenseState.reason = resp.Reason
 		globalLicenseState.isTrial = resp.IsTrial
+		globalLicenseState.planName = resp.PlanName
+		globalLicenseState.licenseProfile = normalizeLicenseProfile(resp.LicenseProfile)
+		globalLicenseState.entitlements = resp.Entitlements
+		if globalLicenseState.entitlements.DeploymentScope == "" {
+			globalLicenseState.entitlements = defaultEntitlementsForProfile(globalLicenseState.licenseProfile)
+		}
 	}
 	globalLicenseState.LastCheck = time.Now()
 	globalLicenseState.mu.Unlock()
@@ -304,6 +406,8 @@ func doVerify() error {
 		globalLicenseState.mu.Lock()
 		globalLicenseState.valid = false
 		globalLicenseState.reason = "未配置授权服务"
+		globalLicenseState.licenseProfile = "personal"
+		globalLicenseState.entitlements = defaultEntitlementsForProfile("personal")
 		globalLicenseState.LastCheck = time.Now()
 		globalLicenseState.mu.Unlock()
 		return nil
@@ -319,6 +423,8 @@ func doVerify() error {
 		globalLicenseState.mu.Lock()
 		globalLicenseState.valid = false
 		globalLicenseState.reason = fmt.Sprintf("验证服务不可达：%v", err)
+		globalLicenseState.licenseProfile = "personal"
+		globalLicenseState.entitlements = defaultEntitlementsForProfile("personal")
 		globalLicenseState.LastCheck = time.Now()
 		globalLicenseState.mu.Unlock()
 		return err
@@ -329,6 +435,12 @@ func doVerify() error {
 	globalLicenseState.expireTime = resp.ExpireTime
 	globalLicenseState.reason = resp.Reason
 	globalLicenseState.isTrial = resp.IsTrial
+	globalLicenseState.planName = resp.PlanName
+	globalLicenseState.licenseProfile = normalizeLicenseProfile(resp.LicenseProfile)
+	globalLicenseState.entitlements = resp.Entitlements
+	if globalLicenseState.entitlements.DeploymentScope == "" {
+		globalLicenseState.entitlements = defaultEntitlementsForProfile(globalLicenseState.licenseProfile)
+	}
 	globalLicenseState.LastCheck = time.Now()
 	globalLicenseState.mu.Unlock()
 
@@ -369,33 +481,66 @@ func GetLicenseTier() (TierType, string) {
 	return TierPremium, ""
 }
 
-var freeLimits = map[string]int{
-	"node":    5,
-	"tunnel":  5,
-	"user":    1,
-	"forward": 25,
-}
-
-// CheckResourceLimit 检查资源是否超出免费版限制
+// CheckResourceLimit keeps backward compatibility for handlers that still call it.
+// Infrastructure capacity is no longer constrained by the commercial license tier.
 func CheckResourceLimit(resourceType string, currentCount int) error {
 	tier, reason := GetLicenseTier()
-	if tier == TierPremium {
+	if tier == TierPremium || tier == TierFree {
 		return nil
 	}
 	if tier == TierBlocked {
-		return fmt.Errorf("授权无效 (%s)，请联系管理员", reason)
-	}
-	limit, ok := freeLimits[resourceType]
-	if !ok {
-		return nil
-	}
-	if currentCount >= limit {
-		return fmt.Errorf("免费版最多 %d 个%s，请配置正式授权以解除限制", limit, resourceType)
+		return fmt.Errorf("license unavailable: %s", reason)
 	}
 	return nil
 }
 
-// GetLicenseState returns the current license state
+func GetCommercialEntitlements() CommercialEntitlements {
+	globalLicenseState.mu.RLock()
+	defer globalLicenseState.mu.RUnlock()
+	entitlements := globalLicenseState.entitlements
+	if entitlements.DeploymentScope == "" {
+		entitlements = defaultEntitlementsForProfile(globalLicenseState.licenseProfile)
+	}
+	return entitlements
+}
+
+func GetCommercialProfile() string {
+	globalLicenseState.mu.RLock()
+	defer globalLicenseState.mu.RUnlock()
+	return normalizeLicenseProfile(globalLicenseState.licenseProfile)
+}
+
+func CheckCommercialFeature(feature string) error {
+	tier, reason := GetLicenseTier()
+	if tier == TierBlocked {
+		return fmt.Errorf("license unavailable: %s", reason)
+	}
+	entitlements := GetCommercialEntitlements()
+	switch strings.ToLower(strings.TrimSpace(feature)) {
+	case "billing", "commerce", "store":
+		if !entitlements.BillingAllowed {
+			return fmt.Errorf("commercial billing, store, or payment features are not enabled for this license")
+		}
+	case "api":
+		if !entitlements.APIAccessAllowed {
+			return fmt.Errorf("commercial API access is not enabled for this license")
+		}
+	case "white_label":
+		if !entitlements.WhiteLabelAllowed {
+			return fmt.Errorf("white-label capability is not enabled for this license")
+		}
+	case "multi_tenant":
+		if !entitlements.MultiTenantAllowed {
+			return fmt.Errorf("multi-tenant capability is not enabled for this license")
+		}
+	case "resale":
+		if !entitlements.ResaleAllowed {
+			return fmt.Errorf("resale or distribution capability is not enabled for this license")
+		}
+	}
+	return nil
+}
+
 func GetLicenseState() (valid bool, expireTime int64, reason string, isTrial bool) {
 	globalLicenseState.mu.RLock()
 	defer globalLicenseState.mu.RUnlock()

@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"context"
@@ -46,13 +46,6 @@ func (h *Handler) userCreate(w http.ResponseWriter, r *http.Request) {
 	if tier == middleware.TierBlocked {
 		response.WriteJSON(w, response.Err(403, "授权无效，请联系管理员"))
 		return
-	}
-	if tier == middleware.TierFree {
-		count, err := h.repo.CountUsers()
-		if err == nil && count >= 1 {
-			response.WriteJSON(w, response.Err(403, "免费版最多 1 个用户，请配置正式授权"))
-			return
-		}
 	}
 
 	username := asString(req["user"])
@@ -643,13 +636,6 @@ func (h *Handler) nodeCreate(w http.ResponseWriter, r *http.Request) {
 		response.WriteJSON(w, response.Err(403, "授权无效，请联系管理员"))
 		return
 	}
-	if tier == middleware.TierFree {
-		count, err := h.repo.CountNodes()
-		if err == nil && count >= 5 {
-			response.WriteJSON(w, response.Err(403, "免费版最多 5 个节点，请配置正式授权"))
-			return
-		}
-	}
 
 	name := asString(req["name"])
 	// 从 serverIp(serverIpV4/serverIpV6/intranetIp) 中选择第一个非空作为 serverIP
@@ -1229,13 +1215,6 @@ func (h *Handler) tunnelCreate(w http.ResponseWriter, r *http.Request) {
 	if tier == middleware.TierBlocked {
 		response.WriteJSON(w, response.Err(403, "授权无效，请联系管理员"))
 		return
-	}
-	if tier == middleware.TierFree {
-		count, err := h.repo.CountTunnels()
-		if err == nil && count >= 5 {
-			response.WriteJSON(w, response.Err(403, "免费版最多 5 个隧道，请配置正式授权"))
-			return
-		}
 	}
 
 	name := asString(req["name"])
@@ -2750,13 +2729,6 @@ func (h *Handler) forwardCreate(w http.ResponseWriter, r *http.Request) {
 		response.WriteJSON(w, response.Err(403, "授权无效，请联系管理员"))
 		return
 	}
-	if tier == middleware.TierFree {
-		count, err := h.repo.CountForwards()
-		if err == nil && count >= 25 {
-			response.WriteJSON(w, response.Err(403, "免费版最多 25 条转发规则，请配置正式授权"))
-			return
-		}
-	}
 
 	userID, roleID, err := userRoleFromRequest(r)
 	if err != nil {
@@ -3965,7 +3937,6 @@ func (h *Handler) groupPermissionRemove(w http.ResponseWriter, r *http.Request) 
 		response.WriteJSON(w, response.Err(-2, tx.Error.Error()))
 		return
 	}
-
 
 	ug, tg, exists, err := h.repo.GetGroupPermissionPairByIDTx(tx, id)
 	if err != nil {

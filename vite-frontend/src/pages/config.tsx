@@ -1320,7 +1320,7 @@ export default function ConfigPage() {
               <div>
                 <h2 className="text-xl font-semibold">授权配置</h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  输入域名和授权码激活授权服务，授权码留空自动生成7天体验授权
+                  输入域名和授权码激活商业授权服务。基础版不限制节点和转发规模，授权控制的是商城、支付与分发能力
                 </p>
               </div>
             </div>
@@ -1347,7 +1347,7 @@ export default function ConfigPage() {
                 </label>
                 <Input
                   classNames={{ input: "text-sm" }}
-                  placeholder="留空自动生成7天体验授权"
+                  placeholder="留空自动生成 7 天评估授权"
                   size="md"
                   value={licenseKey}
                   variant="bordered"
@@ -1380,10 +1380,10 @@ export default function ConfigPage() {
                     {licenseStatus.is_trial && licenseStatus.valid
                       ? `体验版，剩余 ${licenseStatus.trial_remaining_days} 天`
                       : licenseStatus.tier === "premium"
-                        ? `商业版，授权剩余 ${licenseStatus.expire_time ? Math.floor((licenseStatus.expire_time - Date.now()) / 86400000) : "？"} 天`
+                        ? `商业授权已启用，剩余 ${licenseStatus.expire_time ? Math.floor((licenseStatus.expire_time - Date.now()) / 86400000) : "？"} 天`
                         : licenseStatus.tier === "blocked"
                           ? `授权已阻断：${licenseStatus.reason || "未知原因"}`
-                          : "免费版（5 节点 / 5 隧道 / 1 用户）"}
+                          : "基础版（资源不限，商业结算与分发能力未授权）"}
                   </span>
                 )}
               </div>

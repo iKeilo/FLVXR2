@@ -912,14 +912,14 @@ export default function AdminLayout({
                   strokeWidth={2}
                 />
               </svg>
-              <span>免费版，请前往</span>
+              <span>基础版，请前往</span>
               <span
                 className="font-bold underline cursor-pointer"
                 onClick={() => navigate("/config")}
               >
                 设置 {">"} 授权配置
               </span>
-              <span>输入授权信息解除限制</span>
+              <span>配置商业授权以启用商城、支付与分发能力</span>
               <div ref={snoozeRef} className="relative flex-shrink-0">
                 <button
                   className="hover:bg-yellow-600 rounded p-1 transition-colors ml-2"
@@ -1090,7 +1090,7 @@ export default function AdminLayout({
                     />
                   </svg>
                   <span className="truncate">
-                    免费版：5 节点 / 5 隧道 / 1 用户，正式授权请联系管理员
+                    基础版：节点、隧道、端口与转发数量不受授权限制，商业结算与分发能力需单独授权
                   </span>
                   <a
                     className="text-blue-600 dark:text-blue-400 flex-shrink-0 underline whitespace-nowrap"

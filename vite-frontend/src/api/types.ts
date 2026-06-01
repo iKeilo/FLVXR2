@@ -785,6 +785,7 @@ export interface SubscriptionPackageApiItem {
   type: string;
   name: string;
   description: string;
+  licenseProfile?: "evaluation" | "personal" | "business" | "enterprise" | "channel";
   price: number;
   validityDays: number;
   trafficLimit: number;

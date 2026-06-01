@@ -71,6 +71,7 @@ interface PackageForm {
   type: string;
   name: string;
   description: string;
+  licenseProfile: "evaluation" | "personal" | "business" | "enterprise" | "channel";
   priceYuan: string;
   validityDays: number;
   trafficLimit: number;
@@ -93,6 +94,7 @@ const defaultPackageForm: PackageForm = {
   type: "subscription",
   name: "",
   description: "",
+  licenseProfile: "business",
   priceYuan: "0",
   validityDays: 30,
   trafficLimit: 0,
@@ -119,6 +121,47 @@ const durationOptions = [
   { value: 365, label: "一年" },
   { value: 730, label: "两年" },
 ];
+
+const licenseProfileOptions = [
+  { value: "personal", label: "Personal" },
+  { value: "business", label: "Business" },
+  { value: "enterprise", label: "Enterprise" },
+  { value: "channel", label: "Channel" },
+] as const;
+
+function getLicenseProfileLabel(
+  profile?: string,
+): "Personal" | "Business" | "Enterprise" | "Channel" | "Evaluation" {
+  switch (profile) {
+    case "personal":
+      return "Personal";
+    case "enterprise":
+      return "Enterprise";
+    case "channel":
+      return "Channel";
+    case "evaluation":
+      return "Evaluation";
+    default:
+      return "Business";
+  }
+}
+
+function getLicenseProfileSummary(item: SubscriptionPackageApiItem): string {
+  if (item.description?.trim()) return item.description;
+
+  switch (item.licenseProfile) {
+    case "personal":
+      return "Self-hosted use only, no commercial billing or resale.";
+    case "enterprise":
+      return "Commercial use with white-label, API, and multi-tenant support.";
+    case "channel":
+      return "Commercial use with distribution, resale, and multi-customer rights.";
+    case "evaluation":
+      return "Evaluation-only access for trials and internal validation.";
+    default:
+      return "Commercial use with billing and store capability enabled.";
+  }
+}
 
 export default function AdminPlansPage() {
   const [pkgList, setPkgList] = useState<SubscriptionPackageApiItem[]>([]);
@@ -190,6 +233,7 @@ export default function AdminPlansPage() {
           type: p.type || "subscription",
           name: p.name,
           description: p.description || "",
+          licenseProfile: p.licenseProfile || "business",
           priceYuan: (p.price / 100).toFixed(2),
           validityDays: p.validityDays,
           trafficLimit: p.trafficLimit,
@@ -229,6 +273,7 @@ export default function AdminPlansPage() {
         type: pkgForm.type,
         name: pkgForm.name,
         description: pkgForm.description,
+        licenseProfile: pkgForm.licenseProfile,
         priceYuan: parseFloat(pkgForm.priceYuan || "0"),
         validityDays: pkgForm.validityDays,
         trafficLimit: pkgForm.trafficLimit,
@@ -487,8 +532,8 @@ export default function AdminPlansPage() {
               <TableColumn className="whitespace-nowrap min-w-[100px]">
                 隧道组
               </TableColumn>
-              <TableColumn className="whitespace-nowrap min-w-[200px]">
-                限制
+              <TableColumn className="whitespace-nowrap min-w-[260px]">
+                商业授权
               </TableColumn>
               <TableColumn className="whitespace-nowrap min-w-[70px]">
                 启用状态
@@ -551,20 +596,12 @@ export default function AdminPlansPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-xs text-gray-500">
-                    <div className="space-y-0.5">
-                      <div>
-                        规则 {item.maxRules > 0 ? item.maxRules : "不限"} · 流量{" "}
-                        {item.trafficLimit > 0
-                          ? `${item.trafficLimit} GB`
-                          : "不限"}
+                    <div className="space-y-1">
+                      <div className="font-medium text-foreground">
+                        {getLicenseProfileLabel(item.licenseProfile)}
                       </div>
-                      <div>
-                        连接{" "}
-                        {item.maxConnections > 0 ? item.maxConnections : "不限"}{" "}
-                        · 限速{" "}
-                        {item.speedLimit > 0
-                          ? `${item.speedLimit} Mbps`
-                          : "不限"}
+                      <div className="max-w-72 leading-5">
+                        {getLicenseProfileSummary(item)}
                       </div>
                     </div>
                   </TableCell>
@@ -1170,60 +1207,55 @@ export default function AdminPlansPage() {
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <Input
-                      label="总流量 (GB, 0=不限)"
-                      min="0"
-                      type="number"
-                      value={String(pkgForm.trafficLimit)}
+                    <Select
+                      label="商业授权档位"
+                      selectedKeys={[pkgForm.licenseProfile]}
                       variant="bordered"
-                      onChange={(e) =>
-                        setPkgForm((p) => ({
-                          ...p,
-                          trafficLimit: parseInt(e.target.value) || 0,
-                        }))
-                      }
-                    />
-                    <Input
-                      label="最大规则数 (0=不限)"
-                      min="0"
-                      type="number"
-                      value={String(pkgForm.maxRules)}
-                      variant="bordered"
-                      onChange={(e) =>
-                        setPkgForm((p) => ({
-                          ...p,
-                          maxRules: parseInt(e.target.value) || 0,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <Input
-                      label="限速 (Mbps, 0=不限)"
-                      min="0"
-                      type="number"
-                      value={String(pkgForm.speedLimit)}
-                      variant="bordered"
-                      onChange={(e) =>
-                        setPkgForm((p) => ({
-                          ...p,
-                          speedLimit: parseInt(e.target.value) || 0,
-                        }))
-                      }
-                    />
-                    <Input
-                      label="最大连接数 (0=不限)"
-                      min="0"
-                      type="number"
-                      value={String(pkgForm.maxConnections)}
-                      variant="bordered"
-                      onChange={(e) =>
-                        setPkgForm((p) => ({
-                          ...p,
-                          maxConnections: parseInt(e.target.value) || 0,
-                        }))
-                      }
-                    />
+                      onSelectionChange={(keys) => {
+                        const val = Array.from(keys)[0] as PackageForm["licenseProfile"];
+
+                        if (val)
+                          setPkgForm((p) => ({
+                            ...p,
+                            licenseProfile: val,
+                          }));
+                      }}
+                    >
+                      {licenseProfileOptions.map((option) => (
+                        <SelectItem key={option.value}>{option.label}</SelectItem>
+                      ))}
+                    </Select>
+                    <div className="rounded-xl border border-divider bg-default-50/40 px-4 py-3 text-sm text-default-600">
+                      <div className="font-medium text-foreground">
+                        {getLicenseProfileLabel(pkgForm.licenseProfile)}
+                      </div>
+                      <div className="mt-1 leading-6">
+                        {getLicenseProfileSummary({
+                          id: pkgForm.id || 0,
+                          type: pkgForm.type,
+                          name: pkgForm.name,
+                          description: pkgForm.description,
+                          licenseProfile: pkgForm.licenseProfile,
+                          price: 0,
+                          validityDays: pkgForm.validityDays,
+                          trafficLimit: pkgForm.trafficLimit,
+                          speedLimit: pkgForm.speedLimit,
+                          maxRules: pkgForm.maxRules,
+                          maxConnections: pkgForm.maxConnections,
+                          maxIPAccess: 0,
+                          tunnelGroupIds: pkgForm.tunnelGroupIds,
+                          autoRenew: pkgForm.autoRenew ? 1 : 0,
+                          sortOrder: pkgForm.sortOrder,
+                          enabled: pkgForm.enabled ? 1 : 0,
+                          shopVisible: pkgForm.shopVisible ? 1 : 0,
+                          autoBuyTrafficEnabled: pkgForm.autoBuyTrafficEnabled ? 1 : 0,
+                          stock: pkgForm.stock,
+                          recommended: pkgForm.recommended ? 1 : 0,
+                          createdAt: 0,
+                          updatedAt: 0,
+                        })}
+                      </div>
+                    </div>
                   </div>
                   <div className="flex flex-col gap-1">
                     <Switch

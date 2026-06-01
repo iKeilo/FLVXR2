@@ -12,15 +12,18 @@ import (
 // ─── RedeemCode ──────────────────────────────────────────────────────
 
 func (h *Handler) createRedeemCodes(w http.ResponseWriter, r *http.Request) {
+	if !h.ensureCommercialFeature(w, "billing") {
+		return
+	}
 	var req struct {
-		Type        string `json:"type"`  // plan / balance
-		Code        string `json:"code"`
-		Count       int    `json:"count"`
-		PlanID      *int64 `json:"planId"`
+		Type         string `json:"type"` // plan / balance
+		Code         string `json:"code"`
+		Count        int    `json:"count"`
+		PlanID       *int64 `json:"planId"`
 		DurationDays *int   `json:"durationDays"`
-		AmountCents *int64 `json:"amountCents"`
-		StartsAt    *int64 `json:"startsAt"`
-		ExpiresAt   *int64 `json:"expiresAt"`
+		AmountCents  *int64 `json:"amountCents"`
+		StartsAt     *int64 `json:"startsAt"`
+		ExpiresAt    *int64 `json:"expiresAt"`
 	}
 	if err := decodeJSON(r.Body, &req); err != nil {
 		response.WriteJSON(w, response.ErrDefault("请求参数错误"))
@@ -61,6 +64,9 @@ func (h *Handler) createRedeemCodes(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) listRedeemCodes(w http.ResponseWriter, r *http.Request) {
+	if !h.ensureCommercialFeature(w, "billing") {
+		return
+	}
 	list, err := h.repo.ListRedeemCodes()
 	if err != nil {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
@@ -73,6 +79,9 @@ func (h *Handler) listRedeemCodes(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) deleteRedeemCode(w http.ResponseWriter, r *http.Request) {
+	if !h.ensureCommercialFeature(w, "billing") {
+		return
+	}
 	id := idFromBody(r, w)
 	if id <= 0 {
 		return
@@ -87,14 +96,17 @@ func (h *Handler) deleteRedeemCode(w http.ResponseWriter, r *http.Request) {
 // ─── DiscountCode ────────────────────────────────────────────────────
 
 func (h *Handler) createDiscountCode(w http.ResponseWriter, r *http.Request) {
+	if !h.ensureCommercialFeature(w, "billing") {
+		return
+	}
 	var req struct {
-		Code        string  `json:"code"`
-		Type        string  `json:"type"`     // percent / amount
-		Value       float64 `json:"value"`    // 百分比数值或金额(元)
-		MaxUses     int     `json:"maxUses"`
-		PlanIDs     []int64 `json:"planIds"`
-		StartsAt    *int64  `json:"startsAt"`
-		ExpiresAt   *int64  `json:"expiresAt"`
+		Code      string  `json:"code"`
+		Type      string  `json:"type"`  // percent / amount
+		Value     float64 `json:"value"` // 百分比数值或金额(元)
+		MaxUses   int     `json:"maxUses"`
+		PlanIDs   []int64 `json:"planIds"`
+		StartsAt  *int64  `json:"startsAt"`
+		ExpiresAt *int64  `json:"expiresAt"`
 	}
 	if err := decodeJSON(r.Body, &req); err != nil {
 		response.WriteJSON(w, response.ErrDefault("请求参数错误"))
@@ -130,6 +142,9 @@ func (h *Handler) createDiscountCode(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) listDiscountCodes(w http.ResponseWriter, r *http.Request) {
+	if !h.ensureCommercialFeature(w, "billing") {
+		return
+	}
 	list, err := h.repo.ListDiscountCodes()
 	if err != nil {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
@@ -142,6 +157,9 @@ func (h *Handler) listDiscountCodes(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) deleteDiscountCode(w http.ResponseWriter, r *http.Request) {
+	if !h.ensureCommercialFeature(w, "billing") {
+		return
+	}
 	id := idFromBody(r, w)
 	if id <= 0 {
 		return
@@ -156,6 +174,9 @@ func (h *Handler) deleteDiscountCode(w http.ResponseWriter, r *http.Request) {
 // ─── BalanceLog ──────────────────────────────────────────────────────
 
 func (h *Handler) listBalanceLogs(w http.ResponseWriter, r *http.Request) {
+	if !h.ensureCommercialFeature(w, "billing") {
+		return
+	}
 	var req struct {
 		UserID int64 `json:"userId"`
 		Page   int   `json:"page"`
@@ -189,6 +210,9 @@ func (h *Handler) listBalanceLogs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) adminDeleteBalanceLog(w http.ResponseWriter, r *http.Request) {
+	if !h.ensureCommercialFeature(w, "billing") {
+		return
+	}
 	if !h.ensureAdminAccess(w, r) {
 		return
 	}
@@ -211,6 +235,9 @@ func (h *Handler) adminDeleteBalanceLog(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *Handler) adminCleanupBalanceLogs(w http.ResponseWriter, r *http.Request) {
+	if !h.ensureCommercialFeature(w, "billing") {
+		return
+	}
 	if !h.ensureAdminAccess(w, r) {
 		return
 	}

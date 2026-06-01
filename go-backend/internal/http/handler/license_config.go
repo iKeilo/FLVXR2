@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"bytes"
@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"go-backend/internal/http/response"
+	"go-backend/internal/license"
 	"go-backend/internal/middleware"
 )
 
@@ -48,8 +49,7 @@ func (h *Handler) licenseConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	const defaultLicenseServerURL = "https://sq.abai.eu.org"
-	url := defaultLicenseServerURL
+	url := license.DefaultServerURL
 	if os.Getenv("LICENSE_SERVER_URL") != "" {
 		url = os.Getenv("LICENSE_SERVER_URL")
 	}

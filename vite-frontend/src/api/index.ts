@@ -621,6 +621,24 @@ export interface LicenseInfo {
   hmac_key?: string;
   is_trial?: boolean;
   trial_remaining_days?: number;
+  commercial_profile?: "evaluation" | "personal" | "business" | "enterprise" | "channel";
+  billing_allowed?: boolean;
+  commercial_allowed?: boolean;
+  multi_tenant_allowed?: boolean;
+  white_label_allowed?: boolean;
+  resale_allowed?: boolean;
+  entitlements?: {
+    personal_use_only: boolean;
+    commercial_allowed: boolean;
+    resale_allowed: boolean;
+    multi_tenant_allowed: boolean;
+    white_label_allowed: boolean;
+    api_access_allowed: boolean;
+    billing_allowed: boolean;
+    deployment_scope: string;
+    support_level: string;
+    team_size_limit: number;
+  };
 }
 
 export const getLicenseInfo = () => Network.post<LicenseInfo>("/license/info");
