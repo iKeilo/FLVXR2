@@ -1,14 +1,16 @@
-
 name: Build and Push Images
 
 env:
-  VERSION: "2.0.7-beta"  # 分支推送时使用的默认版本
+  VERSION: "flvxt2-main"
   REGISTRY: ghcr.io
 
 on:
   push:
+    branches:
+      - main
     tags:
-      - '[0-9]*'  # 匹配 2.0.8, 2.0.8-beta 等格式
+      - '[0-9]*'
+  workflow_dispatch:
 
 jobs:
   check-version:

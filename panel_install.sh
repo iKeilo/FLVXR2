@@ -92,7 +92,7 @@ ARG_VERSION="${ARG_VERSION//<}"
 ARG_VERSION="${ARG_VERSION//>}"
 
 # GitHub repo used for release downloads
-REPO="abai569/flvx"
+REPO="iKeilo/flvxt2"
 
 # 固定版本号（Release 构建时自动填充，留空则获取最新版）
 PINNED_VERSION=""
@@ -144,16 +144,22 @@ resolve_version() {
     return 0
   fi
 
-  echo "❌ 无法获取最新版本号。你可以手动指定版本，例如：VERSION=<版本号> ./panel_install.sh 或 bash panel_install.sh <版本号>" >&2
-  return 1
+  echo "⚠️  未获取到 GitHub Release，改用 main 分支 compose 和 latest 镜像" >&2
+  echo "latest"
+  return 0
 }
 
 # 根据版本号设置 compose 下载地址
 set_compose_urls_by_version() {
   local version="$1"
   CURRENT_VERSION="$version"
-  DOCKER_COMPOSEV4_URL=$(maybe_proxy_url "https://github.com/${REPO}/releases/download/${version}/docker-compose-v4.yml")
-  DOCKER_COMPOSEV6_URL=$(maybe_proxy_url "https://github.com/${REPO}/releases/download/${version}/docker-compose-v6.yml")
+  if [[ "$version" == "latest" ]]; then
+    DOCKER_COMPOSEV4_URL=$(maybe_proxy_url "https://raw.githubusercontent.com/${REPO}/main/docker-compose-v4.yml")
+    DOCKER_COMPOSEV6_URL=$(maybe_proxy_url "https://raw.githubusercontent.com/${REPO}/main/docker-compose-v6.yml")
+  else
+    DOCKER_COMPOSEV4_URL=$(maybe_proxy_url "https://github.com/${REPO}/releases/download/${version}/docker-compose-v4.yml")
+    DOCKER_COMPOSEV6_URL=$(maybe_proxy_url "https://github.com/${REPO}/releases/download/${version}/docker-compose-v6.yml")
+  fi
 }
 
 # 替版本号翻转 v 前缀（有则去，无则加），供下载失败时重试
@@ -539,7 +545,7 @@ POSTGRES_USER=$POSTGRES_USER
 POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 
 # 授权服务配置
-LICENSE_SERVER_URL=https://sq.abai.eu.org
+LICENSE_SERVER_URL=https://sq.sbplay.eu.org
 LICENSE_KEY=$LICENSE_KEY
 SERVER_DOMAIN=$SERVER_DOMAIN
 HMAC_SECRET_KEY=${HMAC_SECRET_KEY:-flvx_455f08ea-ce13-46d4-8574-ebd2a9d0e853}
@@ -590,7 +596,7 @@ update_panel() {
   
   check_docker
 
-  LICENSE_SERVER_URL=https://sq.abai.eu.org
+  LICENSE_SERVER_URL=https://sq.sbplay.eu.org
 
   if [[ ! -f ".env" ]]; then
     echo "⚠️ 未找到 .env，默认按 SQLite 模式更新"
@@ -673,9 +679,9 @@ update_panel() {
   sleep 10
   
   # 解决 Nerdctl/Docker 格式不兼容以及 $1 提取错误 (如 Tag 和 ID 粘连) 的问题
-  # 使用正则提取标准镜像格式：ghcr.io/abai569/<名称>:<版本>
+  # 使用正则提取标准镜像格式：ghcr.io/ikeilo/<名称>:<版本>
   # 排除当前最新版本 $UPDATE_VERSION
-  OLD_IMAGES=$(docker images 2>/dev/null | grep -v "WARNING" | grep -oE 'ghcr.io/abai569/[^:]+:[^[:space:]":]+' | grep -v ":${UPDATE_VERSION}$" | sort -u)
+  OLD_IMAGES=$(docker images 2>/dev/null | grep -v "WARNING" | grep -oE 'ghcr.io/ikeilo/[^:]+:[^[:space:]":]+' | grep -v ":${UPDATE_VERSION}$" | sort -u)
   
   if [ -n "$OLD_IMAGES" ]; then
     echo " 发现旧版本面板镜像，正在强制删除："

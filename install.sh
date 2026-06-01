@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # GitHub repo used for release downloads
-REPO="abai569/flvx"
+REPO="iKeilo/flvxt2"
 
 # 固定版本号（Release 构建时自动填充，留空则获取最新版）
-PINNED_VERSION="2.2.6-beta1"
+PINNED_VERSION=""
 
 # 默认服务名
 SERVICE_NAME="flvx_agent"
@@ -131,12 +131,12 @@ detect_download_host() {
         # 提取代理地址和 GitHub 路径
         echo "$script_url" | sed 's|/releases/.*||'
     elif [[ "$script_url" == *"ghfast.top"* ]]; then
-        echo "https://ghfast.top/https://github.com/abai569/flvx/releases/latest/download"
+        echo "https://ghfast.top/https://github.com/${REPO}/releases/latest/download"
     elif [[ "$script_url" == *"github.com"* ]]; then
-        echo "https://github.com/abai569/flvx/releases/latest/download"
+        echo "https://github.com/${REPO}/releases/latest/download"
     else
         # 默认使用 GitHub
-        echo "https://github.com/abai569/flvx/releases/latest/download"
+        echo "https://github.com/${REPO}/releases/latest/download"
     fi
 }
 
@@ -212,7 +212,7 @@ build_download_url() {
     # 只有当用户没有显式指定版本时，才从 GitHub API 获取最新版本号
     if [[ "$DOWNLOAD_HOST" == *"/latest"* ]] && [[ -z "${VERSION:-}" ]] && [[ -z "${FLUX_VERSION:-}" ]]; then
         # 从 GitHub API 获取最新版本号
-        actual_version=$(curl -fsSL --max-time 10 "https://api.github.com/repos/abai569/flvx/releases/latest" 2>/dev/null | grep -m1 '"tag_name"' | sed -E 's/.*"tag_name"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/' || echo "")
+        actual_version=$(curl -fsSL --max-time 10 "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null | grep -m1 '"tag_name"' | sed -E 's/.*"tag_name"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/' || echo "")
         if [ -n "$actual_version" ]; then
             RESOLVED_VERSION="$actual_version"
         fi
@@ -483,7 +483,7 @@ install_service() {
   DOWNLOAD_URLS=(
     "$DOWNLOAD_URL"
 	"https://github.com/${REPO}/releases/latest/download/gost-${ARCH}"
-    "https://git-proxy.abai.eu.org/https://github.com/${REPO}/releases/latest/download/gost-${ARCH}"
+    "https://gh-proxy.com/https://github.com/${REPO}/releases/latest/download/gost-${ARCH}"
     "https://ghfast.top/https://github.com/${REPO}/releases/latest/download/gost-${ARCH}"
   )
   
@@ -595,7 +595,7 @@ EOF
     echo "📁 配置目录：$INSTALL_DIR"
     echo "🔧 服务状态：$(systemctl is-active ${SERVICE_NAME})"
 
-    local install_count=$(curl -fsSL --max-time 3 "https://sq.abai.eu.org/api/stats/install" 2>/dev/null | grep -o '"total":[0-9]*' | grep -o '[0-9]*')
+    local install_count=$(curl -fsSL --max-time 3 "https://sq.sbplay.eu.org/api/stats/install" 2>/dev/null | grep -o '"total":[0-9]*' | grep -o '[0-9]*')
     if [[ -n "$install_count" ]]; then
       echo ""
       echo "📊 累计安装次数：${install_count}"
@@ -717,7 +717,7 @@ update_service() {
   
   echo "✅ 更新完成，服务已重新启动。"
 
-  local install_count=$(curl -fsSL --max-time 3 "https://sq.abai.eu.org/api/stats/install" 2>/dev/null | grep -o '"total":[0-9]*' | grep -o '[0-9]*')
+  local install_count=$(curl -fsSL --max-time 3 "https://sq.sbplay.eu.org/api/stats/install" 2>/dev/null | grep -o '"total":[0-9]*' | grep -o '[0-9]*')
   if [[ -n "$install_count" ]]; then
     echo ""
     echo "📊 累计安装次数：${install_count}"
