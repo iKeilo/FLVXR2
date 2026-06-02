@@ -1,4 +1,4 @@
-﻿package repo
+package repo
 
 import (
 	"crypto/hmac"
@@ -206,6 +206,11 @@ func autoMigrateAll(db *gorm.DB) error {
 		&model.ForwardPort{},
 		&model.NftablesRule{},
 		&model.Node{},
+		&model.NodeTLSTemplate{},
+		&model.NodeIdentity{},
+		&model.NodeDeployedInbound{},
+		&model.NodeConfigRevision{},
+		&model.NodeDeployLog{},
 		&model.SpeedLimit{},
 		&model.StatisticsFlow{},
 		&model.Tunnel{},
@@ -921,7 +926,7 @@ func (r *Repository) ListNodes(opts *ListNodesOptions) ([]map[string]interface{}
 			"tcpListenAddr": n.TCPListenAddr,
 			"udpListenAddr": n.UDPListenAddr,
 			"version":       nullableString(n.Version),
-			"http": n.HTTP, "tls": n.TLS, "socks": n.Socks, "blockOther": n.BlockOther,
+			"http":          n.HTTP, "tls": n.TLS, "socks": n.Socks, "blockOther": n.BlockOther,
 			"status": n.Status, "isRemote": n.IsRemote,
 			"remoteUrl":               nullableString(n.RemoteURL),
 			"remoteToken":             nullableString(n.RemoteToken),
@@ -958,12 +963,12 @@ func (r *Repository) ListUsers() ([]map[string]interface{}, error) {
 			"flowResetTime": u.FlowResetTime, "createdTime": u.CreatedTime,
 			"updatedTime": nullableInt64(u.UpdatedTime),
 			"inFlow":      u.InFlow, "outFlow": u.OutFlow,
-			"renewalAmount":    u.RenewalAmount,
-			"balance":          u.Balance,
-			"autoRenew":        u.AutoRenew,
-			"autoBuyTraffic":   u.AutoBuyTraffic,
-			"buyTrafficAmount": u.BuyTrafficAmount,
-			"buyTrafficPrice":          u.BuyTrafficPrice,
+			"renewalAmount":           u.RenewalAmount,
+			"balance":                 u.Balance,
+			"autoRenew":               u.AutoRenew,
+			"autoBuyTraffic":          u.AutoBuyTraffic,
+			"buyTrafficAmount":        u.BuyTrafficAmount,
+			"buyTrafficPrice":         u.BuyTrafficPrice,
 			"autoBuyTrafficPackageId": u.AutoBuyTrafficPackageID,
 			"baseFlow":                u.BaseFlow,
 		}

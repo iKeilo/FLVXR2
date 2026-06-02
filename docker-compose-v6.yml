@@ -1,3 +1,5 @@
+name: flvx
+
 services:
   backend:
     image: ghcr.io/ikeilo/flvx-svc-backend:${FLUX_VERSION:-latest}

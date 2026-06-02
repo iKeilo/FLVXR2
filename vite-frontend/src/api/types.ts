@@ -19,6 +19,78 @@ export interface NodeApiItem {
   [key: string]: unknown;
 }
 
+export interface NodeTLSTemplateApiItem {
+  id: number;
+  name: string;
+  type: "tls" | "reality" | string;
+  serverJson: string;
+  clientJson: string;
+  remark?: string;
+  createdTime?: number;
+  updatedTime?: number;
+}
+
+export interface NodeIdentityApiItem {
+  nodeId: number;
+  uuid: string;
+  seed: string;
+  mixedPassword: string;
+  trojanPassword: string;
+  hysteria2Password: string;
+  tuicUuid: string;
+  tuicPassword: string;
+  realityShortId: string;
+  pathSuffix: string;
+  serviceSuffix: string;
+}
+
+export interface NodeDeployedInboundApiItem {
+  id: number;
+  nodeId: number;
+  displayName: string;
+  internalTag: string;
+  protocol: string;
+  listenAddr: string;
+  listenPort: number;
+  publishAddr: string;
+  publishPort: number;
+  tlsTemplateId?: number | null;
+  inboundOptionsJson: string;
+  clientConfigJson: string;
+  serverConfigJson: string;
+  shareUri: string;
+  enabled: number;
+}
+
+export interface NodeConfigRevisionApiItem {
+  id: number;
+  nodeId: number;
+  coreType: string;
+  configJson: string;
+  status: string;
+  checksum: string;
+  errorMessage?: string;
+  createdTime: number;
+}
+
+export interface NodeDeployLogApiItem {
+  id: number;
+  nodeId: number;
+  revisionId: number;
+  action: string;
+  status: string;
+  message: string;
+  createdTime: number;
+}
+
+export interface NodeDeployDetailApiItem {
+  node: NodeApiItem;
+  identity: NodeIdentityApiItem;
+  inbounds: NodeDeployedInboundApiItem[];
+  revisions: NodeConfigRevisionApiItem[];
+  logs: NodeDeployLogApiItem[];
+}
+
 export interface UserApiItem {
   id: number;
   user: string;

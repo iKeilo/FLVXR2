@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	githubRepo     = "abai569/flvx"
+	githubRepo     = "iKeilo/flvxt2"
 	githubAPIBase  = "https://api.github.com"
 	githubHTMLBase = "https://github.com"
 	upgradeTimeout = 5 * time.Minute
@@ -559,10 +559,10 @@ func (h *Handler) panelUpgrade(w http.ResponseWriter, r *http.Request) {
 	// 使用 panel_install.sh 脚本升级（更可靠）
 	go func() {
 		fmt.Printf("开始升级面板：%s -> %s\n", currentVersion, targetVersion)
-		
+
 		// 下载并执行 panel_install.sh
 		cmd := exec.Command("bash", "-c", `
-			curl -L https://raw.githubusercontent.com/abai569/flvx/main/panel_install.sh -o /tmp/panel_install.sh && \
+			curl -L https://raw.githubusercontent.com/iKeilo/flvxt2/main/panel_install.sh -o /tmp/panel_install.sh && \
 			chmod +x /tmp/panel_install.sh && \
 			echo -e "2\n" | /tmp/panel_install.sh
 		`)

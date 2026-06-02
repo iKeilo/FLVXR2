@@ -1,4 +1,4 @@
-﻿// Package model defines GORM model structs for all database tables,
+// Package model defines GORM model structs for all database tables,
 // providing a single source of truth for the schema that works
 // transparently with both SQLite and PostgreSQL.
 package model
@@ -10,34 +10,34 @@ import "database/sql"
 // User maps to the "user" table. PostgreSQL treats "user" as a reserved
 // word, so TableName() is required for correct quoting.
 type User struct {
-	ID            int64         `gorm:"primaryKey;autoIncrement"`
-	User          string        `gorm:"column:user;type:varchar(100);not null"`
-	Pwd           string        `gorm:"type:varchar(100);not null"`
-	RoleID        int           `gorm:"column:role_id;not null"`
-	Name          string        `gorm:"column:name;type:varchar(100);default:''"` // 用户备注
-	ExpTime       int64         `gorm:"column:exp_time;not null"`
-	Flow          int64         `gorm:"not null"`
-	InFlow        int64         `gorm:"column:in_flow;not null;default:0"`
-	OutFlow       int64         `gorm:"column:out_flow;not null;default:0"`
-	FlowResetTime int64         `gorm:"column:flow_reset_time;not null"`
-	Num           int           `gorm:"not null"`
-	Inx           int           `gorm:"column:inx;default:0"` // 排序索引
-	CreatedTime   int64         `gorm:"column:created_time;not null"`
-	UpdatedTime   sql.NullInt64 `gorm:"column:updated_time"`
-	Status        int           `gorm:"not null"`
-	RenewalAmount   int64         `gorm:"column:renewal_amount;default:0"`   // 续费金额 (分)
-	Balance         int64         `gorm:"column:balance;default:0"`          // 可用余额 (分)
-	AutoRenew       int           `gorm:"column:auto_renew;default:0"`       // 自动续费开关 (0=禁用，1=启用)
-	AutoBuyTraffic  int           `gorm:"column:auto_buy_traffic;default:0"` // 自动购买流量开关 (0=禁用，1=启用)
-	BuyTrafficAmount int64        `gorm:"column:buy_traffic_amount;default:0"` // 每次购买流量量 (GB)
-	BuyTrafficPrice int64         `gorm:"column:buy_traffic_price;default:0"`  // 每次购买价格 (分)
-	AutoBuyTrafficPackageID int64 `gorm:"column:auto_buy_traffic_package_id;default:0"` // 关联的自动购流套餐ID (0=使用自定义配置)
-	BaseFlow        int64         `gorm:"column:base_flow;default:0"`          // 初始流量配额 (GB)
-	TrafficFlow     int64         `gorm:"column:traffic_flow;default:0"`        // 流量快餐累计 (GB)
-	SpeedLimit      int           `gorm:"column:speed_limit;default:0"`        // 限速 MB/s (0=不限)
-	MaxRules        int           `gorm:"column:max_rules;default:0"`          // 最大规则数 (0=不限)
-	MaxConnections  int           `gorm:"column:max_connections;default:0"`    // 最大连接数 (0=不限)
-	MaxIPAccess     int           `gorm:"column:max_ip_access;default:0"`      // 单 IP 接入限制 (0=不限)
+	ID                      int64         `gorm:"primaryKey;autoIncrement"`
+	User                    string        `gorm:"column:user;type:varchar(100);not null"`
+	Pwd                     string        `gorm:"type:varchar(100);not null"`
+	RoleID                  int           `gorm:"column:role_id;not null"`
+	Name                    string        `gorm:"column:name;type:varchar(100);default:''"` // 用户备注
+	ExpTime                 int64         `gorm:"column:exp_time;not null"`
+	Flow                    int64         `gorm:"not null"`
+	InFlow                  int64         `gorm:"column:in_flow;not null;default:0"`
+	OutFlow                 int64         `gorm:"column:out_flow;not null;default:0"`
+	FlowResetTime           int64         `gorm:"column:flow_reset_time;not null"`
+	Num                     int           `gorm:"not null"`
+	Inx                     int           `gorm:"column:inx;default:0"` // 排序索引
+	CreatedTime             int64         `gorm:"column:created_time;not null"`
+	UpdatedTime             sql.NullInt64 `gorm:"column:updated_time"`
+	Status                  int           `gorm:"not null"`
+	RenewalAmount           int64         `gorm:"column:renewal_amount;default:0"`              // 续费金额 (分)
+	Balance                 int64         `gorm:"column:balance;default:0"`                     // 可用余额 (分)
+	AutoRenew               int           `gorm:"column:auto_renew;default:0"`                  // 自动续费开关 (0=禁用，1=启用)
+	AutoBuyTraffic          int           `gorm:"column:auto_buy_traffic;default:0"`            // 自动购买流量开关 (0=禁用，1=启用)
+	BuyTrafficAmount        int64         `gorm:"column:buy_traffic_amount;default:0"`          // 每次购买流量量 (GB)
+	BuyTrafficPrice         int64         `gorm:"column:buy_traffic_price;default:0"`           // 每次购买价格 (分)
+	AutoBuyTrafficPackageID int64         `gorm:"column:auto_buy_traffic_package_id;default:0"` // 关联的自动购流套餐ID (0=使用自定义配置)
+	BaseFlow                int64         `gorm:"column:base_flow;default:0"`                   // 初始流量配额 (GB)
+	TrafficFlow             int64         `gorm:"column:traffic_flow;default:0"`                // 流量快餐累计 (GB)
+	SpeedLimit              int           `gorm:"column:speed_limit;default:0"`                 // 限速 MB/s (0=不限)
+	MaxRules                int           `gorm:"column:max_rules;default:0"`                   // 最大规则数 (0=不限)
+	MaxConnections          int           `gorm:"column:max_connections;default:0"`             // 最大连接数 (0=不限)
+	MaxIPAccess             int           `gorm:"column:max_ip_access;default:0"`               // 单 IP 接入限制 (0=不限)
 }
 
 func (User) TableName() string { return "user" }
@@ -81,7 +81,7 @@ type ForwardPort struct {
 func (ForwardPort) TableName() string { return "forward_port" }
 
 type NftablesRule struct {
-	ID        int64  `gorm:"primaryKey;autoIncrement"`
+	ID         int64  `gorm:"primaryKey;autoIncrement"`
 	ForwardID  int64  `gorm:"column:forward_id;not null;index:idx_nftables_forward_id"`
 	NodeID     int64  `gorm:"column:node_id;not null"`
 	Protocol   string `gorm:"type:varchar(10);not null"`
@@ -130,6 +130,85 @@ type Node struct {
 }
 
 func (Node) TableName() string { return "node" }
+
+type NodeTLSTemplate struct {
+	ID          int64          `gorm:"primaryKey;autoIncrement" json:"id"`
+	Name        string         `gorm:"type:varchar(100);not null;uniqueIndex" json:"name"`
+	Type        string         `gorm:"type:varchar(20);not null;default:'tls'" json:"type"`
+	ServerJSON  string         `gorm:"column:server_json;type:text;not null;default:'{}'" json:"serverJson"`
+	ClientJSON  string         `gorm:"column:client_json;type:text;not null;default:'{}'" json:"clientJson"`
+	Remark      sql.NullString `gorm:"column:remark;type:text" json:"remark,omitempty"`
+	CreatedTime int64          `gorm:"column:created_time;not null" json:"createdTime"`
+	UpdatedTime int64          `gorm:"column:updated_time;not null" json:"updatedTime"`
+}
+
+func (NodeTLSTemplate) TableName() string { return "node_tls_template" }
+
+type NodeIdentity struct {
+	NodeID                  int64  `gorm:"column:node_id;primaryKey" json:"nodeId"`
+	UUID                    string `gorm:"type:varchar(64);not null" json:"uuid"`
+	Seed                    string `gorm:"type:varchar(64);not null" json:"seed"`
+	MixedPassword           string `gorm:"column:mixed_password;type:varchar(64);not null" json:"mixedPassword"`
+	TrojanPassword          string `gorm:"column:trojan_password;type:varchar(64);not null" json:"trojanPassword"`
+	Hysteria2Password       string `gorm:"column:hysteria2_password;type:varchar(64);not null" json:"hysteria2Password"`
+	TUICUUID                string `gorm:"column:tuic_uuid;type:varchar(64);not null" json:"tuicUuid"`
+	TUICPassword            string `gorm:"column:tuic_password;type:varchar(64);not null" json:"tuicPassword"`
+	RealityShortID          string `gorm:"column:reality_short_id;type:varchar(32);not null" json:"realityShortId"`
+	PathSuffix              string `gorm:"column:path_suffix;type:varchar(64);not null" json:"pathSuffix"`
+	ServiceSuffix           string `gorm:"column:service_suffix;type:varchar(64);not null" json:"serviceSuffix"`
+	ProtocolCredentialsJSON string `gorm:"column:protocol_credentials_json;type:text;not null;default:'{}'" json:"protocolCredentialsJson"`
+	CreatedTime             int64  `gorm:"column:created_time;not null" json:"createdTime"`
+	UpdatedTime             int64  `gorm:"column:updated_time;not null" json:"updatedTime"`
+}
+
+func (NodeIdentity) TableName() string { return "node_identity" }
+
+type NodeDeployedInbound struct {
+	ID                 int64         `gorm:"primaryKey;autoIncrement" json:"id"`
+	NodeID             int64         `gorm:"column:node_id;not null;index:idx_node_deployed_inbound_node" json:"nodeId"`
+	DisplayName        string        `gorm:"column:display_name;type:varchar(160);not null;index" json:"displayName"`
+	InternalTag        string        `gorm:"column:internal_tag;type:varchar(160);not null;uniqueIndex" json:"internalTag"`
+	Protocol           string        `gorm:"type:varchar(40);not null" json:"protocol"`
+	ListenAddr         string        `gorm:"column:listen_addr;type:varchar(100);not null" json:"listenAddr"`
+	ListenPort         int           `gorm:"column:listen_port;not null" json:"listenPort"`
+	PublishAddr        string        `gorm:"column:publish_addr;type:varchar(200);not null" json:"publishAddr"`
+	PublishPort        int           `gorm:"column:publish_port;not null" json:"publishPort"`
+	TLSTemplateID      sql.NullInt64 `gorm:"column:tls_template_id;index" json:"tlsTemplateId,omitempty"`
+	InboundOptionsJSON string        `gorm:"column:inbound_options_json;type:text;not null;default:'{}'" json:"inboundOptionsJson"`
+	ClientConfigJSON   string        `gorm:"column:client_config_json;type:text;not null;default:'{}'" json:"clientConfigJson"`
+	ServerConfigJSON   string        `gorm:"column:server_config_json;type:text;not null;default:'{}'" json:"serverConfigJson"`
+	ShareURI           string        `gorm:"column:share_uri;type:text" json:"shareUri"`
+	Enabled            int           `gorm:"not null;default:1" json:"enabled"`
+	CreatedTime        int64         `gorm:"column:created_time;not null" json:"createdTime"`
+	UpdatedTime        int64         `gorm:"column:updated_time;not null" json:"updatedTime"`
+}
+
+func (NodeDeployedInbound) TableName() string { return "node_deployed_inbound" }
+
+type NodeConfigRevision struct {
+	ID           int64  `gorm:"primaryKey;autoIncrement" json:"id"`
+	NodeID       int64  `gorm:"column:node_id;not null;index" json:"nodeId"`
+	CoreType     string `gorm:"column:core_type;type:varchar(40);not null;default:'sing-box'" json:"coreType"`
+	ConfigJSON   string `gorm:"column:config_json;type:text;not null" json:"configJson"`
+	Status       string `gorm:"type:varchar(40);not null;default:'generated'" json:"status"`
+	Checksum     string `gorm:"type:varchar(128);not null" json:"checksum"`
+	ErrorMessage string `gorm:"column:error_message;type:text" json:"errorMessage,omitempty"`
+	CreatedTime  int64  `gorm:"column:created_time;not null" json:"createdTime"`
+}
+
+func (NodeConfigRevision) TableName() string { return "node_config_revision" }
+
+type NodeDeployLog struct {
+	ID          int64  `gorm:"primaryKey;autoIncrement" json:"id"`
+	NodeID      int64  `gorm:"column:node_id;not null;index" json:"nodeId"`
+	RevisionID  int64  `gorm:"column:revision_id;not null;index" json:"revisionId"`
+	Action      string `gorm:"type:varchar(40);not null" json:"action"`
+	Status      string `gorm:"type:varchar(40);not null" json:"status"`
+	Message     string `gorm:"type:text" json:"message"`
+	CreatedTime int64  `gorm:"column:created_time;not null" json:"createdTime"`
+}
+
+func (NodeDeployLog) TableName() string { return "node_deploy_log" }
 
 type SpeedLimit struct {
 	ID          int64          `gorm:"primaryKey;autoIncrement"`
@@ -961,13 +1040,13 @@ type UserTrafficBuyLog struct {
 	ID            int64  `gorm:"primaryKey;autoIncrement"`
 	UserID        int64  `gorm:"column:user_id;not null;index:idx_user_buy_time"`
 	UserName      string `gorm:"column:user_name;type:varchar(100);not null"`
-	BuyAmount     int64  `gorm:"column:buy_amount;not null"`        // 购买流量量 (GB)
-	BuyPrice      int64  `gorm:"column:buy_price;not null"`         // 扣款金额 (分)
-	BalanceBefore int64  `gorm:"column:balance_before;not null"`    // 扣款前余额
-	BalanceAfter  int64  `gorm:"column:balance_after;not null"`     // 扣款后余额
-	FlowBefore    int64  `gorm:"column:flow_before;not null"`       // 购买前流量配额 (GB)
-	FlowAfter     int64  `gorm:"column:flow_after;not null"`        // 购买后流量配额 (GB)
-	BuyTime       int64  `gorm:"column:buy_time;not null"`          // 购买时间
+	BuyAmount     int64  `gorm:"column:buy_amount;not null"`     // 购买流量量 (GB)
+	BuyPrice      int64  `gorm:"column:buy_price;not null"`      // 扣款金额 (分)
+	BalanceBefore int64  `gorm:"column:balance_before;not null"` // 扣款前余额
+	BalanceAfter  int64  `gorm:"column:balance_after;not null"`  // 扣款后余额
+	FlowBefore    int64  `gorm:"column:flow_before;not null"`    // 购买前流量配额 (GB)
+	FlowAfter     int64  `gorm:"column:flow_after;not null"`     // 购买后流量配额 (GB)
+	BuyTime       int64  `gorm:"column:buy_time;not null"`       // 购买时间
 	Reason        string `gorm:"column:reason;type:varchar(200);default:'自动购买流量'"`
 }
 

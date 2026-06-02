@@ -1,4 +1,4 @@
-﻿package socket
+package socket
 
 import (
 	"bytes"
@@ -177,26 +177,26 @@ const (
 )
 
 type WebSocketReporter struct {
-	url               string
-	addr              string // 保存服务器地址
-	secret            string // 保存密钥
-	version           string // 保存版本号
-	nodeID            int64  // 节点 ID
-	preferredWSScheme string
-	conn              *websocket.Conn
-	curBackoff        time.Duration // 当前重连退避间隔
-	pingInterval      time.Duration
-	configInterval    time.Duration
-	ctx               context.Context
-	cancel            context.CancelFunc
-	connected         bool
-	connecting        bool              // 正在连接状态
-	connMutex         sync.Mutex        // 连接状态锁
-	aesCrypto         *crypto.AESCrypto // AES 加密器
-	publicIPReported  bool              // 是否已上报公网 IP
-	serviceName       string            // 服务名
+	url                  string
+	addr                 string // 保存服务器地址
+	secret               string // 保存密钥
+	version              string // 保存版本号
+	nodeID               int64  // 节点 ID
+	preferredWSScheme    string
+	conn                 *websocket.Conn
+	curBackoff           time.Duration // 当前重连退避间隔
+	pingInterval         time.Duration
+	configInterval       time.Duration
+	ctx                  context.Context
+	cancel               context.CancelFunc
+	connected            bool
+	connecting           bool                     // 正在连接状态
+	connMutex            sync.Mutex               // 连接状态锁
+	aesCrypto            *crypto.AESCrypto        // AES 加密器
+	publicIPReported     bool                     // 是否已上报公网 IP
+	serviceName          string                   // 服务名
 	nftablesMgr          NftablesManagerInterface // nftables manager (platform-specific)
-	nftablesPrevCounters map[string]uint64          // "forwardID_protocol" → last total bytes
+	nftablesPrevCounters map[string]uint64        // "forwardID_protocol" → last total bytes
 	nftablesPrevMu       sync.Mutex
 }
 
@@ -218,12 +218,12 @@ func NewWebSocketReporter(serverURL string, secret string) *WebSocketReporter {
 	}
 
 	return &WebSocketReporter{
-		url:            serverURL,
-		curBackoff:     initialBackoff,   // 当前退避间隔
-		pingInterval:   1 * time.Second,  // 指标上报间隔（每秒采集）
-		configInterval: 10 * time.Minute, // 配置上报间隔
-		ctx:            ctx,
-		cancel:         cancel,
+		url:                  serverURL,
+		curBackoff:           initialBackoff,   // 当前退避间隔
+		pingInterval:         1 * time.Second,  // 指标上报间隔（每秒采集）
+		configInterval:       10 * time.Minute, // 配置上报间隔
+		ctx:                  ctx,
+		cancel:               cancel,
 		connected:            false,
 		connecting:           false,
 		aesCrypto:            aesCrypto,
@@ -1344,6 +1344,17 @@ func (w *WebSocketReporter) routeCommand(cmd CommandMessage) {
 		err = w.handleSetProtocol(cmd.Data)
 		response.Type = "SetProtocolResponse"
 		needSaveConfig = true
+	case "ApplyCoreConfig":
+		err = w.handleApplyCoreConfig(cmd.Data)
+		response.Type = "ApplyCoreConfigResponse"
+	case "GetCoreConfig":
+		var coreConfig map[string]interface{}
+		coreConfig, err = w.handleGetCoreConfig(cmd.Data)
+		response.Type = "GetCoreConfigResponse"
+		response.Data = coreConfig
+	case "RestartCore":
+		err = w.handleRestartCore(cmd.Data)
+		response.Type = "RestartCoreResponse"
 
 	// 升级 Agent 命令（异步执行，不需要保存配置）
 	case "UpgradeAgent":
@@ -1357,7 +1368,7 @@ func (w *WebSocketReporter) routeCommand(cmd CommandMessage) {
 		response.Type = "RollbackAgentResponse"
 		// needSaveConfig = false (默认值)
 
-	// Nftables 
+	// Nftables
 	case "AddNftablesRules":
 		rawData, _ := json.Marshal(cmd.Data)
 		err = w.handleAddNftablesRules(rawData)
@@ -1494,6 +1505,198 @@ func (w *WebSocketReporter) handleResumeService(data interface{}) error {
 	}
 
 	return resumeServices(req)
+}
+
+func (w *WebSocketReporter) handleApplyCoreConfig(data interface{}) error {
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	var req struct {
+		CoreType   string `json:"coreType"`
+		ConfigJSON string `json:"configJson"`
+		Checksum   string `json:"checksum"`
+	}
+	if err := json.Unmarshal(raw, &req); err != nil {
+		return err
+	}
+	if strings.TrimSpace(req.CoreType) == "" {
+		req.CoreType = "sing-box"
+	}
+	if strings.TrimSpace(req.ConfigJSON) == "" {
+		return fmt.Errorf("core config is empty")
+	}
+	sum := sha256.Sum256([]byte(req.ConfigJSON))
+	if req.Checksum != "" && !strings.EqualFold(req.Checksum, hex.EncodeToString(sum[:])) {
+		return fmt.Errorf("core config checksum mismatch")
+	}
+	var parsed interface{}
+	if err := json.Unmarshal([]byte(req.ConfigJSON), &parsed); err != nil {
+		return fmt.Errorf("core config must be valid JSON: %v", err)
+	}
+	if err := os.MkdirAll(coreConfigDir(), 0700); err != nil {
+		return fmt.Errorf("create core config dir failed: %v", err)
+	}
+	target := coreConfigPath(req.CoreType)
+	tmp := target + ".tmp"
+	backup := fmt.Sprintf("%s.bak.%d", target, time.Now().Unix())
+	if err := os.WriteFile(tmp, []byte(req.ConfigJSON), 0600); err != nil {
+		return fmt.Errorf("write temp core config failed: %v", err)
+	}
+	if err := validateCoreConfig(req.CoreType, tmp); err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
+	if _, err := os.Stat(target); err == nil {
+		if err := copyFile(target, backup); err != nil {
+			_ = os.Remove(tmp)
+			return fmt.Errorf("backup old core config failed: %v", err)
+		}
+	}
+	if err := os.Rename(tmp, target); err != nil {
+		_ = os.Remove(tmp)
+		return fmt.Errorf("replace core config failed: %v", err)
+	}
+	if err := restartCore(req.CoreType, target); err != nil {
+		if _, statErr := os.Stat(backup); statErr == nil {
+			_ = copyFile(backup, target)
+		}
+		return err
+	}
+	return nil
+}
+
+func (w *WebSocketReporter) handleGetCoreConfig(data interface{}) (map[string]interface{}, error) {
+	coreType := "sing-box"
+	if raw, err := json.Marshal(data); err == nil {
+		var req map[string]string
+		if json.Unmarshal(raw, &req) == nil && strings.TrimSpace(req["coreType"]) != "" {
+			coreType = strings.TrimSpace(req["coreType"])
+		}
+	}
+	path := coreConfigPath(coreType)
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]interface{}{"coreType": coreType, "path": path, "configJson": string(content)}, nil
+}
+
+func (w *WebSocketReporter) handleRestartCore(data interface{}) error {
+	coreType := "sing-box"
+	if raw, err := json.Marshal(data); err == nil {
+		var req map[string]string
+		if json.Unmarshal(raw, &req) == nil && strings.TrimSpace(req["coreType"]) != "" {
+			coreType = strings.TrimSpace(req["coreType"])
+		}
+	}
+	return restartCore(coreType, coreConfigPath(coreType))
+}
+
+func coreConfigDir() string {
+	if runtime.GOOS == "windows" {
+		return ".flvxt2"
+	}
+	return "/etc/flvxt2"
+}
+
+func coreConfigPath(coreType string) string {
+	name := "sing-box.json"
+	switch strings.ToLower(strings.TrimSpace(coreType)) {
+	case "gost":
+		name = "gost.json"
+	case "xray":
+		name = "xray.json"
+	}
+	return coreConfigDir() + string(os.PathSeparator) + name
+}
+
+func validateCoreConfig(coreType, path string) error {
+	if strings.EqualFold(coreType, "sing-box") {
+		if _, err := exec.LookPath("sing-box"); err != nil {
+			return fmt.Errorf("sing-box executable not found on this node; install it locally before offline core deployment")
+		}
+		if out, err := exec.Command("sing-box", "check", "-c", path).CombinedOutput(); err != nil {
+			return fmt.Errorf("sing-box config check failed: %v: %s", err, strings.TrimSpace(string(out)))
+		}
+	}
+	return nil
+}
+
+func restartCore(coreType, path string) error {
+	if runtime.GOOS == "windows" {
+		return nil
+	}
+	normalizedCore := strings.ToLower(strings.TrimSpace(coreType))
+	if normalizedCore == "" {
+		normalizedCore = "sing-box"
+	}
+	executable := normalizedCore
+	if normalizedCore == "sing-box" {
+		executable = "sing-box"
+	}
+	execPath, err := exec.LookPath(executable)
+	if err != nil {
+		return fmt.Errorf("%s executable not found on this node; offline deployment will not download it", executable)
+	}
+	if _, err := exec.LookPath("systemctl"); err != nil {
+		return fmt.Errorf("systemctl not found; config was written but %s cannot be managed automatically", normalizedCore)
+	}
+	serviceName := "flvxt2-" + normalizedCore
+	if err := ensureCoreSystemdService(serviceName, normalizedCore, execPath, path); err != nil {
+		return err
+	}
+	if out, err := exec.Command("systemctl", "restart", serviceName).CombinedOutput(); err != nil {
+		return fmt.Errorf("restart %s failed: %v: %s", serviceName, err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+func ensureCoreSystemdService(serviceName, coreType, execPath, configPath string) error {
+	if coreType != "sing-box" {
+		return nil
+	}
+	unitPath := "/etc/systemd/system/" + serviceName + ".service"
+	unit := fmt.Sprintf(`[Unit]
+Description=flvxt2 managed %s core
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%s run -c %s
+Restart=on-failure
+RestartSec=5s
+LimitNOFILE=1048576
+
+[Install]
+WantedBy=multi-user.target
+`, coreType, execPath, configPath)
+	if err := os.WriteFile(unitPath, []byte(unit), 0644); err != nil {
+		return fmt.Errorf("write %s failed: %v", unitPath, err)
+	}
+	if out, err := exec.Command("systemctl", "daemon-reload").CombinedOutput(); err != nil {
+		return fmt.Errorf("systemd daemon-reload failed: %v: %s", err, strings.TrimSpace(string(out)))
+	}
+	if out, err := exec.Command("systemctl", "enable", serviceName).CombinedOutput(); err != nil {
+		return fmt.Errorf("enable %s failed: %v: %s", serviceName, err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	out, err := os.OpenFile(dst, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	_, err = io.Copy(out, in)
+	return err
 }
 
 func (w *WebSocketReporter) handleSetServiceMaxConnections(data interface{}) error {

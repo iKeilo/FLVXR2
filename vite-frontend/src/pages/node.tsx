@@ -22,6 +22,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 import { NodeGroupManager } from "./node/node-group-manager";
+import { NodeDeployModal } from "./node/node-deploy-modal";
 
 import {
   DistroIcon,
@@ -454,9 +455,15 @@ export default function NodePage() {
   >({});
   const [nodeGroups, setNodeGroups] = useState<NodeGroupApiItem[]>([]);
   const [groupManagerOpen, setGroupManagerOpen] = useState(false);
+  const [deployModalOpen, setDeployModalOpen] = useState(false);
+  const [deployTargetNode, setDeployTargetNode] = useState<Node | null>(null);
   const [groupSelectorNode, setGroupSelectorNode] = useState<number | null>(
     null,
   );
+  const openDeployModal = useCallback((node: Node) => {
+    setDeployTargetNode(node);
+    setDeployModalOpen(true);
+  }, []);
   const updateInfoPopoverPlacement = useCallback(
     (nodeId: number, triggerElement: HTMLElement | null) => {
       if (!triggerElement) {
@@ -1318,11 +1325,11 @@ export default function NodePage() {
 
     // 检测是否为 GitHub 代理（不包含 github.com 的都需要拼接完整 GitHub URL）
     if (!ghfastURL.includes("github.com")) {
-      return `${ghfastURL}/https://github.com/abai569/flvx/releases/download/${releaseType}/gost-{ARCH}`;
+      return `${ghfastURL}/https://github.com/iKeilo/flvxt2/releases/download/${releaseType}/gost-{ARCH}`;
     }
 
     // 直连 GitHub（如 https://github.com）
-    return `${ghfastURL}/abai569/flvx/releases/download/${releaseType}/gost-{ARCH}`;
+    return `${ghfastURL}/iKeilo/flvxt2/releases/download/${releaseType}/gost-{ARCH}`;
   };
   // 获取地址前缀文本（升级地址/回退地址）
   const getAddressPrefix = (): string => {
@@ -2341,7 +2348,17 @@ export default function NodePage() {
                 更新
               </Button>
             </div>
-            <div className="grid gap-2 grid-cols-3">
+            <div className="grid gap-2 grid-cols-4">
+              <Button
+                className="min-h-8 w-full"
+                color="secondary"
+                isDisabled={node.connectionStatus !== "online"}
+                size="sm"
+                variant="flat"
+                onPress={() => openDeployModal(node)}
+              >
+                部署
+              </Button>
               <Button
                 className="min-h-8 w-full"
                 color="primary"
@@ -2787,6 +2804,7 @@ export default function NodePage() {
                                       nodeExpiryStats={nodeExpiryStats}
                                       nodeFilterMode={nodeFilterMode}
                                       nodeGroups={nodeGroups}
+                                      openDeployModal={openDeployModal}
                                       openInstallSelector={openInstallSelector}
                                       openUpgradeModal={openUpgradeModal}
                                       realtimeNodeMetrics={realtimeNodeMetrics}
@@ -2862,6 +2880,7 @@ export default function NodePage() {
                   nodeExpiryStats={nodeExpiryStats}
                   nodeFilterMode={nodeFilterMode}
                   nodeGroups={nodeGroups}
+                  openDeployModal={openDeployModal}
                   openInstallSelector={openInstallSelector}
                   openUpgradeModal={openUpgradeModal}
                   realtimeNodeMetrics={realtimeNodeMetrics}
@@ -2878,6 +2897,11 @@ export default function NodePage() {
         </>
       )}
       {/* 新增/编辑节点对话框 */}
+      <NodeDeployModal
+        isOpen={deployModalOpen}
+        node={deployTargetNode as any}
+        onClose={() => setDeployModalOpen(false)}
+      />
       <Modal
         backdrop="blur"
         classNames={{

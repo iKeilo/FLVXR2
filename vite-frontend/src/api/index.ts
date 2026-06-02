@@ -5,6 +5,8 @@ import type {
   GroupPermissionApiItem,
   NodeGroupApiItem,
   NodeGroupMutationPayload,
+  NodeDeployDetailApiItem,
+  NodeTLSTemplateApiItem,
   NodeReleaseApiItem,
   NodeApiItem,
   NodeTagApiItem,
@@ -172,6 +174,37 @@ export const checkNodeStatus = (nodeId?: number) => {
 
   return Network.post("/node/check-status", params);
 };
+
+export const getNodeTLSTemplates = () =>
+  Network.post<NodeTLSTemplateApiItem[]>("/node/tls-template/list");
+export const saveNodeTLSTemplate = (data: Partial<NodeTLSTemplateApiItem>) =>
+  Network.post<NodeTLSTemplateApiItem>("/node/tls-template/save", data);
+export const deleteNodeTLSTemplate = (id: number) =>
+  Network.post("/node/tls-template/delete", { id });
+export const getNodeDeployDetail = (nodeId: number) =>
+  Network.post<NodeDeployDetailApiItem>("/node/deploy/detail", { nodeId });
+export const regenerateNodeIdentity = (nodeId: number) =>
+  Network.post("/node/deploy/identity/regenerate", { nodeId });
+export const saveNodeDeployInbound = (data: {
+  id?: number;
+  nodeId: number;
+  name?: string;
+  protocol: string;
+  listenAddr: string;
+  listenPort: number;
+  publishAddr: string;
+  publishPort: number;
+  tlsTemplateId?: number;
+  inboundOptionsJson?: string;
+  enabled?: number;
+  apply?: boolean;
+}) => Network.post("/node/deploy/inbound/save", data);
+export const deleteNodeDeployInbound = (id: number) =>
+  Network.post("/node/deploy/inbound/delete", { id });
+export const applyNodeDeployConfig = (nodeId: number) =>
+  Network.post("/node/deploy/apply", { nodeId });
+export const rollbackNodeDeployConfig = (nodeId: number, revisionId: number) =>
+  Network.post("/node/deploy/rollback", { nodeId, revisionId });
 
 export const upgradeNode = (
   id: number,

@@ -23,7 +23,7 @@ import {
 import { getPanelReleases, type PanelReleaseItem } from "@/api";
 import { runSystemUpgrade } from "@/api/index";
 
-const FALLBACK_GITHUB_REPO = "https://github.com/abai569/flvx";
+const FALLBACK_GITHUB_REPO = "https://github.com/iKeilo/flvxt2";
 const UPGRADE_DISMISS_KEY = "upgrade_dismissed_date";
 
 const isUpgradeDismissedToday = (): boolean => {

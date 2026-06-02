@@ -44,7 +44,7 @@ type Handler struct {
 
 	systemUpgradeMu sync.Mutex
 
-	qualityProber *tunnelQualityProber
+	qualityProber    *tunnelQualityProber
 	nodeGroupHandler *NodeGroupHandler
 	nodeTagHandler   *NodeTagHandler
 
@@ -105,15 +105,15 @@ const (
 
 func New(repo *repo.Repository, jwtSecret string, fluxVersion string) *Handler {
 	h := &Handler{
-		repo:                   repo,
-		jwtSecret:              jwtSecret,
-		wsServer:               ws.NewServer(repo, jwtSecret),
-		metrics:                metrics.NewIngestionService(repo),
-		healthCheck:            nil,
-		bestExit:               newBestExitManager(),
-		fluxVersion:            fluxVersion,
-		captchaTokens:        make(map[string]int64),
-		nftablesDomainCache:  make(map[int64]string),
+		repo:                repo,
+		jwtSecret:           jwtSecret,
+		wsServer:            ws.NewServer(repo, jwtSecret),
+		metrics:             metrics.NewIngestionService(repo),
+		healthCheck:         nil,
+		bestExit:            newBestExitManager(),
+		fluxVersion:         fluxVersion,
+		captchaTokens:       make(map[string]int64),
+		nftablesDomainCache: make(map[int64]string),
 	}
 	h.healthCheck = health.NewChecker(repo, h.wsServer)
 	h.qualityProber = newTunnelQualityProber(h)
@@ -203,6 +203,15 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/node/batch-reset-traffic", h.nodeBatchResetTraffic)
 	mux.HandleFunc("/api/v1/node/info", h.nodeInfo)
 	mux.HandleFunc("/api/v1/node/report-ip", h.nodeReportIP)
+	mux.HandleFunc("/api/v1/node/tls-template/list", h.nodeTLSList)
+	mux.HandleFunc("/api/v1/node/tls-template/save", h.nodeTLSSave)
+	mux.HandleFunc("/api/v1/node/tls-template/delete", h.nodeTLSDelete)
+	mux.HandleFunc("/api/v1/node/deploy/detail", h.nodeDeployDetail)
+	mux.HandleFunc("/api/v1/node/deploy/identity/regenerate", h.nodeIdentityRegenerate)
+	mux.HandleFunc("/api/v1/node/deploy/inbound/save", h.nodeDeploySaveInbound)
+	mux.HandleFunc("/api/v1/node/deploy/inbound/delete", h.nodeDeployDeleteInbound)
+	mux.HandleFunc("/api/v1/node/deploy/apply", h.nodeDeployApply)
+	mux.HandleFunc("/api/v1/node/deploy/rollback", h.nodeDeployRollback)
 	mux.HandleFunc("/api/v1/tunnel/list", h.tunnelList)
 	mux.HandleFunc("/api/v1/tunnel/create", h.tunnelCreate)
 	mux.HandleFunc("/api/v1/tunnel/get", h.tunnelGet)
@@ -307,8 +316,6 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/license/info", h.licenseInfo)
 	mux.HandleFunc("/api/v1/license/config", h.licenseConfig)
 	mux.HandleFunc("/api/v1/license/transfer", h.licenseTransfer)
-
-
 
 	mux.HandleFunc("/api/v1/monitor/access", h.monitorAccessHandler)
 	mux.HandleFunc("/api/v1/monitor/public/nodes", h.monitorPublicNodeListHandler)
@@ -1231,27 +1238,27 @@ func (h *Handler) userPackage(w http.ResponseWriter, r *http.Request) {
 
 	payload := map[string]interface{}{
 		"userInfo": map[string]interface{}{
-			"id":            user.ID,
-			"name":          user.User,
-			"user":          user.User,
-			"status":        user.Status,
-			"flow":          user.Flow,
-			"inFlow":        user.InFlow,
-			"outFlow":       user.OutFlow,
-			"num":           user.Num,
-			"expTime":       user.ExpTime,
-			"flowResetTime": user.FlowResetTime,
-			"createdTime":   user.CreatedTime,
-			"updatedTime":   nullableNullInt64(user.UpdatedTime),
-			"renewalAmount":    user.RenewalAmount,
-			"balance":          user.Balance,
-			"autoRenew":        user.AutoRenew,
-			"autoBuyTraffic":   user.AutoBuyTraffic,
-			"buyTrafficAmount": user.BuyTrafficAmount,
-			"buyTrafficPrice":  user.BuyTrafficPrice,
+			"id":                      user.ID,
+			"name":                    user.User,
+			"user":                    user.User,
+			"status":                  user.Status,
+			"flow":                    user.Flow,
+			"inFlow":                  user.InFlow,
+			"outFlow":                 user.OutFlow,
+			"num":                     user.Num,
+			"expTime":                 user.ExpTime,
+			"flowResetTime":           user.FlowResetTime,
+			"createdTime":             user.CreatedTime,
+			"updatedTime":             nullableNullInt64(user.UpdatedTime),
+			"renewalAmount":           user.RenewalAmount,
+			"balance":                 user.Balance,
+			"autoRenew":               user.AutoRenew,
+			"autoBuyTraffic":          user.AutoBuyTraffic,
+			"buyTrafficAmount":        user.BuyTrafficAmount,
+			"buyTrafficPrice":         user.BuyTrafficPrice,
 			"autoBuyTrafficPackageId": user.AutoBuyTrafficPackageID,
-			"baseFlow":         user.BaseFlow,
-			"trafficFlow":      user.TrafficFlow,
+			"baseFlow":                user.BaseFlow,
+			"trafficFlow":             user.TrafficFlow,
 		},
 		"tunnelPermissions": tunnelOut,
 		"forwards":          forwardOut,

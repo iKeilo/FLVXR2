@@ -82,6 +82,7 @@ interface NodeListViewProps {
   toggleSelectAll: (isSelected: boolean) => void;
   copyToClipboard: (text: string, label: string) => void;
   openInstallSelector: (node: Node) => void;
+  openDeployModal?: (node: Node) => void;
   openUpgradeModal: (type: "single" | "batch", nodeId?: number) => void;
   handleEdit: (node: Node) => void;
   handleDelete: (node: Node) => void;
@@ -110,6 +111,7 @@ function SortableTableRow({
   toggleSelect,
   copyToClipboard,
   openUpgradeModal,
+  openDeployModal,
   handleEdit,
   handleDelete,
   formatTraffic,
@@ -684,6 +686,16 @@ function SortableTableRow({
               </Button>
               <Button
                 className="min-h-7 px-2"
+                color="secondary"
+                isDisabled={node.connectionStatus !== "online"}
+                size="sm"
+                variant="flat"
+                onPress={() => openDeployModal?.(node)}
+              >
+                部署
+              </Button>
+              <Button
+                className="min-h-7 px-2"
                 color="primary"
                 size="sm"
                 variant="flat"
@@ -725,6 +737,7 @@ export function NodeListView({
   toggleSelectAll,
   copyToClipboard,
   openUpgradeModal,
+  openDeployModal,
   handleEdit,
   handleDelete,
   formatTraffic,
@@ -929,6 +942,7 @@ export function NodeListView({
                   toggleSelect,
                   copyToClipboard,
                   openUpgradeModal,
+                  openDeployModal,
                   handleEdit,
                   handleDelete,
                   formatTraffic,

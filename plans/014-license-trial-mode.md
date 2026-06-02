@@ -23,7 +23,7 @@
 
 - [ ] 2.1 新增 go-backend/internal/http/handler/license_config.go
   - POST /api/v1/license/config 保存到 config 表（license_key + domain）
-  - 服务器 URL 后端默认 https://sq.abai.eu.org
+  - 服务器 URL 后端默认 https://sq.sbplay.eu.org
   - 参数：{ license_key, domain }
   - 保存后触发 TriggerAsyncCheck
 
