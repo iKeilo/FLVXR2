@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"go-backend/internal/http/response"
@@ -50,9 +49,6 @@ func (h *Handler) licenseConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	url := license.DefaultServerURL
-	if os.Getenv("LICENSE_SERVER_URL") != "" {
-		url = os.Getenv("LICENSE_SERVER_URL")
-	}
 
 	now := time.Now().UnixMilli()
 
@@ -92,10 +88,6 @@ func (h *Handler) licenseConfig(w http.ResponseWriter, r *http.Request) {
 	if err := h.repo.UpsertConfig("server_domain", req.Domain, now); err != nil {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return
-	}
-
-	if err := h.repo.UpsertConfig("license_server_url", url, now); err != nil {
-		log.Printf("⚠️ sync config license_server_url failed: %v", err)
 	}
 
 	if req.HmacKey != "" {

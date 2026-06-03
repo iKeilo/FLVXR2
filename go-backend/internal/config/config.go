@@ -22,7 +22,7 @@ func FromEnv() Config {
 		DatabaseURL:      getEnv("DATABASE_URL", ""),
 		JWTSecret:        getEnv("JWT_SECRET", ""),
 		LogDir:           getEnv("LOG_DIR", "/app/logs"),
-		LicenseServerURL: getEnv("LICENSE_SERVER_URL", ""),
+		LicenseServerURL: "",
 		LicenseKey:       getEnv("LICENSE_KEY", ""),
 		FluxVersion:      getEnv("FLUX_VERSION", "dev"),
 	}

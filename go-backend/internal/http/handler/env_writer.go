@@ -27,7 +27,6 @@ func UpdateEnvFile(licenseKey, domain, serverURL, hmacKey string) error {
 	// 更新或追加的标记
 	foundLicenseKey := false
 	foundDomain := false
-	foundServerURL := false
 	foundHmacKey := false
 
 	for i, line := range lines {
@@ -42,8 +41,7 @@ func UpdateEnvFile(licenseKey, domain, serverURL, hmacKey string) error {
 				lines[i] = "SERVER_DOMAIN=" + domain
 				foundDomain = true
 			case "LICENSE_SERVER_URL":
-				lines[i] = "LICENSE_SERVER_URL=" + serverURL
-				foundServerURL = true
+				lines[i] = ""
 			case "HMAC_SECRET_KEY":
 				if hmacKey != "" {
 					lines[i] = "HMAC_SECRET_KEY=" + hmacKey
@@ -60,14 +58,17 @@ func UpdateEnvFile(licenseKey, domain, serverURL, hmacKey string) error {
 	if !foundDomain && domain != "" {
 		lines = append(lines, "SERVER_DOMAIN="+domain)
 	}
-	if !foundServerURL && serverURL != "" {
-		lines = append(lines, "LICENSE_SERVER_URL="+serverURL)
-	}
 	if !foundHmacKey && hmacKey != "" {
 		lines = append(lines, "HMAC_SECRET_KEY="+hmacKey)
 	}
 
-	content := strings.Join(lines, "\n") + "\n"
+	out := lines[:0]
+	for _, line := range lines {
+		if strings.TrimSpace(line) != "" {
+			out = append(out, line)
+		}
+	}
+	content := strings.Join(out, "\n") + "\n"
 	return osWrite(envPath, []byte(content), 0644)
 }
 

@@ -43,10 +43,7 @@ func (h *Handler) licenseTransfer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lsURL := os.Getenv("LICENSE_SERVER_URL")
-	if lsURL == "" {
-		lsURL = license.DefaultServerURL
-	}
+	lsURL := license.DefaultServerURL
 
 	trialPayload, _ := json.Marshal(map[string]string{
 		"license_key": licenseKey,

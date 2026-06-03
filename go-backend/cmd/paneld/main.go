@@ -30,7 +30,6 @@ func main() {
 		log.Println("license env is not configured, trying to restore from database")
 		tempRepo, err := getTempRepository(cfg)
 		if err == nil && tempRepo != nil {
-			cfg1, _ := tempRepo.GetConfigByName("license_server_url")
 			cfg2, _ := tempRepo.GetConfigByName("license_key")
 			cfg3, _ := tempRepo.GetConfigByName("server_domain")
 			tempRepo.Close()
@@ -41,9 +40,7 @@ func main() {
 			if cfg3 != nil && cfg3.Value != "" {
 				middleware.UpdateServerDomainFromConfig(cfg3.Value)
 			}
-			if cfg1 != nil && cfg1.Value != "" {
-				cfg.LicenseServerURL = cfg1.Value
-			} else if cfg.LicenseKey != "" {
+			if cfg.LicenseKey != "" {
 				cfg.LicenseServerURL = license.DefaultServerURL
 				log.Println("license server URL restored from compiled default")
 			}
