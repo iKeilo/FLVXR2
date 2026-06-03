@@ -1,7 +1,7 @@
 site_name: FLVX 文档
-site_url: https://abai569.github.io/flvx/docs/
+site_url: https://ikeilo.github.io/flvxt2/docs/
 site_description: FLVX官方文档
-site_author: Sagit-chu
+site_author: iKeilo
 
 theme:
   name: material

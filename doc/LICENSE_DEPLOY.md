@@ -177,10 +177,10 @@ curl -H "X-Admin-Token: your-secret-admin-token" \
 
 ```bash
 # 面板端
-curl -L https://raw.githubusercontent.com/abai569/flvx/main/panel_install.sh -o panel_install.sh && chmod +x panel_install.sh && ./panel_install.sh
+curl -L https://raw.githubusercontent.com/iKeilo/flvxt2/main/panel_install.sh -o panel_install.sh && chmod +x panel_install.sh && ./panel_install.sh
 
 # 节点端
-curl -L https://raw.githubusercontent.com/abai569/flvx/main/install.sh -o install.sh && chmod +x install.sh && ./install.sh
+curl -L https://raw.githubusercontent.com/iKeilo/flvxt2/main/install.sh -o install.sh && chmod +x install.sh && ./install.sh
 ```
 
 ### 配置 License 验证
@@ -332,4 +332,3 @@ ls -la config/ data/
 
 - 文档：https://docs.yourdomain.com
 - 邮箱：support@yourdomain.com
-- Telegram: https://t.me/flvxpanel

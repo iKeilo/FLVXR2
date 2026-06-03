@@ -2,8 +2,6 @@
 
 **FLVX** 是一个基于 [go-gost/gost](https://github.com/go-gost/gost) 和 [go-gost/x](https://github.com/go-gost/x) 开发的高性能流量转发管理系统。
 
-> 📞 **联系我们**: [Telegram群组](https://t.me/flvxpanel)
-
 ## 核心特性
 
 - **多协议支持**: 完美支持 TCP 和 UDP 协议转发。

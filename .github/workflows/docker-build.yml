@@ -170,7 +170,6 @@ jobs:
         run: |
           VERSION="${{ needs.check-version.outputs.version }}"
           {
-            echo "VITE_GITHUB_REPO=https://github.com/${{ github.repository }}"
             echo "VITE_APP_VERSION=$VERSION"
           } > ./vite-frontend/.env.production
 

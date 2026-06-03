@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func UpdateEnvFile(licenseKey, domain, serverURL, hmacKey string) error {
+func UpdateEnvFile(licenseKey, domain, hmacKey string) error {
 	envPath := "/opt/flvx-svc/.env"
 	if _, err := os.Stat(envPath); os.IsNotExist(err) {
 		return nil

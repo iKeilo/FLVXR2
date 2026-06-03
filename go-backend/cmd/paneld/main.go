@@ -41,23 +41,16 @@ func main() {
 				middleware.UpdateServerDomainFromConfig(cfg3.Value)
 			}
 			if cfg.LicenseKey != "" {
-				cfg.LicenseServerURL = license.DefaultServerURL
-				log.Println("license server URL restored from compiled default")
-			}
-			if cfg.LicenseKey != "" {
 				log.Println("license config restored from database")
 			}
 		}
 	}
-	if cfg.LicenseKey != "" && cfg.LicenseServerURL == "" {
-		cfg.LicenseServerURL = license.DefaultServerURL
-	}
 
 	// Verify license at startup.
-	if cfg.LicenseServerURL != "" && cfg.LicenseKey != "" {
+	if cfg.LicenseKey != "" {
 		log.Printf("starting license verification")
 		domain := middleware.GetServerDomain()
-		if err := middleware.StartLicenseVerification(cfg.LicenseServerURL, cfg.LicenseKey, domain, domain, "https:"); err != nil {
+		if err := middleware.StartLicenseVerification(license.DefaultServerURL, cfg.LicenseKey, domain, domain, "https:"); err != nil {
 			log.Printf("license verification failed: %v", err)
 		} else {
 			valid, expireTime, reason, _ := middleware.GetLicenseState()
@@ -68,7 +61,7 @@ func main() {
 			}
 		}
 	} else {
-		log.Println("license server is not configured, running in evaluation mode")
+		log.Println("license key is not configured, running in evaluation mode")
 	}
 
 	log.Printf("starting go-backend on %s (db=%s, version=%s)", cfg.Addr, cfg.DBPath, cfg.FluxVersion)

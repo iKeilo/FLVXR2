@@ -26,7 +26,7 @@ export default defineConfig({
       ],
     },
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/abai569/flvx' },
+      { icon: 'github', link: 'https://github.com/iKeilo/flvxt2' },
     ],
     search: {
       provider: 'local',

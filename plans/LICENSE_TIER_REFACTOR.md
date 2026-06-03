@@ -13,7 +13,7 @@
 
 **破解方法：**
 1. 删除 `router.go` 中的 `LicenseGuard` 行 → 绕过所有授权检查
-2. 删除 `trial_guard.go` 文件 → 免费版限制消失
+2. 删除 `trial_guard.go` 文件 → 基础授权策略消失
 3. 修改 `doVerify()` 永远返回 `true` → 授权永远有效
 4. 重新编译 → 完全绕过授权
 
@@ -26,7 +26,7 @@
                         (删除中间件也无法绕过)
 ```
 
-**核心原则：** 验证代码随便删除，移除后自动回退免费版限制。
+**核心原则：** 验证代码随便删除，移除后自动回退基础授权策略。
 
 ---
 
@@ -37,7 +37,7 @@
 | 等级 | 名称 | 条件 | 限制 |
 |------|------|------|------|
 | `premium` | 商业版 | LICENSE_KEY + 授权服务器验证通过 | 无限制 |
-| `free` | 免费版 | 无 LICENSE_KEY / 验证服务不可达 | 5 节点 / 5 隧道 / 1 用户规则 |
+| `free` | 基础授权 | 无 LICENSE_KEY / 验证服务不可达 | 基础授权规则 |
 | `blocked` | 锁定 | LICENSE_KEY 存在但授权明确无效（过期/域名不匹配/禁用） | 完全阻止 |
 
 ### 2.2 双保险机制
@@ -92,8 +92,8 @@ func GetLicenseTier() (TierType, string) {
         case "域名不匹配", "授权已过期", "授权已被禁用":
             return TierBlocked, globalLicenseState.reason
         default:
-            // 验证服务不可达 → 降级为免费版（宽限）
-            return TierFree, "验证服务不可达，已降级为免费版"
+            // 验证服务不可达 → 降级为基础授权（宽限）
+            return TierFree, "验证服务不可达，已降级为基础授权"
         }
     }
 
@@ -126,7 +126,7 @@ func CheckResourceLimit(resourceType string, currentCount int) error {
         return nil
     }
     if currentCount >= limit {
-        return fmt.Errorf("免费版最多 %d 个%s，请配置正式授权以解除限制", limit, resourceType)
+        return fmt.Errorf("基础授权最多 %d 个%s，请配置正式授权以解除限制", limit, resourceType)
     }
     return nil
 }
@@ -189,11 +189,11 @@ func (h *Handler) nodeCreate(w http.ResponseWriter, r *http.Request) {
     // 2. 解析请求
     // ... existing code ...
 
-    // 3. 检查免费版限制（在创建前检查当前数量）
+    // 3. 检查基础授权策略（在创建前检查当前数量）
     if tier == middleware.TierFree {
         count, err := h.repo.CountNodes()
         if err == nil && count >= 5 {
-            response.WriteJSON(w, response.Err(403, "免费版最多 5 个节点，请配置正式授权"))
+            response.WriteJSON(w, response.Err(403, "基础授权最多 5 个节点，请配置正式授权"))
             return
         }
     }
@@ -227,7 +227,7 @@ func (h *Handler) nodeDelete(w http.ResponseWriter, r *http.Request) {
 
 | 序号 | Handler | 行号 | 操作 | 限制类型 |
 |------|---------|------|------|---------|
-| 1 | `nodeCreate` | ~518 | 新增 tier 检查 + 免费版数量限制 | blocked/free |
+| 1 | `nodeCreate` | ~518 | 新增 tier 检查 + 基础授权数量限制 | blocked/free |
 | 2 | `nodeUpdate` | ~592 | 新增 tier 检查 | blocked |
 | 3 | `nodeDelete` | ~679 | 新增 tier 检查 | blocked |
 | 4 | `nodeBatchDelete` | ~993 | 新增 tier 检查 | blocked |
@@ -239,20 +239,20 @@ func (h *Handler) nodeDelete(w http.ResponseWriter, r *http.Request) {
 | 10 | `nodeRefreshExpiryReminder` | ~943 | 新增 tier 检查 | blocked |
 | 11 | `nodeDismissExpiryReminder` | ~970 | 新增 tier 检查 | blocked |
 | 12 | `nodeCheckStatus` | ~1008 | 新增 tier 检查 | blocked |
-| 13 | `tunnelCreate` | ~1021 | 新增 tier 检查 + 免费版数量限制 | blocked/free |
+| 13 | `tunnelCreate` | ~1021 | 新增 tier 检查 + 基础授权数量限制 | blocked/free |
 | 14 | `tunnelUpdate` | ~1299 | 新增 tier 检查 | blocked |
 | 15 | `tunnelDelete` | ~1808 | 新增 tier 检查 | blocked |
 | 16 | `tunnelBatchDelete` | ~1870 | 新增 tier 检查 | blocked |
 | 17 | `tunnelBatchRedeploy` | ~2085 | 新增 tier 检查 | blocked |
 | 18 | `tunnelUpdateOrder` | ~1849 | 新增 tier 检查 | blocked |
-| 19 | `userCreate` | ~31 | 新增 tier 检查 + 免费版数量限制 | blocked/free |
+| 19 | `userCreate` | ~31 | 新增 tier 检查 + 基础授权数量限制 | blocked/free |
 | 20 | `userUpdate` | ~121 | 新增 tier 检查 | blocked |
 | 21 | `userDelete` | ~321 | 新增 tier 检查 | blocked |
 | 22 | `userBatchDelete` | ~377 | 新增 tier 检查 | blocked |
 | 23 | `userResetFlow` | ~352 | 新增 tier 检查 | blocked |
 | 24 | `userBatchResetFlow` | ~414 | 新增 tier 检查 | blocked |
 | 25 | `userUpdateOrder` | ~442 | 新增 tier 检查 | blocked |
-| 26 | `forwardCreate` | ~2385 | 新增 tier 检查 + 免费版数量限制 | blocked/free |
+| 26 | `forwardCreate` | ~2385 | 新增 tier 检查 + 基础授权数量限制 | blocked/free |
 | 27 | `forwardUpdate` | ~2505 | 新增 tier 检查 | blocked |
 | 28 | `forwardDelete` | ~2718 | 新增 tier 检查 | blocked |
 | 29 | `forwardForceDelete` | ~2747 | 新增 tier 检查 | blocked |
@@ -304,7 +304,7 @@ func LicenseGuard(next http.Handler) http.Handler {
         // 3. TierFree 和 TierPremium 都放行
         //    → 由 handler 层做具体限制（双保险）
         //    → 即使验证代码被删除，GetLicenseTier() 返回 TierFree
-        //    → 用户永远无法越过 handler 层的免费版限制
+        //    → 用户永远无法越过 handler 层的基础授权策略
         next.ServeHTTP(w, r)
     })
 }
@@ -409,7 +409,7 @@ export interface LicenseInfo {
 }
 ```
 
-#### 3.5.2 免费版提示更新
+#### 3.5.2 基础授权提示更新
 
 **文件：** `vite-frontend/src/layouts/admin.tsx`
 
@@ -417,7 +417,7 @@ export interface LicenseInfo {
 
 第 1076 行（config.tsx）：
 ```
-输入授权码和面板域名以解除免费版限制（5 节点 / 5 隧道 / 1 用户规则）
+输入授权码和面板域名以解除基础授权策略（基础授权规则）
 ```
 
 ---
@@ -426,10 +426,10 @@ export interface LicenseInfo {
 
 | 攻击方式 | 改造前 | 改造后 | 原理 |
 |---------|--------|--------|------|
-| 删除 `router.go:LicenseGuard` |   功能全开 |   免费版限制 | handler 层兜底 |
-| 修改 `doVerify()` 返回 true |   功能全开 |   免费版限制 | `GetLicenseTier()` 根据实际 key/状态判断 |
+| 删除 `router.go:LicenseGuard` |   功能全开 |   基础授权策略 | handler 层兜底 |
+| 修改 `doVerify()` 返回 true |   功能全开 |   基础授权策略 | `GetLicenseTier()` 根据实际 key/状态判断 |
 | 设置 `SERVER_DOMAIN=xxx` |   可通过域名检查 |   需 LICENSE_KEY | 无 key 即为 free |
-| 删除 `trial_guard.go` |   无限制 |   免费版限制 | handler 层兜底 |
+| 删除 `trial_guard.go` |   无限制 |   基础授权策略 | handler 层兜底 |
 | 删除 `GetLicenseTier()` |   编译失败 |   编译失败 | 函数被 handler 调用 |
 | 修改 `GetLicenseTier()` 返回 premium |   功能全开 |   功能全开 | **理论上可绕过，但需要：** |
 | | | | 1. 找到并修改该函数 |
@@ -448,9 +448,9 @@ export interface LicenseInfo {
 
 ---
 
-## 五、免费版 vs 商业版功能对照
+## 五、基础授权 vs 商业版功能对照
 
-| 功能 | 免费版 | 商业版 |
+| 功能 | 基础授权 | 商业版 |
 |------|--------|--------|
 | **节点** | 最多 5 个 | 无限 |
 | **隧道** | 最多 5 个 | 无限 |
@@ -485,8 +485,8 @@ export interface LicenseInfo {
 | 风险 | 影响 | 应对 |
 |------|------|------|
 | 漏改 handler | 该操作无限制 | 对所有 handler 逐一 review 确认 |
-| 免费版用户无法使用 | 用户流失 | 保留完整的 UI 和已创建功能，仅限制创建 |
-| 验证服务不可达 | 误伤付费用户 | 降级为免费版，给予宽限期 |
+| 基础授权用户无法使用 | 用户流失 | 保留完整的 UI 和已创建功能，仅限制创建 |
+| 验证服务不可达 | 误伤付费用户 | 降级为基础授权，给予宽限期 |
 | 编译级破解 | 无法完全阻止 | 法律 + 更新 + 云端化，长期策略 |
 
 ---

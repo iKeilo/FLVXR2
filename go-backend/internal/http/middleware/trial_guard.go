@@ -8,8 +8,9 @@ import (
 	"go-backend/internal/store/repo"
 )
 
-// TrialGuard restricts resource creation in free tier (no premium license).
-// Acts as a belt+braces layer alongside handler-level checks.
+// TrialGuard keeps legacy resource routes compatible with the commercial
+// license model. Basic deployments are not capped by node/tunnel/user count;
+// only a blocked license state prevents resource mutation.
 func TrialGuard(next http.Handler, r *repo.Repository) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if r == nil {
@@ -17,28 +18,10 @@ func TrialGuard(next http.Handler, r *repo.Repository) http.Handler {
 			return
 		}
 
-		tier, _ := middleware.GetLicenseTier()
-		if tier == middleware.TierPremium {
-			next.ServeHTTP(w, req)
+		tier, reason := middleware.GetLicenseTier()
+		if tier == middleware.TierBlocked {
+			response.WriteJSON(w, response.Err(403, "授权无效，无法操作："+reason))
 			return
-		}
-
-		switch req.URL.Path {
-		case "/api/v1/node/create":
-			if c, _ := r.CountNodes(); c >= 5 {
-				response.WriteJSON(w, response.Err(403, "免费版限制：节点最多 5 个，请配置正式授权以解除限制"))
-				return
-			}
-		case "/api/v1/tunnel/create":
-			if c, _ := r.CountTunnels(); c >= 5 {
-				response.WriteJSON(w, response.Err(403, "免费版限制：隧道最多 5 个，请配置正式授权以解除限制"))
-				return
-			}
-		case "/api/v1/user/create":
-			if c, _ := r.CountUsers(); c >= 1 {
-				response.WriteJSON(w, response.Err(403, "免费版限制：用户最多 1 个，请配置正式授权以解除限制"))
-				return
-			}
 		}
 
 		next.ServeHTTP(w, req)

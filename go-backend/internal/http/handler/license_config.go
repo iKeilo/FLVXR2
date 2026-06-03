@@ -100,7 +100,7 @@ func (h *Handler) licenseConfig(w http.ResponseWriter, r *http.Request) {
 	go middleware.TriggerAsyncCheck()
 
 	go func() {
-		if err := UpdateEnvFile(actualLicenseKey, req.Domain, url, req.HmacKey); err != nil {
+		if err := UpdateEnvFile(actualLicenseKey, req.Domain, req.HmacKey); err != nil {
 			log.Printf("⚠️ failed to write .env persistence: %v", err)
 		}
 	}()

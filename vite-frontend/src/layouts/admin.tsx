@@ -36,7 +36,7 @@ import {
 } from "@/api";
 import { safeLogout } from "@/utils/logout";
 import { isRestricted } from "@/utils/session";
-import { siteConfig } from "@/config/site";
+import { PROJECT_REPOSITORY_URL, siteConfig } from "@/config/site";
 import { useMobileBreakpoint } from "@/hooks/useMobileBreakpoint";
 import { getAdminFlag, getSessionName } from "@/utils/session";
 import { useThemeContext } from "@/themes/context";
@@ -138,7 +138,7 @@ export default function AdminLayout({
     };
   }, []);
 
-  // 免费版横幅关闭状态
+  // 基础授权横幅关闭状态
   const [isBannerClosed, setIsBannerClosed] = useState(false);
   // 红色授权横幅关闭状态
   const [isRedBannerClosed, setIsRedBannerClosed] = useState(false);
@@ -421,7 +421,7 @@ export default function AdminLayout({
     };
   }, []);
 
-  // 初始化：检查 localStorage 中是否已关闭免费版横幅
+  // 初始化：检查 localStorage 中是否已关闭基础授权横幅
   useEffect(() => {
     try {
       const snooze = localStorage.getItem("license_snooze_free");
@@ -500,7 +500,7 @@ export default function AdminLayout({
       setIsBannerClosed(true);
       setSnoozeMenuOpen(false);
       if (days === -1) {
-        toast.success("已关闭免费版提醒");
+        toast.success("已关闭基础授权提醒");
       } else {
         toast.success(`${days} 天后再提醒您`);
       }
@@ -727,7 +727,7 @@ export default function AdminLayout({
               href={
                 licenseInfo?.has_license_key
                   ? "/dashboard"
-                  : siteConfig.github_repo
+                  : PROJECT_REPOSITORY_URL
               }
               rel={
                 licenseInfo?.has_license_key ? undefined : "noopener noreferrer"
@@ -1104,16 +1104,8 @@ export default function AdminLayout({
                     />
                   </svg>
                   <span className="truncate">
-                    基础版：节点、隧道、端口与转发数量不受授权限制，商业结算与分发能力需单独授权
+                    基础授权：节点、隧道、端口与转发数量不受限制，商业结算与分发能力需单独授权
                   </span>
-                  <a
-                    className="text-blue-600 dark:text-blue-400 flex-shrink-0 underline whitespace-nowrap"
-                    href="https://t.me/erflvx"
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    TG群组
-                  </a>
                 </div>
               ) : licenseInfo && licenseInfo.tier === "blocked" ? (
                 <div className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400 truncate">

@@ -11,7 +11,7 @@ import {
 import { Button } from "@/shadcn-bridge/heroui/button";
 import { Select, SelectItem } from "@/shadcn-bridge/heroui/select";
 import { Spinner } from "@/shadcn-bridge/heroui/spinner";
-import { siteConfig } from "@/config/site";
+import { PROJECT_REPOSITORY_URL } from "@/config/site";
 import {
   UPDATE_CHANNEL_CHANGED_EVENT,
   type UpdateReleaseChannel,
@@ -23,7 +23,6 @@ import {
 import { getPanelReleases, type PanelReleaseItem } from "@/api";
 import { runSystemUpgrade } from "@/api/index";
 
-const FALLBACK_GITHUB_REPO = "https://github.com/iKeilo/flvxt2";
 const UPGRADE_DISMISS_KEY = "upgrade_dismissed_date";
 
 const isUpgradeDismissedToday = (): boolean => {
@@ -105,7 +104,7 @@ export function VersionFooter({
     const checkUpdate = async () => {
       const latestVersion = await getLatestVersionByChannel(
         channel,
-        siteConfig.github_repo || FALLBACK_GITHUB_REPO,
+        PROJECT_REPOSITORY_URL,
       );
 
       if (!active) {
@@ -297,7 +296,7 @@ export function VersionFooter({
           Powered by{" "}
           <a
             className="text-gray-600 dark:text-white hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-            href={siteConfig.github_repo}
+            href={PROJECT_REPOSITORY_URL}
             rel="noopener noreferrer"
             target="_blank"
           >

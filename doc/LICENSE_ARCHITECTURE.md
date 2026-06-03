@@ -363,5 +363,4 @@ FLVX 授权系统采用**分离式架构**：
 
 ## 联系支持
 
-- 邮箱：support@yourdomain.com
-- Telegram: https://t.me/flvxpanel
+请通过项目维护者指定的商业支持渠道获取授权与技术支持。

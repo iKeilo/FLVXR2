@@ -29,7 +29,7 @@ import {
 } from "@/api";
 import { safeLogout } from "@/utils/logout";
 import { isRestricted } from "@/utils/session";
-import { siteConfig } from "@/config/site";
+import { PROJECT_REPOSITORY_URL, siteConfig } from "@/config/site";
 import { getAdminFlag, getSessionName } from "@/utils/session";
 import { useScrollTopOnPathChange } from "@/hooks/useScrollTopOnPathChange";
 import { useThemeContext } from "@/themes/context";
@@ -528,7 +528,7 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
               href={
                 licenseInfo?.has_license_key
                   ? "/dashboard"
-                  : siteConfig.github_repo
+                  : PROJECT_REPOSITORY_URL
               }
               rel={
                 licenseInfo?.has_license_key ? undefined : "noopener noreferrer"
@@ -564,16 +564,8 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
                   />
                 </svg>
                 <span className="truncate">
-                  基础版：节点、隧道、端口与转发数量不受授权限制，商业结算与分发能力需单独授权
+                  基础授权：节点、隧道、端口与转发数量不受限制，商业结算与分发能力需单独授权
                 </span>
-                <a
-                  className="text-blue-600 dark:text-blue-400 flex-shrink-0 underline whitespace-nowrap"
-                  href="https://t.me/erflvx"
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  TG群组
-                </a>
               </div>
             ) : licenseInfo && licenseInfo.tier === "blocked" ? (
               <div className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400 truncate">

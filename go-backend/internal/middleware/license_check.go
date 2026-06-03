@@ -474,7 +474,7 @@ func GetLicenseTier() (TierType, string) {
 		case "域名不匹配", "授权已过期", "授权已被禁用":
 			return TierBlocked, globalLicenseState.reason
 		default:
-			return TierFree, "验证服务不可达，已降级为免费版"
+			return TierFree, "验证服务不可达，商业授权暂不可用"
 		}
 	}
 
