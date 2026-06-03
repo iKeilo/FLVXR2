@@ -206,6 +206,13 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/node/tls-template/list", h.nodeTLSList)
 	mux.HandleFunc("/api/v1/node/tls-template/save", h.nodeTLSSave)
 	mux.HandleFunc("/api/v1/node/tls-template/delete", h.nodeTLSDelete)
+	mux.HandleFunc("/api/v1/node/tls-template/reality-keypair", h.nodeTLSRealityKeypair)
+	mux.HandleFunc("/api/v1/node/tls-template/reality-short-ids", h.nodeTLSRealityShortIDs)
+	mux.HandleFunc("/api/v1/tls-template/list", h.nodeTLSList)
+	mux.HandleFunc("/api/v1/tls-template/save", h.nodeTLSSave)
+	mux.HandleFunc("/api/v1/tls-template/delete", h.nodeTLSDelete)
+	mux.HandleFunc("/api/v1/tls-template/reality-keypair", h.nodeTLSRealityKeypair)
+	mux.HandleFunc("/api/v1/tls-template/reality-short-ids", h.nodeTLSRealityShortIDs)
 	mux.HandleFunc("/api/v1/node/deploy/detail", h.nodeDeployDetail)
 	mux.HandleFunc("/api/v1/node/deploy/identity/regenerate", h.nodeIdentityRegenerate)
 	mux.HandleFunc("/api/v1/node/deploy/inbound/save", h.nodeDeploySaveInbound)
@@ -585,9 +592,16 @@ func (h *Handler) nodeList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	actorUserID, _, err := userRoleFromRequest(r)
+	if err != nil {
+		response.WriteJSON(w, response.Err(401, "无效的token或token已过期"))
+		return
+	}
+
 	opts := &repo.ListNodesOptions{
-		GroupID: req.GroupID,
-		TagID:   req.TagID,
+		GroupID:     req.GroupID,
+		TagID:       req.TagID,
+		ActorUserID: actorUserID,
 	}
 
 	items, err := h.repo.ListNodes(opts)

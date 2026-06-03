@@ -13,6 +13,12 @@ import (
 func (r *Repository) ListNodeTLSTemplates() ([]model.NodeTLSTemplate, error) {
 	var items []model.NodeTLSTemplate
 	err := r.db.Order("id desc").Find(&items).Error
+	if err != nil {
+		return items, err
+	}
+	for idx := range items {
+		items[idx].UsageCount, _ = r.CountNodeTLSUsage(items[idx].ID)
+	}
 	return items, err
 }
 
@@ -43,7 +49,25 @@ func (r *Repository) DeleteNodeTLSTemplate(id int64) error {
 	if id <= 0 {
 		return errors.New("TLS模板ID无效")
 	}
+	count, err := r.CountNodeTLSUsage(id)
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		return errors.New("TLS template is used by deployed inbounds")
+	}
 	return r.db.Delete(&model.NodeTLSTemplate{}, id).Error
+}
+
+func (r *Repository) CountNodeTLSUsage(id int64) (int64, error) {
+	if id <= 0 {
+		return 0, nil
+	}
+	var count int64
+	err := r.db.Model(&model.NodeDeployedInbound{}).
+		Where("tls_template_id = ?", id).
+		Count(&count).Error
+	return count, err
 }
 
 func (r *Repository) GetNodeTLSTemplate(id int64) (*model.NodeTLSTemplate, error) {

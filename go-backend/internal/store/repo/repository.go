@@ -314,6 +314,7 @@ func autoMigrateAll(db *gorm.DB) error {
 
 	// 迁移：为现有用户设置初始流量配额
 	_ = db.Model(&model.User{}).Where("base_flow = 0").Update("base_flow", gorm.Expr("\"flow\""))
+	_ = db.Model(&model.Node{}).Where("owner_user_id = 0").Update("owner_user_id", int64(1))
 
 	return nil
 }
@@ -882,8 +883,9 @@ func (r *Repository) AddFlow(forwardID, userID int64, userTunnelID int64, inFlow
 
 // ListNodesOptions holds optional filters for ListNodes.
 type ListNodesOptions struct {
-	GroupID *int64 // Filter by group ID (nil = no filter)
-	TagID   *int64 // Filter by tag ID (nil = no filter)
+	GroupID     *int64 // Filter by group ID (nil = no filter)
+	TagID       *int64 // Filter by tag ID (nil = no filter)
+	ActorUserID int64
 }
 
 func (r *Repository) ListNodes(opts *ListNodesOptions) ([]map[string]interface{}, error) {
@@ -933,6 +935,8 @@ func (r *Repository) ListNodes(opts *ListNodesOptions) ([]map[string]interface{}
 			"remoteConfig":            nullableString(n.RemoteConfig),
 			"expiryReminderDismissed": n.ExpiryReminderDismissed,
 			"groupId":                 nullableInt64(n.GroupID),
+			"ownerUserId":             n.OwnerUserID,
+			"canDeploy":               opts != nil && opts.ActorUserID > 0 && n.OwnerUserID == opts.ActorUserID,
 		})
 	}
 	return items, nil

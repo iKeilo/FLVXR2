@@ -1,6 +1,7 @@
 package socket
 
 import (
+	"archive/tar"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -15,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -1613,14 +1615,151 @@ func coreConfigPath(coreType string) string {
 
 func validateCoreConfig(coreType, path string) error {
 	if strings.EqualFold(coreType, "sing-box") {
-		if _, err := exec.LookPath("sing-box"); err != nil {
-			return fmt.Errorf("sing-box executable not found on this node; install it locally before offline core deployment")
+		if err := ensureSingBoxInstalled(); err != nil {
+			return err
 		}
 		if out, err := exec.Command("sing-box", "check", "-c", path).CombinedOutput(); err != nil {
 			return fmt.Errorf("sing-box config check failed: %v: %s", err, strings.TrimSpace(string(out)))
 		}
 	}
 	return nil
+}
+
+func ensureSingBoxInstalled() error {
+	if _, err := exec.LookPath("sing-box"); err == nil {
+		return nil
+	}
+	if runtime.GOOS != "linux" {
+		return fmt.Errorf("sing-box executable not found on this node")
+	}
+	if err := installSingBoxFromGitHub(); err != nil {
+		return fmt.Errorf("sing-box executable not found and auto install failed: %v", err)
+	}
+	if _, err := exec.LookPath("sing-box"); err != nil {
+		return fmt.Errorf("sing-box auto install finished but executable is still unavailable: %v", err)
+	}
+	return nil
+}
+
+func installSingBoxFromGitHub() error {
+	arch := runtime.GOARCH
+	switch arch {
+	case "amd64", "arm64", "armv7":
+	default:
+		return fmt.Errorf("unsupported sing-box architecture: %s", arch)
+	}
+	apiURL := "https://api.github.com/repos/SagerNet/sing-box/releases/latest"
+	req, err := http.NewRequest(http.MethodGet, apiURL, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("User-Agent", "flvxt2-agent")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("query sing-box release failed: HTTP %d", resp.StatusCode)
+	}
+	var release struct {
+		Assets []struct {
+			Name string `json:"name"`
+			URL  string `json:"browser_download_url"`
+		} `json:"assets"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+		return err
+	}
+	want := fmt.Sprintf("linux-%s.tar.gz", arch)
+	downloadURL := ""
+	for _, asset := range release.Assets {
+		name := strings.ToLower(asset.Name)
+		if strings.Contains(name, want) && !strings.Contains(name, ".asc") && !strings.Contains(name, ".sha") {
+			downloadURL = asset.URL
+			break
+		}
+	}
+	if downloadURL == "" {
+		return fmt.Errorf("sing-box release asset for %s not found", want)
+	}
+	tmp, err := os.CreateTemp("", "sing-box-*.tar.gz")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+	defer os.Remove(tmpPath)
+	defer tmp.Close()
+	if err := downloadToFile(downloadURL, tmp); err != nil {
+		return err
+	}
+	if _, err := tmp.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
+	return extractSingBoxBinary(tmp, "/usr/local/bin/sing-box")
+}
+
+func downloadToFile(url string, out *os.File) error {
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("User-Agent", "flvxt2-agent")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("download %s failed: HTTP %d", url, resp.StatusCode)
+	}
+	_, err = io.Copy(out, resp.Body)
+	return err
+}
+
+func extractSingBoxBinary(src io.Reader, target string) error {
+	gz, err := gzip.NewReader(src)
+	if err != nil {
+		return err
+	}
+	defer gz.Close()
+	tr := tar.NewReader(gz)
+	tmpTarget := target + ".tmp"
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		if header.FileInfo().IsDir() || filepath.Base(header.Name) != "sing-box" {
+			continue
+		}
+		if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+			return err
+		}
+		out, err := os.OpenFile(tmpTarget, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0755)
+		if err != nil {
+			return err
+		}
+		_, copyErr := io.Copy(out, tr)
+		closeErr := out.Close()
+		if copyErr != nil {
+			_ = os.Remove(tmpTarget)
+			return copyErr
+		}
+		if closeErr != nil {
+			_ = os.Remove(tmpTarget)
+			return closeErr
+		}
+		if err := os.Rename(tmpTarget, target); err != nil {
+			_ = os.Remove(tmpTarget)
+			return err
+		}
+		return os.Chmod(target, 0755)
+	}
+	return fmt.Errorf("sing-box binary not found in archive")
 }
 
 func restartCore(coreType, path string) error {
@@ -1634,6 +1773,9 @@ func restartCore(coreType, path string) error {
 	executable := normalizedCore
 	if normalizedCore == "sing-box" {
 		executable = "sing-box"
+		if err := ensureSingBoxInstalled(); err != nil {
+			return err
+		}
 	}
 	execPath, err := exec.LookPath(executable)
 	if err != nil {

@@ -134,6 +134,8 @@ interface Node {
   tls?: number;
   socks?: number;
   status: number;
+  ownerUserId?: number;
+  canDeploy?: boolean;
   connectionStatus: "online" | "offline";
   systemInfo?: NodeSystemInfo | null;
   copyLoading?: boolean;
@@ -461,6 +463,10 @@ export default function NodePage() {
     null,
   );
   const openDeployModal = useCallback((node: Node) => {
+    if (!node.canDeploy) {
+      toast.error("只有该节点所属账号可以使用部署功能");
+      return;
+    }
     setDeployTargetNode(node);
     setDeployModalOpen(true);
   }, []);
@@ -2350,7 +2356,7 @@ export default function NodePage() {
             </div>
             <div className="grid gap-2 grid-cols-4">
               <Button
-                className="min-h-8 w-full"
+                className={`min-h-8 w-full ${node.canDeploy ? "" : "hidden"}`}
                 color="secondary"
                 isDisabled={node.connectionStatus !== "online"}
                 size="sm"

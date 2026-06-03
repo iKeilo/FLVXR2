@@ -57,6 +57,8 @@ interface Node {
   tls?: number;
   socks?: number;
   status: number;
+  ownerUserId?: number;
+  canDeploy?: boolean;
   isRemote?: number;
   remoteUrl?: string;
   syncError?: string;
@@ -685,7 +687,7 @@ function SortableTableRow({
                 更新
               </Button>
               <Button
-                className="min-h-7 px-2"
+                className={`min-h-7 px-2 ${node.canDeploy ? "" : "hidden"}`}
                 color="secondary"
                 isDisabled={node.connectionStatus !== "online"}
                 size="sm"

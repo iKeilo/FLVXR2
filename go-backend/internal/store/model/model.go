@@ -127,6 +127,7 @@ type Node struct {
 	ExpiryReminderDismissedUntil sql.NullInt64  `gorm:"column:expiry_reminder_dismissed_until"`
 	GroupID                      sql.NullInt64  `gorm:"column:group_id;index:idx_node_group_id"`
 	ServiceName                  sql.NullString `gorm:"column:service_name;type:varchar(100)"`
+	OwnerUserID                  int64          `gorm:"column:owner_user_id;not null;default:1;index" json:"ownerUserId"`
 }
 
 func (Node) TableName() string { return "node" }
@@ -140,6 +141,7 @@ type NodeTLSTemplate struct {
 	Remark      sql.NullString `gorm:"column:remark;type:text" json:"remark,omitempty"`
 	CreatedTime int64          `gorm:"column:created_time;not null" json:"createdTime"`
 	UpdatedTime int64          `gorm:"column:updated_time;not null" json:"updatedTime"`
+	UsageCount  int64          `gorm:"-" json:"usageCount"`
 }
 
 func (NodeTLSTemplate) TableName() string { return "node_tls_template" }

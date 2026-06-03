@@ -42,6 +42,12 @@ func (h *Handler) userCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	_, _, err := userRoleFromRequest(r)
+	if err != nil {
+		response.WriteJSON(w, response.Err(401, "无效的token或token已过期"))
+		return
+	}
+
 	tier, _ := middleware.GetLicenseTier()
 	if tier == middleware.TierBlocked {
 		response.WriteJSON(w, response.Err(403, "授权无效，请联系管理员"))
@@ -637,6 +643,12 @@ func (h *Handler) nodeCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	actorUserID, _, err := userRoleFromRequest(r)
+	if err != nil {
+		response.WriteJSON(w, response.Err(401, "无效的token或token已过期"))
+		return
+	}
+
 	name := asString(req["name"])
 	// 从 serverIp(serverIpV4/serverIpV6/intranetIp) 中选择第一个非空作为 serverIP
 	// 优先使用 serverIp（兼容旧 API），否则从 serverIpV4/serverIpV6/intranetIp 中选择
@@ -695,6 +707,7 @@ func (h *Handler) nodeCreate(w http.ResponseWriter, r *http.Request) {
 		nullableText(asString(req["remoteToken"])),
 		nullableText(asString(req["remoteConfig"])),
 		nullableText(asString(req["extraIPs"])),
+		actorUserID,
 	); err != nil {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return

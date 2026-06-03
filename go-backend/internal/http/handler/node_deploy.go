@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"crypto/ecdh"
 	"crypto/rand"
 	"crypto/sha256"
 	"database/sql"
@@ -56,6 +57,8 @@ type nodeDeployRollbackRequest struct {
 	RevisionID int64 `json:"revisionId"`
 }
 
+const coreDeployTimeout = 180 * time.Second
+
 func (h *Handler) nodeTLSList(w http.ResponseWriter, r *http.Request) {
 	items, err := h.repo.ListNodeTLSTemplates()
 	if err != nil {
@@ -99,15 +102,55 @@ func (h *Handler) nodeTLSDelete(w http.ResponseWriter, r *http.Request) {
 	response.WriteJSON(w, response.OKEmpty())
 }
 
+func (h *Handler) nodeTLSRealityKeypair(w http.ResponseWriter, r *http.Request) {
+	privateKey, err := ecdh.X25519().GenerateKey(rand.Reader)
+	if err != nil {
+		response.WriteJSON(w, response.ErrDefault(err.Error()))
+		return
+	}
+	publicKey := privateKey.PublicKey()
+	response.WriteJSON(w, response.OK(map[string]string{
+		"privateKey": base64.RawURLEncoding.EncodeToString(privateKey.Bytes()),
+		"publicKey":  base64.RawURLEncoding.EncodeToString(publicKey.Bytes()),
+	}))
+}
+
+func (h *Handler) nodeTLSRealityShortIDs(w http.ResponseWriter, r *http.Request) {
+	response.WriteJSON(w, response.OK(map[string][]string{
+		"shortIds": randomRealityShortIDs(),
+	}))
+}
+
+func (h *Handler) ensureNodeDeployAccess(r *http.Request, nodeID int64) (*model.Node, error) {
+	actorUserID, _, err := userRoleFromRequest(r)
+	if err != nil {
+		return nil, errors.New("无效的token或token已过期")
+	}
+	node, err := h.repo.GetNodeByID(nodeID)
+	if err != nil || node == nil {
+		return nil, errors.New("节点不存在")
+	}
+	if node.OwnerUserID <= 0 {
+		if actorUserID == 1 {
+			return node, nil
+		}
+		return nil, errors.New("无权部署该节点")
+	}
+	if node.OwnerUserID != actorUserID {
+		return nil, errors.New("无权部署该节点，仅节点所属账号可以使用部署功能")
+	}
+	return node, nil
+}
+
 func (h *Handler) nodeDeployDetail(w http.ResponseWriter, r *http.Request) {
 	var req nodeIDRequest
 	if err := decodeJSON(r.Body, &req); err != nil || req.NodeID <= 0 {
 		response.WriteJSON(w, response.ErrDefault("请求参数无效"))
 		return
 	}
-	node, err := h.repo.GetNodeByID(req.NodeID)
+	node, err := h.ensureNodeDeployAccess(r, req.NodeID)
 	if err != nil {
-		response.WriteJSON(w, response.ErrDefault("节点不存在"))
+		response.WriteJSON(w, response.ErrDefault(err.Error()))
 		return
 	}
 	identity, err := h.ensureNodeIdentity(req.NodeID, false)
@@ -116,6 +159,11 @@ func (h *Handler) nodeDeployDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	inbounds, _ := h.repo.ListNodeDeployedInbounds(req.NodeID)
+	for idx := range inbounds {
+		if refreshed, err := h.refreshNodeInboundCopyFields(inbounds[idx], identity); err == nil {
+			inbounds[idx] = refreshed
+		}
+	}
 	revisions, _ := h.repo.ListNodeConfigRevisions(req.NodeID, 20)
 	logs, _ := h.repo.ListNodeDeployLogs(req.NodeID, 50)
 	response.WriteJSON(w, response.OK(map[string]interface{}{
@@ -127,10 +175,43 @@ func (h *Handler) nodeDeployDetail(w http.ResponseWriter, r *http.Request) {
 	}))
 }
 
+func (h *Handler) refreshNodeInboundCopyFields(item model.NodeDeployedInbound, identity *model.NodeIdentity) (model.NodeDeployedInbound, error) {
+	var tlsTemplate *model.NodeTLSTemplate
+	if item.TLSTemplateID.Valid {
+		tlsTemplate, _ = h.repo.GetNodeTLSTemplate(item.TLSTemplateID.Int64)
+	}
+	serverConfig, clientConfig, shareURI, err := renderInboundConfig(
+		strings.ToLower(strings.TrimSpace(item.Protocol)),
+		item.InternalTag,
+		item.ListenAddr,
+		item.ListenPort,
+		item.PublishAddr,
+		item.PublishPort,
+		[]byte(normalizeJSONText(item.InboundOptionsJSON)),
+		identity,
+		tlsTemplate,
+	)
+	if err != nil {
+		return item, err
+	}
+	if item.ServerConfigJSON == serverConfig && item.ClientConfigJSON == clientConfig && item.ShareURI == shareURI {
+		return item, nil
+	}
+	item.ServerConfigJSON = serverConfig
+	item.ClientConfigJSON = clientConfig
+	item.ShareURI = shareURI
+	_ = h.repo.SaveNodeDeployedInbound(&item)
+	return item, nil
+}
+
 func (h *Handler) nodeIdentityRegenerate(w http.ResponseWriter, r *http.Request) {
 	var req nodeIDRequest
 	if err := decodeJSON(r.Body, &req); err != nil || req.NodeID <= 0 {
 		response.WriteJSON(w, response.ErrDefault("请求参数无效"))
+		return
+	}
+	if _, err := h.ensureNodeDeployAccess(r, req.NodeID); err != nil {
+		response.WriteJSON(w, response.ErrDefault(err.Error()))
 		return
 	}
 	identity, err := h.ensureNodeIdentity(req.NodeID, true)
@@ -145,6 +226,21 @@ func (h *Handler) nodeDeploySaveInbound(w http.ResponseWriter, r *http.Request) 
 	var req nodeInboundDeployRequest
 	if err := decodeJSON(r.Body, &req); err != nil {
 		response.WriteJSON(w, response.ErrDefault("请求参数无效"))
+		return
+	}
+	if req.ID > 0 {
+		existing, err := h.repo.GetNodeDeployedInbound(req.ID)
+		if err != nil {
+			response.WriteJSON(w, response.ErrDefault("部署入站不存在"))
+			return
+		}
+		if existing.NodeID != req.NodeID {
+			response.WriteJSON(w, response.ErrDefault("部署入站不属于该节点"))
+			return
+		}
+	}
+	if _, err := h.ensureNodeDeployAccess(r, req.NodeID); err != nil {
+		response.WriteJSON(w, response.ErrDefault(err.Error()))
 		return
 	}
 	result, err := h.saveNodeInboundDeployment(req)
@@ -166,6 +262,10 @@ func (h *Handler) nodeDeployDeleteInbound(w http.ResponseWriter, r *http.Request
 		response.WriteJSON(w, response.ErrDefault("部署入站不存在"))
 		return
 	}
+	if _, err := h.ensureNodeDeployAccess(r, item.NodeID); err != nil {
+		response.WriteJSON(w, response.ErrDefault(err.Error()))
+		return
+	}
 	if err := h.repo.DeleteNodeDeployedInbound(req.ID); err != nil {
 		response.WriteJSON(w, response.ErrDefault(err.Error()))
 		return
@@ -176,7 +276,7 @@ func (h *Handler) nodeDeployDeleteInbound(w http.ResponseWriter, r *http.Request
 			"coreType":   revision.CoreType,
 			"configJson": cfg,
 			"checksum":   revision.Checksum,
-		}, 20*time.Second, false, false)
+		}, coreDeployTimeout, false, false)
 	}
 	if err != nil {
 		_ = h.repo.CreateNodeDeployLog(item.NodeID, 0, "delete-inbound", "failed", err.Error())
@@ -194,6 +294,10 @@ func (h *Handler) nodeDeployApply(w http.ResponseWriter, r *http.Request) {
 		response.WriteJSON(w, response.ErrDefault("请求参数无效"))
 		return
 	}
+	if _, err := h.ensureNodeDeployAccess(r, req.NodeID); err != nil {
+		response.WriteJSON(w, response.ErrDefault(err.Error()))
+		return
+	}
 	revision, cfg, err := h.renderAndStoreNodeConfig(req.NodeID, "generated")
 	if err != nil {
 		response.WriteJSON(w, response.ErrDefault(err.Error()))
@@ -203,7 +307,7 @@ func (h *Handler) nodeDeployApply(w http.ResponseWriter, r *http.Request) {
 		"coreType":   revision.CoreType,
 		"configJson": cfg,
 		"checksum":   revision.Checksum,
-	}, 20*time.Second, false, false)
+	}, coreDeployTimeout, false, false)
 	if err != nil {
 		_ = h.repo.UpdateNodeConfigRevisionStatus(revision.ID, "failed", err.Error())
 		_ = h.repo.CreateNodeDeployLog(req.NodeID, revision.ID, "apply", "failed", err.Error())
@@ -221,6 +325,10 @@ func (h *Handler) nodeDeployRollback(w http.ResponseWriter, r *http.Request) {
 		response.WriteJSON(w, response.ErrDefault("请求参数无效"))
 		return
 	}
+	if _, err := h.ensureNodeDeployAccess(r, req.NodeID); err != nil {
+		response.WriteJSON(w, response.ErrDefault(err.Error()))
+		return
+	}
 	revision, err := h.repo.GetNodeConfigRevision(req.RevisionID)
 	if err != nil || revision.NodeID != req.NodeID {
 		response.WriteJSON(w, response.ErrDefault("配置版本不存在"))
@@ -230,7 +338,7 @@ func (h *Handler) nodeDeployRollback(w http.ResponseWriter, r *http.Request) {
 		"coreType":   revision.CoreType,
 		"configJson": revision.ConfigJSON,
 		"checksum":   revision.Checksum,
-	}, 20*time.Second, false, false)
+	}, coreDeployTimeout, false, false)
 	if err != nil {
 		_ = h.repo.CreateNodeDeployLog(req.NodeID, revision.ID, "rollback", "failed", err.Error())
 		response.WriteJSON(w, response.ErrDefault(err.Error()))
@@ -326,7 +434,7 @@ func (h *Handler) saveNodeInboundDeployment(req nodeInboundDeployRequest) (map[s
 			"coreType":   revision.CoreType,
 			"configJson": cfg,
 			"checksum":   revision.Checksum,
-		}, 20*time.Second, false, false)
+		}, coreDeployTimeout, false, false)
 		if err != nil {
 			_ = h.repo.UpdateNodeConfigRevisionStatus(revision.ID, "failed", err.Error())
 			_ = h.repo.CreateNodeDeployLog(req.NodeID, revision.ID, "apply-inbound", "failed", err.Error())
@@ -358,6 +466,7 @@ func (h *Handler) renderAndStoreNodeConfig(nodeID int64, status string) (*model.
 		if err := json.Unmarshal([]byte(inbound.ServerConfigJSON), &obj); err != nil {
 			return nil, "", err
 		}
+		normalizeRenderedInbound(obj)
 		rendered = append(rendered, obj)
 	}
 	cfgObj := map[string]interface{}{
@@ -383,6 +492,60 @@ func (h *Handler) renderAndStoreNodeConfig(nodeID int64, status string) (*model.
 		return nil, "", err
 	}
 	return revision, string(raw), nil
+}
+
+func normalizeRenderedInbound(inbound map[string]interface{}) {
+	delete(inbound, "flow")
+	if tls := asMap(inbound["tls"]); len(tls) > 0 {
+		if normalizedTLS := normalizeServerTLS(tls); normalizedTLS != nil {
+			inbound["tls"] = normalizedTLS
+		} else {
+			delete(inbound, "tls")
+		}
+	}
+}
+
+func normalizeServerTLS(tls map[string]interface{}) map[string]interface{} {
+	if len(tls) == 0 {
+		return nil
+	}
+	reality := asMap(tls["reality"])
+	if enabled, ok := reality["enabled"].(bool); ok && enabled {
+		tls["enabled"] = true
+		return tls
+	}
+	acme := asMap(tls["acme"])
+	if len(acme) > 0 {
+		tls["enabled"] = true
+		return tls
+	}
+	if hasTLSCertificate(tls) {
+		tls["enabled"] = true
+		return tls
+	}
+	return nil
+}
+
+func hasTLSCertificate(tls map[string]interface{}) bool {
+	certPath := optString(tls, "certificate_path", "")
+	keyPath := optString(tls, "key_path", "")
+	if certPath != "" && keyPath != "" {
+		return true
+	}
+	return hasNonEmptyValue(tls["certificate"]) && hasNonEmptyValue(tls["key"])
+}
+
+func hasNonEmptyValue(v interface{}) bool {
+	switch raw := v.(type) {
+	case string:
+		return strings.TrimSpace(raw) != ""
+	case []interface{}:
+		return len(raw) > 0
+	case []string:
+		return len(raw) > 0
+	default:
+		return v != nil
+	}
 }
 
 func (h *Handler) ensureNodeIdentity(nodeID int64, force bool) (*model.NodeIdentity, error) {
@@ -429,9 +592,21 @@ func renderInboundConfig(protocol, tag, listenAddr string, listenPort int, publi
 		"listen_port": listenPort,
 	}
 	for k, v := range opt {
+		if strings.EqualFold(k, "flow") ||
+			strings.EqualFold(k, "network") ||
+			strings.EqualFold(k, "packet_encoding") {
+			continue
+		}
+		if strings.EqualFold(k, "multiplex") {
+			if multiplex := normalizeInboundMultiplex(v); multiplex != nil {
+				inbound["multiplex"] = multiplex
+			}
+			continue
+		}
 		inbound[k] = v
 	}
 	var tlsClient map[string]interface{}
+	tlsActive := false
 	if tlsTemplate != nil {
 		var tlsServer map[string]interface{}
 		_ = json.Unmarshal([]byte(tlsTemplate.ServerJSON), &tlsServer)
@@ -452,16 +627,23 @@ func renderInboundConfig(protocol, tag, listenAddr string, listenPort int, publi
 			tlsServer["reality"] = reality
 			clientReality := asMap(tlsClient["reality"])
 			clientReality["enabled"] = true
-			if clientReality["short_id"] == nil {
-				clientReality["short_id"] = identity.RealityShortID
+			if strings.TrimSpace(optString(clientReality, "short_id", "")) == "" {
+				clientReality["short_id"] = pickRealityShortID(reality["short_id"], identity.RealityShortID)
 			}
 			tlsClient["reality"] = clientReality
 		}
-		inbound["tls"] = tlsServer
+		if normalizedTLS := normalizeServerTLS(tlsServer); normalizedTLS != nil {
+			inbound["tls"] = normalizedTLS
+			tlsActive = true
+		}
 	}
 	switch protocol {
 	case "vless":
-		inbound["users"] = []map[string]interface{}{{"uuid": identity.UUID, "flow": optString(opt, "flow", "")}}
+		user := map[string]interface{}{"uuid": identity.UUID}
+		if flow := optString(opt, "flow", ""); tlsActive && flow != "" {
+			user["flow"] = flow
+		}
+		inbound["users"] = []map[string]interface{}{user}
 	case "trojan":
 		inbound["users"] = []map[string]interface{}{{"password": identity.TrojanPassword}}
 	case "hysteria2":
@@ -474,28 +656,115 @@ func renderInboundConfig(protocol, tag, listenAddr string, listenPort int, publi
 	case "mixed", "socks", "http":
 		inbound["users"] = []map[string]interface{}{{"username": identity.UUID, "password": identity.MixedPassword}}
 	}
+	client := buildClientOutbound(protocol, tag, publishAddr, publishPort, opt, identity, tlsClient, tlsActive)
+	serverRaw, _ := json.MarshalIndent(inbound, "", "  ")
+	clientRaw, _ := json.MarshalIndent(client, "", "  ")
+	return string(serverRaw), string(clientRaw), shareURI(protocol, publishAddr, publishPort, identity, tag, tlsTemplate, tlsClient, opt, tlsActive), nil
+}
+
+func buildClientOutbound(protocol, tag, publishAddr string, publishPort int, opt map[string]interface{}, identity *model.NodeIdentity, tlsClient map[string]interface{}, tlsActive bool) map[string]interface{} {
 	client := map[string]interface{}{
 		"type":        protocol,
 		"tag":         tag,
 		"server":      publishAddr,
 		"server_port": publishPort,
-		"uuid":        identity.UUID,
-		"password":    protocolPassword(protocol, identity),
-		"tlsTemplate": nil,
 	}
-	if tlsTemplate != nil {
-		client["tlsTemplate"] = tlsClient
+	switch protocol {
+	case "vless":
+		client["uuid"] = identity.UUID
+		if flow := optString(opt, "flow", ""); tlsActive && flow != "" {
+			client["flow"] = flow
+		}
+		if network := optString(opt, "network", ""); network != "" {
+			client["network"] = network
+		}
+		if packetEncoding := optString(opt, "packet_encoding", ""); packetEncoding != "" && packetEncoding != "none" {
+			client["packet_encoding"] = packetEncoding
+		}
+	case "trojan":
+		client["password"] = identity.TrojanPassword
+	case "hysteria2":
+		client["password"] = identity.Hysteria2Password
+	case "tuic":
+		client["uuid"] = identity.TUICUUID
+		client["password"] = identity.TUICPassword
+	case "shadowsocks":
+		client["method"] = optString(opt, "method", "2022-blake3-aes-128-gcm")
+		client["password"] = identity.MixedPassword
+	case "mixed", "socks", "http":
+		client["username"] = identity.UUID
+		client["password"] = identity.MixedPassword
 	}
-	serverRaw, _ := json.MarshalIndent(inbound, "", "  ")
-	clientRaw, _ := json.MarshalIndent(client, "", "  ")
-	return string(serverRaw), string(clientRaw), shareURI(protocol, publishAddr, publishPort, identity, tag, tlsTemplate, tlsClient), nil
+	if len(tlsClient) > 0 {
+		client["tls"] = tlsClient
+	}
+	if multiplex := normalizeClientMultiplex(opt["multiplex"]); multiplex != nil {
+		client["multiplex"] = multiplex
+	}
+	if transport := asMap(opt["transport"]); len(transport) > 0 {
+		client["transport"] = transport
+	}
+	return client
 }
 
-func shareURI(protocol, host string, port int, identity *model.NodeIdentity, tag string, tlsTemplate *model.NodeTLSTemplate, tlsClient map[string]interface{}) string {
+func normalizeInboundMultiplex(v interface{}) map[string]interface{} {
+	multiplex := asMap(v)
+	if len(multiplex) == 0 || !optBool(multiplex, "enabled", false) {
+		return nil
+	}
+	normalized := map[string]interface{}{"enabled": true}
+	if padding, ok := multiplex["padding"].(bool); ok {
+		normalized["padding"] = padding
+	}
+	if brutal := asMap(multiplex["brutal"]); len(brutal) > 0 {
+		normalized["brutal"] = brutal
+	}
+	return normalized
+}
+
+func normalizeClientMultiplex(v interface{}) map[string]interface{} {
+	multiplex := asMap(v)
+	if len(multiplex) == 0 || !optBool(multiplex, "enabled", false) {
+		return nil
+	}
+	normalized := map[string]interface{}{"enabled": true}
+	if protocol := optString(multiplex, "protocol", "smux"); protocol != "" {
+		normalized["protocol"] = protocol
+	}
+	copyOptionalNumber(normalized, multiplex, "max_connections")
+	copyOptionalNumber(normalized, multiplex, "min_streams")
+	copyOptionalNumber(normalized, multiplex, "max_streams")
+	if padding, ok := multiplex["padding"].(bool); ok {
+		normalized["padding"] = padding
+	}
+	if brutal := asMap(multiplex["brutal"]); len(brutal) > 0 {
+		normalized["brutal"] = brutal
+	}
+	return normalized
+}
+
+func copyOptionalNumber(dst, src map[string]interface{}, key string) {
+	switch value := src[key].(type) {
+	case float64:
+		if value > 0 {
+			dst[key] = int(value)
+		}
+	case int:
+		if value > 0 {
+			dst[key] = value
+		}
+	case int64:
+		if value > 0 {
+			dst[key] = value
+		}
+	}
+}
+
+func shareURI(protocol, host string, port int, identity *model.NodeIdentity, tag string, tlsTemplate *model.NodeTLSTemplate, tlsClient map[string]interface{}, opt map[string]interface{}, tlsActive bool) string {
 	escapedTag := url.QueryEscape(tag)
-	query := ""
-	if tlsTemplate != nil {
-		params := url.Values{}
+	params := url.Values{}
+	addTransportLinkParams(params, asMap(opt["transport"]))
+	if tlsTemplate != nil && tlsActive {
 		if strings.EqualFold(tlsTemplate.Type, "reality") {
 			params.Set("security", "reality")
 		} else {
@@ -504,7 +773,11 @@ func shareURI(protocol, host string, port int, identity *model.NodeIdentity, tag
 		if sni := optString(tlsClient, "server_name", ""); sni != "" {
 			params.Set("sni", sni)
 		}
-		if fp := optString(tlsClient, "utls_fingerprint", ""); fp != "" {
+		fp := optString(tlsClient, "utls_fingerprint", "")
+		if fp == "" {
+			fp = optString(asMap(tlsClient["utls"]), "fingerprint", "")
+		}
+		if fp != "" {
 			params.Set("fp", fp)
 		}
 		if reality := asMap(tlsClient["reality"]); len(reality) > 0 {
@@ -515,8 +788,14 @@ func shareURI(protocol, host string, port int, identity *model.NodeIdentity, tag
 				params.Set("pbk", pk)
 			}
 		}
-		query = params.Encode()
 	}
+	if packetEncoding := optString(opt, "packet_encoding", ""); packetEncoding != "" && packetEncoding != "none" {
+		params.Set("packetEncoding", packetEncoding)
+	}
+	if flow := optString(opt, "flow", ""); tlsActive && flow != "" {
+		params.Set("flow", flow)
+	}
+	query := params.Encode()
 	switch protocol {
 	case "vless":
 		if query != "" {
@@ -542,6 +821,46 @@ func shareURI(protocol, host string, port int, identity *model.NodeIdentity, tag
 		return fmt.Sprintf("ss://%s@%s:%d#%s", auth, host, port, escapedTag)
 	default:
 		return ""
+	}
+}
+
+func addTransportLinkParams(params url.Values, transport map[string]interface{}) {
+	transportType := optString(transport, "type", "tcp")
+	params.Set("type", transportType)
+	switch transportType {
+	case "http":
+		if host, ok := transport["host"].([]interface{}); ok && len(host) > 0 {
+			hosts := make([]string, 0, len(host))
+			for _, item := range host {
+				if s, ok := item.(string); ok && strings.TrimSpace(s) != "" {
+					hosts = append(hosts, s)
+				}
+			}
+			if len(hosts) > 0 {
+				params.Set("host", strings.Join(hosts, ","))
+			}
+		}
+		if path := optString(transport, "path", ""); path != "" {
+			params.Set("path", path)
+		}
+	case "ws":
+		if path := optString(transport, "path", ""); path != "" {
+			params.Set("path", path)
+		}
+		if host := optString(asMap(transport["headers"]), "Host", ""); host != "" {
+			params.Set("host", host)
+		}
+	case "grpc":
+		if serviceName := optString(transport, "service_name", ""); serviceName != "" {
+			params.Set("serviceName", serviceName)
+		}
+	case "httpupgrade":
+		if host := optString(transport, "host", ""); host != "" {
+			params.Set("host", host)
+		}
+		if path := optString(transport, "path", ""); path != "" {
+			params.Set("path", path)
+		}
 	}
 }
 
@@ -619,6 +938,13 @@ func optString(m map[string]interface{}, key, fallback string) string {
 	return fallback
 }
 
+func optBool(m map[string]interface{}, key string, fallback bool) bool {
+	if v, ok := m[key].(bool); ok {
+		return v
+	}
+	return fallback
+}
+
 func randomPort() int {
 	n, _ := rand.Int(rand.Reader, big.NewInt(50000))
 	return int(n.Int64()) + 10000
@@ -636,6 +962,51 @@ func randomHex(n int) string {
 	b := make([]byte, n)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
+}
+
+func randomRealityShortIDs() []string {
+	shortIDs := make([]string, 24)
+	for i := 1; i < len(shortIDs); i++ {
+		byteCount, _ := rand.Int(rand.Reader, big.NewInt(8))
+		shortIDs[i] = randomHex(int(byteCount.Int64()) + 1)
+	}
+	return shortIDs
+}
+
+func pickRealityShortID(v interface{}, fallback string) string {
+	fallback = strings.TrimSpace(fallback)
+	switch raw := v.(type) {
+	case []interface{}:
+		values := make([]string, 0, len(raw))
+		for _, item := range raw {
+			if s, ok := item.(string); ok && strings.TrimSpace(s) != "" {
+				values = append(values, s)
+			}
+		}
+		if len(values) > 0 {
+			n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(values))))
+			return values[int(n.Int64())]
+		}
+	case []string:
+		values := make([]string, 0, len(raw))
+		for _, item := range raw {
+			if strings.TrimSpace(item) != "" {
+				values = append(values, item)
+			}
+		}
+		if len(values) > 0 {
+			n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(values))))
+			return values[int(n.Int64())]
+		}
+	case string:
+		if strings.TrimSpace(raw) != "" {
+			return raw
+		}
+	}
+	if fallback == "" {
+		return randomHex(8)
+	}
+	return fallback
 }
 
 func deployRandomToken(n int) string {

@@ -199,6 +199,20 @@ export default function AdminLayout({
       adminOnly: true,
     },
     {
+      path: "/tls",
+      label: "TLS",
+      icon: (
+        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <path
+            clipRule="evenodd"
+            d="M10 2a6 6 0 00-6 6v2.09A2 2 0 003 12v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-1-1.73V8a6 6 0 00-6-6zm4 8V8a4 4 0 00-8 0v2h8zm-4 3a1 1 0 00-1 1v2a1 1 0 102 0v-2a1 1 0 00-1-1z"
+            fillRule="evenodd"
+          />
+        </svg>
+      ),
+      adminOnly: true,
+    },
+    {
       path: "/monitor",
       label: "监控",
       icon: (

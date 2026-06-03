@@ -627,7 +627,7 @@ func (h *Handler) executePanelUpgrade(currentVersion, targetVersion string) erro
 		globalURL = "https://ghfast.top"
 	}
 	// 构建下载 URL：代理模式需要拼接完整 GitHub URL
-	// 例如：https://ghfast.top/https://github.com/abai569/flvx/releases/download/...
+	// 例如：https://ghfast.top/https://github.com/iKeilo/flvxt2/releases/download/...
 	downloadURL := fmt.Sprintf("%s/%s", strings.TrimRight(globalURL, "/"), latestComposeURL)
 
 	h.broadcastPanelUpgradeProgress("downloading", 10, "下载 docker-compose.yml...", false)

@@ -3,6 +3,8 @@ export interface NodeApiItem {
   name: string;
   status: number;
   inx?: number;
+  ownerUserId?: number;
+  canDeploy?: boolean;
   remark?: string;
   expiryTime?: number;
   renewalCycle?: "month" | "quarter" | "halfYear" | "" | "year";
@@ -28,6 +30,7 @@ export interface NodeTLSTemplateApiItem {
   remark?: string;
   createdTime?: number;
   updatedTime?: number;
+  usageCount?: number;
 }
 
 export interface NodeIdentityApiItem {

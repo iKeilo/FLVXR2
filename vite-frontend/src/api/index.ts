@@ -181,6 +181,18 @@ export const saveNodeTLSTemplate = (data: Partial<NodeTLSTemplateApiItem>) =>
   Network.post<NodeTLSTemplateApiItem>("/node/tls-template/save", data);
 export const deleteNodeTLSTemplate = (id: number) =>
   Network.post("/node/tls-template/delete", { id });
+export const getTLSTemplates = () =>
+  Network.post<NodeTLSTemplateApiItem[]>("/tls-template/list");
+export const saveTLSTemplate = (data: Partial<NodeTLSTemplateApiItem>) =>
+  Network.post<NodeTLSTemplateApiItem>("/tls-template/save", data);
+export const deleteTLSTemplate = (id: number) =>
+  Network.post("/tls-template/delete", { id });
+export const generateTLSRealityKeypair = () =>
+  Network.post<{ privateKey: string; publicKey: string }>(
+    "/tls-template/reality-keypair",
+  );
+export const generateTLSRealityShortIds = () =>
+  Network.post<{ shortIds: string[] }>("/tls-template/reality-short-ids");
 export const getNodeDeployDetail = (nodeId: number) =>
   Network.post<NodeDeployDetailApiItem>("/node/deploy/detail", { nodeId });
 export const regenerateNodeIdentity = (nodeId: number) =>
