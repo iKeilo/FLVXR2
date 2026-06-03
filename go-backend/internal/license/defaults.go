@@ -1,3 +1,3 @@
 package license
 
-const DefaultServerURL = ""
+const DefaultServerURL = "https://sq.sbplay.eu.org"

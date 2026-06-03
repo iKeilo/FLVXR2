@@ -545,6 +545,7 @@ POSTGRES_USER=$POSTGRES_USER
 POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 
 # 授权服务配置
+LICENSE_SERVER_URL=https://sq.sbplay.eu.org
 LICENSE_KEY=$LICENSE_KEY
 SERVER_DOMAIN=$SERVER_DOMAIN
 HMAC_SECRET_KEY=${HMAC_SECRET_KEY:-flvx_455f08ea-ce13-46d4-8574-ebd2a9d0e853}
@@ -622,7 +623,7 @@ update_panel() {
     return 1
   fi
   upsert_env_var ".env" "FLUX_VERSION" "$CURRENT_VERSION"
-  sed -i '/^LICENSE_SERVER_URL=/d' ".env"
+  upsert_env_var ".env" "LICENSE_SERVER_URL" "https://sq.sbplay.eu.org"
 
   # 自动检测并配置 IPv6 支持
   if check_ipv6_support; then
