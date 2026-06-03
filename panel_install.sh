@@ -639,7 +639,7 @@ update_panel() {
   sleep 5
   
   # 然后再完全停止
-  $DOCKER_CMD down
+  $DOCKER_CMD down --remove-orphans
   
   # 释放端口缓冲
   sleep 2
