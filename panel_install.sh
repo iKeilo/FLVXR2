@@ -622,6 +622,7 @@ update_panel() {
     return 1
   fi
   upsert_env_var ".env" "FLUX_VERSION" "$CURRENT_VERSION"
+  sed -i '/^LICENSE_SERVER_URL=/d' ".env"
 
   # 自动检测并配置 IPv6 支持
   if check_ipv6_support; then
