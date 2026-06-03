@@ -545,7 +545,6 @@ POSTGRES_USER=$POSTGRES_USER
 POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 
 # 授权服务配置
-LICENSE_SERVER_URL=https://sq.sbplay.eu.org
 LICENSE_KEY=$LICENSE_KEY
 SERVER_DOMAIN=$SERVER_DOMAIN
 HMAC_SECRET_KEY=${HMAC_SECRET_KEY:-flvx_455f08ea-ce13-46d4-8574-ebd2a9d0e853}
@@ -571,11 +570,6 @@ EOF
   echo "⚠️  请妥善保管管理员密码！"
 
   # 上报安装统计
-  local install_count=$(curl -fsSL --max-time 3 "${LICENSE_SERVER_URL}/api/stats/install" 2>/dev/null | grep -o '"total":[0-9]*' | grep -o '[0-9]*')
-  if [[ -n "$install_count" ]]; then
-    echo ""
-    echo "📊 累计安装次数：${install_count}"
-  fi
 
 }
 
@@ -595,8 +589,6 @@ update_panel() {
   cd "$INSTALL_DIR"
   
   check_docker
-
-  LICENSE_SERVER_URL=https://sq.sbplay.eu.org
 
   if [[ ! -f ".env" ]]; then
     echo "⚠️ 未找到 .env，默认按 SQLite 模式更新"
@@ -704,11 +696,6 @@ update_panel() {
   echo "✅ 更新完成"
 
   # 上报安装统计
-  local install_count=$(curl -fsSL --max-time 3 "${LICENSE_SERVER_URL}/api/stats/install" 2>/dev/null | grep -o '"total":[0-9]*' | grep -o '[0-9]*')
-  if [[ -n "$install_count" ]]; then
-    echo ""
-    echo "📊 累计安装次数：${install_count}"
-  fi
 }
 
 
