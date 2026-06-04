@@ -22,7 +22,7 @@ func TestFederationShareCreateRejectsRemoteNode(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = r.Close() })
 
-	h := New(r, "test-jwt-secret")
+	h := New(r, "test-jwt-secret", "3.0.16")
 	now := time.Now().UnixMilli()
 
 	if err := r.DB().Exec(`
@@ -79,7 +79,7 @@ func TestFederationShareCreateRejectsInvalidAllowedIPs(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = r.Close() })
 
-	h := New(r, "test-jwt-secret")
+	h := New(r, "test-jwt-secret", "3.0.16")
 	now := time.Now().UnixMilli()
 
 	if err := r.DB().Exec(`
@@ -137,7 +137,7 @@ func TestFederationShareListIncludesRemoteUsedPorts(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = r.Close() })
 
-	h := New(r, "test-jwt-secret")
+	h := New(r, "test-jwt-secret", "3.0.16")
 	now := time.Now().UnixMilli()
 
 	if err := r.CreatePeerShare(&repo.PeerShare{
@@ -230,7 +230,7 @@ func TestFederationShareDeleteCleansUpRuntimes(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = r.Close() })
 
-	h := New(r, "test-jwt-secret")
+	h := New(r, "test-jwt-secret", "3.0.16")
 	now := time.Now().UnixMilli()
 
 	if err := r.CreatePeerShare(&repo.PeerShare{
@@ -307,7 +307,7 @@ func TestFederationRemoteUsageListSyncErrorFallback(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = r.Close() })
 
-	h := New(r, "test-jwt-secret")
+	h := New(r, "test-jwt-secret", "3.0.16")
 	now := time.Now().UnixMilli()
 
 	if err := r.DB().Exec(`
@@ -363,7 +363,7 @@ func TestFederationShareResetFlow(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = r.Close() })
 
-	h := New(r, "test-jwt-secret")
+	h := New(r, "test-jwt-secret", "3.0.16")
 	now := time.Now().UnixMilli()
 	if err := r.CreatePeerShare(&repo.PeerShare{
 		Name:           "reset-flow-share",
@@ -421,7 +421,7 @@ func TestFederationTunnelCreateCreatesPeerShareRuntime(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = r.Close() })
 
-	h := New(r, "test-jwt-secret")
+	h := New(r, "test-jwt-secret", "3.0.16")
 	now := time.Now().UnixMilli()
 
 	if err := r.DB().Exec(`
@@ -492,7 +492,7 @@ func TestFederationTunnelCreateRejectsOccupiedPort(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = r.Close() })
 
-	h := New(r, "test-jwt-secret")
+	h := New(r, "test-jwt-secret", "3.0.16")
 	now := time.Now().UnixMilli()
 
 	if err := r.DB().Exec(`
@@ -559,7 +559,7 @@ func TestDeleteTunnelReleasesFederationForwardRuntimeByPort(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = r.Close() })
 
-	h := New(r, "test-jwt-secret")
+	h := New(r, "test-jwt-secret", "3.0.16")
 	now := time.Now().UnixMilli()
 
 	if err := r.CreatePeerShare(&repo.PeerShare{
@@ -613,7 +613,7 @@ func TestBindPeerShareForwardRuntimeServicesOnlyBindsForwardRole(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = r.Close() })
 
-	h := New(r, "test-jwt-secret")
+	h := New(r, "test-jwt-secret", "3.0.16")
 	now := time.Now().UnixMilli()
 
 	if err := r.CreatePeerShare(&repo.PeerShare{
@@ -677,7 +677,7 @@ func TestBindPeerShareForwardRuntimeServicesAcceptsTopLevelServiceArray(t *testi
 	}
 	t.Cleanup(func() { _ = r.Close() })
 
-	h := New(r, "test-jwt-secret")
+	h := New(r, "test-jwt-secret", "3.0.16")
 	now := time.Now().UnixMilli()
 
 	if err := r.CreatePeerShare(&repo.PeerShare{
@@ -729,7 +729,7 @@ func TestBindPeerShareForwardRuntimeServicesCreatesRuntimeWhenMissing(t *testing
 	}
 	t.Cleanup(func() { _ = r.Close() })
 
-	h := New(r, "test-jwt-secret")
+	h := New(r, "test-jwt-secret", "3.0.16")
 	now := time.Now().UnixMilli()
 
 	if err := r.CreatePeerShare(&repo.PeerShare{
@@ -789,7 +789,7 @@ func TestReleasePeerShareForwardRuntimeServicesMarksRuntimeReleased(t *testing.T
 	}
 	t.Cleanup(func() { _ = r.Close() })
 
-	h := New(r, "test-jwt-secret")
+	h := New(r, "test-jwt-secret", "3.0.16")
 	now := time.Now().UnixMilli()
 
 	if err := r.CreatePeerShare(&repo.PeerShare{
@@ -860,7 +860,7 @@ func TestFederationRemoteUsageList(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = r.Close() })
 
-	h := New(r, "test-jwt-secret")
+	h := New(r, "test-jwt-secret", "3.0.16")
 	now := time.Now().UnixMilli()
 
 	if err := r.DB().Exec(`
@@ -948,7 +948,7 @@ func TestFederationRemoteUsageListIncludesForwardPorts(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = r.Close() })
 
-	h := New(r, "test-jwt-secret")
+	h := New(r, "test-jwt-secret", "3.0.16")
 	now := time.Now().UnixMilli()
 
 	if err := r.DB().Exec(`
@@ -1052,7 +1052,7 @@ func TestAuthPeerAllowedIPs(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = r.Close() })
 
-	h := New(r, "test-jwt-secret")
+	h := New(r, "test-jwt-secret", "3.0.16")
 	now := time.Now().UnixMilli()
 
 	tests := []struct {

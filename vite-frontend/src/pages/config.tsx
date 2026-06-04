@@ -66,6 +66,8 @@ const STANDALONE_SWITCH_KEYS = [
   "registration_enabled",
   "login_monitor_link",
 ];
+const POWERED_BADGE_VISIBILITY_KEY = "flvx_powered_badge_visible";
+const POWERED_BADGE_VISIBILITY_EVENT = "flvxPoweredBadgeVisibilityChanged";
 // 网站配置项定义
 const CONFIG_ITEMS: ConfigItem[] = [
   {
@@ -190,7 +192,16 @@ const getInitialConfigs = (): Record<string, string> => {
 
 export default function ConfigPage() {
   const navigate = useNavigate();
-  const initialConfigs = getInitialConfigs();
+  const rawInitialConfigs = getInitialConfigs();
+  const initialConfigs = {
+    ...rawInitialConfigs,
+    payment_enabled:
+      localStorage.getItem("vite_config_payment_enabled") ?? "false",
+    registration_enabled:
+      localStorage.getItem("vite_config_registration_enabled") ?? "false",
+    login_monitor_link:
+      localStorage.getItem("vite_config_login_monitor_link") ?? "false",
+  };
   const [configs, setConfigs] =
     useState<Record<string, string>>(initialConfigs);
   const [loading, setLoading] = useState(
@@ -224,8 +235,27 @@ export default function ConfigPage() {
   const [hmacKey, setHmacKey] = useState("");
   const [licenseSaving, setLicenseSaving] = useState(false);
   const [licenseStatus, setLicenseStatus] = useState<LicenseInfo | null>(null);
+  const [poweredBadgeVisible, setPoweredBadgeVisible] = useState(
+    () => localStorage.getItem(POWERED_BADGE_VISIBILITY_KEY) !== "false",
+  );
   const [transferDomain, setTransferDomain] = useState("");
   const [transferConfirmOpen, setTransferConfirmOpen] = useState(false);
+  const commercialAuthorized =
+    licenseStatus?.has_license_key === true &&
+    licenseStatus?.valid === true &&
+    licenseStatus?.tier !== "blocked";
+  const isCommercialConfigKey = (key: string) =>
+    [
+      "app_name",
+      "app_logo",
+      "app_favicon",
+      "payment_enabled",
+      "registration_enabled",
+      "login_monitor_link",
+    ].includes(key);
+  const commercialDisabledTitle = commercialAuthorized
+    ? undefined
+    : "该功能需要商业授权";
 
   // 权限检查
   useEffect(() => {
@@ -246,7 +276,12 @@ export default function ConfigPage() {
       setLoading(true);
     }
     try {
-      const configData = await getCachedConfigs();
+      const configData = {
+        payment_enabled: "false",
+        registration_enabled: "false",
+        login_monitor_link: "false",
+        ...(await getCachedConfigs()),
+      };
       // 只有在数据有变化时才更新
       const hasDataChanged =
         JSON.stringify(configData) !== JSON.stringify(configsToCompare);
@@ -335,6 +370,12 @@ export default function ConfigPage() {
     } finally {
       setLicenseSaving(false);
     }
+  };
+  const handlePoweredBadgeVisibilityChange = (checked: boolean) => {
+    setPoweredBadgeVisible(checked);
+    localStorage.setItem(POWERED_BADGE_VISIBILITY_KEY, String(checked));
+    window.dispatchEvent(new Event(POWERED_BADGE_VISIBILITY_EVENT));
+    toast.success(checked ? "Powered 标识已显示" : "Powered 标识已关闭");
   };
   const handleTransferLicense = () => {
     if (!transferDomain.trim()) {
@@ -430,6 +471,11 @@ export default function ConfigPage() {
   };
   // 快捷开关直接生效（不经过保存按钮）
   const handleDirectSwitchChange = async (key: string, checked: boolean) => {
+    if (isCommercialConfigKey(key) && !commercialAuthorized) {
+      toast.error("该功能需要商业授权");
+
+      return;
+    }
     const newValue = checked ? "true" : "false";
 
     const payload: Record<string, string> = { [key]: newValue };
@@ -495,6 +541,15 @@ export default function ConfigPage() {
 
       if (changedKeys.length === 0) {
         setHasChanges(false);
+
+        return;
+      }
+      if (
+        changedKeys.some((key) => isCommercialConfigKey(key)) &&
+        !commercialAuthorized
+      ) {
+        toast.error("站点品牌、商城、注册与探针入口需要商业授权");
+        setSaving(false);
 
         return;
       }
@@ -591,12 +646,22 @@ export default function ConfigPage() {
     return key === "app_logo" ? logoFileInputRef : faviconFileInputRef;
   };
   const triggerBrandFilePicker = (key: BrandPreviewKey) => {
+    if (!commercialAuthorized) {
+      toast.error("该品牌设置需要商业授权");
+
+      return;
+    }
     if (brandUploading[key]) {
       return;
     }
     getBrandInputRef(key).current?.click();
   };
   const clearBrandAsset = (key: BrandPreviewKey) => {
+    if (!commercialAuthorized) {
+      toast.error("该品牌设置需要商业授权");
+
+      return;
+    }
     handleConfigChange(key, "");
     setPreviewLoadFailed((prev) => ({ ...prev, [key]: false }));
   };
@@ -604,6 +669,12 @@ export default function ConfigPage() {
     key: BrandPreviewKey,
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
+    if (!commercialAuthorized) {
+      toast.error("该品牌设置需要商业授权");
+      event.target.value = "";
+
+      return;
+    }
     const file = event.target.files?.[0];
 
     if (!file) {
@@ -707,10 +778,11 @@ export default function ConfigPage() {
     const value = (configs[key] || "").trim();
     const uploading = brandUploading[key] === true;
     const isLogo = key === "app_logo";
+    const disabled = !commercialAuthorized;
 
     return (
       <div
-        className={`rounded-lg border p-3 ${
+        className={`rounded-lg border p-3 ${disabled ? "opacity-55 grayscale" : ""} ${
           isChanged
             ? "border-warning-300"
             : "border-default-200 dark:border-default-100/30"
@@ -728,8 +800,10 @@ export default function ConfigPage() {
         <div className="flex flex-wrap items-center gap-2">
           <Button
             color="primary"
+            isDisabled={disabled}
             isLoading={uploading}
             size="sm"
+            title={commercialDisabledTitle}
             variant="flat"
             onPress={() => triggerBrandFilePicker(key)}
           >
@@ -742,8 +816,9 @@ export default function ConfigPage() {
                 : "上传 Favicon"}
           </Button>
           <Button
-            isDisabled={value.length === 0 || uploading}
+            isDisabled={disabled || value.length === 0 || uploading}
             size="sm"
+            title={commercialDisabledTitle}
             variant="flat"
             onPress={() => clearBrandAsset(key)}
           >
@@ -766,6 +841,8 @@ export default function ConfigPage() {
   const renderConfigItem = (item: ConfigItem) => {
     const isChanged =
       hasChanges && configs[item.key] !== originalConfigs[item.key];
+    const commercialLocked =
+      isCommercialConfigKey(item.key) && !commercialAuthorized;
 
     switch (item.type) {
       case "input":
@@ -821,8 +898,10 @@ export default function ConfigPage() {
                 ? "border-warning-300 data-[hover=true]:border-warning-400"
                 : "",
             }}
+            isDisabled={commercialLocked}
             placeholder={item.placeholder}
             size="md"
+            title={commercialLocked ? commercialDisabledTitle : undefined}
             value={configs[item.key] || ""}
             variant="bordered"
             onChange={(e) => handleConfigChange(item.key, e.target.value)}
@@ -836,8 +915,10 @@ export default function ConfigPage() {
                 wrapper: isChanged ? "border-warning-300" : "",
               }}
               color="primary"
+              isDisabled={commercialLocked}
               isSelected={configs[item.key] === "true"}
               size="md"
+              title={commercialLocked ? commercialDisabledTitle : undefined}
               onValueChange={(checked) =>
                 handleConfigChange(item.key, checked ? "true" : "false")
               }
@@ -855,8 +936,10 @@ export default function ConfigPage() {
               wrapper: isChanged ? "border-warning-300" : "",
             }}
             color="primary"
+            isDisabled={commercialLocked}
             isSelected={configs[item.key] === "true"}
             size="md"
+            title={commercialLocked ? commercialDisabledTitle : undefined}
             onValueChange={(checked) =>
               handleConfigChange(item.key, checked ? "true" : "false")
             }
@@ -1098,7 +1181,11 @@ export default function ConfigPage() {
               ).map((item) => (
                 <div
                   key={item.key}
-                  className="flex justify-between items-center py-1"
+                  className={`flex justify-between items-center py-1 ${
+                    isCommercialConfigKey(item.key) && !commercialAuthorized
+                      ? "opacity-50 grayscale"
+                      : ""
+                  }`}
                 >
                   <div className="flex flex-col">
                     <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
@@ -1111,8 +1198,16 @@ export default function ConfigPage() {
                   <div className="flex-shrink-0">
                     <Switch
                       color="primary"
+                      isDisabled={
+                        isCommercialConfigKey(item.key) && !commercialAuthorized
+                      }
                       isSelected={configs[item.key] === "true"}
                       size="sm"
+                      title={
+                        isCommercialConfigKey(item.key) && !commercialAuthorized
+                          ? commercialDisabledTitle
+                          : undefined
+                      }
                       onValueChange={(checked) =>
                         handleDirectSwitchChange(item.key, checked)
                       }
@@ -1355,6 +1450,28 @@ export default function ConfigPage() {
                 </p>
               </div>
             </div>
+            {commercialAuthorized && (
+              <div className="flex items-center justify-between gap-4 rounded-2xl border border-divider/60 bg-default-50/60 px-4 py-3">
+                <div>
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    底部 Powered 标识
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    商业授权版可关闭整页底部居中的 Powered by FLVX 浮窗
+                  </p>
+                </div>
+                <Switch
+                  color="primary"
+                  isSelected={poweredBadgeVisible}
+                  size="md"
+                  onValueChange={handlePoweredBadgeVisibilityChange}
+                >
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    {poweredBadgeVisible ? "显示" : "关闭"}
+                  </span>
+                </Switch>
+              </div>
+            )}
             <div className="flex justify-between items-center pt-4 border-t border-divider/50">
               <div className="flex items-center gap-2">
                 {licenseStatus && (

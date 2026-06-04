@@ -16,7 +16,7 @@ func TestRunStatisticsFlowJobTracksIncrementAndPrunes(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = r.Close() })
 
-	h := New(r, "secret")
+	h := New(r, "secret", "3.0.16")
 	now := time.Date(2026, 2, 7, 12, 0, 0, 0, time.UTC)
 	nowMs := now.UnixMilli()
 
@@ -58,7 +58,7 @@ func TestRunResetAndExpiryJobResetsFlowAndDisablesExpiredRecords(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = r.Close() })
 
-	h := New(r, "secret")
+	h := New(r, "secret", "3.0.16")
 	now := time.Date(2026, 3, 15, 0, 0, 5, 0, time.UTC)
 	nowMs := now.UnixMilli()
 
@@ -152,7 +152,7 @@ func TestRunResetAndExpiryJobResetsUserQuotaAndUnblocksUser(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = r.Close() })
 
-	h := New(r, "secret")
+	h := New(r, "secret", "3.0.16")
 	now := time.Date(2026, 3, 12, 0, 0, 5, 0, time.UTC)
 	nowMs := now.UnixMilli()
 

@@ -14,3 +14,12 @@ func (h *Handler) ensureCommercialFeature(w http.ResponseWriter, feature string)
 	}
 	return true
 }
+
+func isCommercialConfigKey(key string) bool {
+	switch key {
+	case "app_name", "app_logo", "app_favicon", "payment_enabled", "registration_enabled", "login_monitor_link":
+		return true
+	default:
+		return false
+	}
+}

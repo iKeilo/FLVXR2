@@ -19,7 +19,6 @@ import {
 } from "@/shadcn-bridge/heroui/modal";
 import { Input } from "@/shadcn-bridge/heroui/input";
 import { BrandLogo } from "@/components/brand-logo";
-import { VersionFooter } from "@/components/version-footer";
 import { SunFilledIcon, MoonFilledIcon } from "@/components/icons";
 import {
   getLicenseInfo,
@@ -43,6 +42,7 @@ interface MenuItem {
   userOnly?: boolean;
   target?: string;
   restrictedAccessible?: boolean;
+  group?: "product";
 }
 
 interface PasswordForm {
@@ -51,6 +51,9 @@ interface PasswordForm {
   newPassword: string;
   confirmPassword: string;
 }
+
+const POWERED_BADGE_VISIBILITY_KEY = "flvx_powered_badge_visible";
+const POWERED_BADGE_VISIBILITY_EVENT = "flvxPoweredBadgeVisibilityChanged";
 
 export default function H5Layout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
@@ -63,6 +66,9 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
   const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
   const [monitorAllowed, setMonitorAllowed] = useState<boolean | null>(null);
   const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
+  const [poweredBadgeVisible, setPoweredBadgeVisible] = useState(
+    () => localStorage.getItem(POWERED_BADGE_VISIBILITY_KEY) !== "false",
+  );
   const restricted = isRestricted();
   const [licenseInfo, setLicenseInfo] = useState<null | {
     valid: boolean;
@@ -140,7 +146,6 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
     {
       path: "/tls",
       label: "TLS",
-      adminOnly: true,
       icon: (
         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
           <path
@@ -216,6 +221,7 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
     //    },
     {
       path: "/shop",
+      group: "product",
       label: "商城",
       restrictedAccessible: true,
       icon: (
@@ -226,6 +232,7 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
     },
     {
       path: "/admin/plans",
+      group: "product",
       label: "套餐",
       adminOnly: true,
       icon: (
@@ -243,6 +250,7 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
     },
     {
       path: "/admin/orders",
+      group: "product",
       label: "订单",
       adminOnly: true,
       icon: (
@@ -257,6 +265,7 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
     },
     {
       path: "/admin/payment",
+      group: "product",
       label: "支付",
       adminOnly: true,
       icon: (
@@ -286,7 +295,8 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
     },
     {
       path: "/myhome",
-      label: "我的",
+      group: "product",
+      label: "套餐/订单",
       restrictedAccessible: true,
       userOnly: true,
       icon: (
@@ -316,11 +326,15 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
     fetchLicense();
     const licenseInterval = setInterval(fetchLicense, 5 * 60 * 1000);
 
-    getStoreStatus().then((res) => {
-      if (res.code === 0 && res.data) {
-        setStoreEnabled(!!res.data.enabled);
-      }
-    });
+    getStoreStatus()
+      .then((res) => {
+        if (res.code === 0 && res.data) {
+          setStoreEnabled(!!res.data.enabled);
+        } else {
+          setStoreEnabled(false);
+        }
+      })
+      .catch(() => setStoreEnabled(false));
 
     const handlePaymentChange = () => forceUpdate();
     const handleConfigUpdate = () => forceUpdate();
@@ -369,6 +383,28 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
         handleStoreEnabledChanged,
       );
       window.removeEventListener("storage", handleStorageChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    const syncPoweredBadgePreference = () => {
+      setPoweredBadgeVisible(
+        localStorage.getItem(POWERED_BADGE_VISIBILITY_KEY) !== "false",
+      );
+    };
+
+    window.addEventListener(
+      POWERED_BADGE_VISIBILITY_EVENT,
+      syncPoweredBadgePreference,
+    );
+    window.addEventListener("storage", syncPoweredBadgePreference);
+
+    return () => {
+      window.removeEventListener(
+        POWERED_BADGE_VISIBILITY_EVENT,
+        syncPoweredBadgePreference,
+      );
+      window.removeEventListener("storage", syncPoweredBadgePreference);
     };
   }, []);
 
@@ -480,6 +516,7 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
     (item) =>
       (!item.adminOnly || isAdmin) &&
       (!item.userOnly || !isAdmin) &&
+      item.path !== "/tls" &&
       !(item.path === "/monitor" && monitorAllowed !== true) &&
       !(item.path === "/shop" && !isAdmin && !storeEnabled) &&
       !(
@@ -720,12 +757,12 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
 
       {/* 侧边滑动 Drawer */}
       <aside
-        className={`flvx-luminous-sidebar fixed ${!mobileMenuVisible ? "-translate-x-full" : "translate-x-0"} w-[40%] min-w-[140px] bg-white/90 dark:bg-black/80 shadow-2xl border-r border-gray-200/80 dark:border-gray-600/60 z-50 transition-transform duration-300 ease-in-out flex flex-col h-[100dvh] top-0 left-0 backdrop-blur-xl`}
+        className={`flvx-luminous-sidebar fixed ${!mobileMenuVisible ? "-translate-x-full" : "translate-x-0"} w-[68%] max-w-[236px] min-w-[180px] bg-white/90 dark:bg-black/80 shadow-2xl border-r border-gray-200/80 dark:border-gray-600/60 z-50 transition-transform duration-300 ease-in-out flex flex-col h-[100dvh] top-0 left-0 backdrop-blur-xl`}
       >
-        <div className="px-5 h-14 flex items-center overflow-hidden whitespace-nowrap box-border border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+        <div className="px-4 h-20 flex items-center justify-center overflow-hidden whitespace-nowrap box-border border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
           {/* 注释掉侧边栏顶部 logo  */}
-          <div className="flex-shrink-0 flex items-center justify-center w-10">
-            <BrandLogo size={24} />
+          <div className="flex-shrink-0 flex items-center justify-center w-12">
+            <BrandLogo size={42} />
           </div>
           <div className="flex items-center opacity-100 ml-2">
             {/* 注释掉侧边栏顶部 svg 图标 
@@ -738,47 +775,48 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        <nav className="flex-1 px-3 py-4 overflow-y-auto">
+        <nav className="flvx-hide-scrollbar flex-1 px-3 py-4 overflow-y-auto">
           <ul className="space-y-1">
-            {filteredMenuItems.map((item) => {
+            {filteredMenuItems.map((item, index) => {
               const isActive = location.pathname === item.path;
               const isStoreBlocked = item.path === "/shop" && !storeEnabled;
               const isRestrictedBlocked =
                 restricted && !item.restrictedAccessible;
               const isBlocked = isStoreBlocked || isRestrictedBlocked;
+              const startsProductGroup =
+                item.group === "product" &&
+                filteredMenuItems[index - 1]?.group !== "product";
 
               return (
-                <li key={item.path}>
-                  <button
-                    className={`w-full flex items-center p-1 rounded-lg text-left relative min-h-[20px] overflow-hidden transition-colors ${isBlocked ? "opacity-40 cursor-not-allowed" : ""} ${isActive ? "text-primary-600 dark:text-primary-300 bg-primary-100 dark:bg-primary-600/20" : isBlocked ? "text-gray-400 dark:text-gray-500" : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-900"}`}
-                    onClick={() => handleMenuClick(item)}
-                  >
-                    <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center relative z-10">
-                      {item.icon}
-                    </div>
-                    <div className="flex items-center opacity-100 ml-3">
-                      <span className="font-medium text-sm relative z-10 whitespace-nowrap">
-                        {item.label}
-                      </span>
-                    </div>
-                  </button>
-                </li>
+                <React.Fragment key={item.path}>
+                  {startsProductGroup && (
+                    <li className="px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-normal text-gray-400 dark:text-gray-500">
+                      商品管理
+                    </li>
+                  )}
+                  <li>
+                    <button
+                      className={`w-full flex items-center p-1 rounded-lg text-left relative min-h-[20px] overflow-hidden transition-colors ${item.group === "product" ? "pl-4" : ""} ${isBlocked ? "opacity-40 cursor-not-allowed" : ""} ${isActive ? "text-primary-600 dark:text-primary-300 bg-primary-100 dark:bg-primary-600/20" : isBlocked ? "text-gray-400 dark:text-gray-500" : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-900"}`}
+                      onClick={() => handleMenuClick(item)}
+                    >
+                      <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center relative z-10">
+                        {item.icon}
+                      </div>
+                      <div className="flex items-center opacity-100 ml-3">
+                        <span className="font-medium text-sm relative z-10 whitespace-nowrap">
+                          {item.label}
+                        </span>
+                      </div>
+                    </button>
+                  </li>
+                </React.Fragment>
               );
             })}
           </ul>
         </nav>
 
         {/* 底部版权信息 */}
-        <div className="px-5 py-4 mt-auto flex-shrink-0 flex items-center overflow-hidden whitespace-nowrap box-border">
-          <VersionFooter
-            isAdmin={isAdmin}
-            poweredClassName="text-xs text-gray-600 dark:text-white"
-            showUpdateInfo={isAdmin}
-            updateBadgeClassName="inline-flex items-center h-[16px] px-1.5 rounded-xs bg-green-500/90 text-[9px] font-semibold text-white"
-            version={siteConfig.version}
-            versionClassName="text-xs text-gray-400 dark:text-gray-500"
-          />
-        </div>
+        <div className="px-5 py-4 mt-auto flex-shrink-0" />
       </aside>
 
       {/* 主内容区域 */}
@@ -789,6 +827,15 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
         <GlobalPullToRefresh />
         {children}
       </main>
+
+      {(!licenseInfo?.has_license_key || poweredBadgeVisible) && (
+        <div className="flvx-powered-badge" aria-label="Powered by FLVX">
+          Powered by{" "}
+          <a href={PROJECT_REPOSITORY_URL} rel="noopener noreferrer" target="_blank">
+            FLVX
+          </a>
+        </div>
+      )}
 
       {/* 修改密码弹窗 */}
       <Modal

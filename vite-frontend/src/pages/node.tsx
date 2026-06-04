@@ -23,6 +23,7 @@ import { CSS } from "@dnd-kit/utilities";
 
 import { NodeGroupManager } from "./node/node-group-manager";
 import { NodeDeployModal } from "./node/node-deploy-modal";
+import TLSPage from "./tls";
 
 import {
   DistroIcon,
@@ -455,6 +456,7 @@ export default function NodePage() {
   >({});
   const [nodeGroups, setNodeGroups] = useState<NodeGroupApiItem[]>([]);
   const [groupManagerOpen, setGroupManagerOpen] = useState(false);
+  const [tlsManagerOpen, setTLSManagerOpen] = useState(false);
   const [deployModalOpen, setDeployModalOpen] = useState(false);
   const [deployTargetNode, setDeployTargetNode] = useState<Node | null>(null);
   const [groupSelectorNode, setGroupSelectorNode] = useState<number | null>(
@@ -2534,6 +2536,14 @@ export default function NodePage() {
                 </Button>
                 {/* 新增按钮 */}
                 <Button
+                  className="bg-cyan-100 text-cyan-700 hover:bg-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-300 dark:hover:bg-cyan-900/45"
+                  size="sm"
+                  variant="flat"
+                  onPress={() => setTLSManagerOpen(true)}
+                >
+                  TLS
+                </Button>
+                <Button
                   color="primary"
                   size="sm"
                   variant="flat"
@@ -2884,6 +2894,24 @@ export default function NodePage() {
         </>
       )}
       {/* 新增/编辑节点对话框 */}
+      <Modal
+        isOpen={tlsManagerOpen}
+        scrollBehavior="inside"
+        size="4xl"
+        onClose={() => setTLSManagerOpen(false)}
+      >
+        <ModalContent>
+          <ModalHeader>TLS 管理</ModalHeader>
+          <ModalBody className="px-0 py-0">
+            <TLSPage embedded />
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="flat" onPress={() => setTLSManagerOpen(false)}>
+              关闭
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
       <NodeDeployModal
         isOpen={deployModalOpen}
         node={deployTargetNode as any}

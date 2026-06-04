@@ -33,6 +33,7 @@ import {
 import { Progress } from "@/shadcn-bridge/heroui/progress";
 import { Select, SelectItem } from "@/shadcn-bridge/heroui/select";
 import { Switch } from "@/shadcn-bridge/heroui/switch";
+import { getAdminFlag } from "@/utils/session";
 
 const protocols = [
   "vless",
@@ -574,6 +575,7 @@ export function NodeDeployModal({
   } | null>(null);
   const [deployProgress, setDeployProgress] =
     useState<DeployProgressState>(idleDeployProgress);
+  const isAdmin = getAdminFlag();
   const [form, setForm] = useState({
     id: 0,
     name: "",
@@ -868,6 +870,10 @@ export function NodeDeployModal({
   };
 
   const saveTLS = async () => {
+    if (!isAdmin) {
+      toast.error("Only administrators can modify TLS templates");
+      return;
+    }
     if (!tlsDraft.name?.trim()) {
       toast.error("TLS template name is required");
       return;
@@ -2035,7 +2041,10 @@ export function NodeDeployModal({
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-divider p-4">
+                <div
+                  className={`rounded-lg border border-divider p-4 ${!isAdmin ? "opacity-55 grayscale-[0.15]" : ""}`}
+                  title={!isAdmin ? "Only administrators can modify TLS templates" : undefined}
+                >
                   <h3 className="mb-3 text-sm font-semibold">TLS Template</h3>
                   <div className="grid gap-3 md:grid-cols-2">
                     <Input
@@ -2174,10 +2183,11 @@ export function NodeDeployModal({
                       />
                     </div>
                     <div className="mt-3 flex gap-2">
-                      <Button size="sm" variant="flat" onPress={applyTLSFormToDraft}>
+                      <Button isDisabled={!isAdmin} size="sm" variant="flat" onPress={applyTLSFormToDraft}>
                         Generate JSON from form
                       </Button>
                       <Button
+                        isDisabled={!isAdmin}
                         size="sm"
                         variant="flat"
                         onPress={() =>
@@ -2209,6 +2219,7 @@ export function NodeDeployModal({
                   <Button
                     className="mt-3"
                     color="secondary"
+                    isDisabled={!isAdmin}
                     variant="flat"
                     onPress={saveTLS}
                   >
@@ -2428,6 +2439,7 @@ export function NodeDeployModal({
                         </span>
                         <Button
                           color="danger"
+                          isDisabled={!isAdmin}
                           size="sm"
                           variant="light"
                           onPress={async () => {

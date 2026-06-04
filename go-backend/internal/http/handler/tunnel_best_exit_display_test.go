@@ -302,7 +302,7 @@ func setupBestExitTunnelHandler(t *testing.T) *Handler {
 		t.Fatalf("open sqlite: %v", err)
 	}
 	t.Cleanup(func() { _ = r.Close() })
-	h := New(r, "secret")
+	h := New(r, "secret", "3.0.16")
 	now := time.Now().UnixMilli()
 
 	insertNode := func(id int64, name string) {

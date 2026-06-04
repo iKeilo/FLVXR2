@@ -495,10 +495,10 @@ func (h *Handler) getStoreStatus(w http.ResponseWriter, r *http.Request) {
 		response.WriteJSON(w, response.ErrDefault("请求失败"))
 		return
 	}
-	enabled := true
+	enabled := false
 	cfg, err := h.repo.GetConfigByName("store_enabled")
-	if err == nil && cfg != nil && cfg.Value == "0" {
-		enabled = false
+	if err == nil && cfg != nil && cfg.Value == "1" {
+		enabled = true
 	}
 	response.WriteJSON(w, response.OK(map[string]interface{}{
 		"enabled": enabled,

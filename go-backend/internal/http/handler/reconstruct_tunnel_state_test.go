@@ -16,7 +16,7 @@ func TestReconstructTunnelState_PreservesConnectIP(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = r.Close() })
 
-	h := New(r, "secret")
+	h := New(r, "secret", "3.0.16")
 	now := time.Now().UnixMilli()
 
 	if err := r.DB().Exec(`

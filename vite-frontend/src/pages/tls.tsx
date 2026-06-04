@@ -29,6 +29,7 @@ import {
 } from "@/shadcn-bridge/heroui/modal";
 import { Select, SelectItem } from "@/shadcn-bridge/heroui/select";
 import { Switch } from "@/shadcn-bridge/heroui/switch";
+import { getAdminFlag } from "@/utils/session";
 
 type TLSType = "tls" | "reality";
 type SourceMode = "path" | "content";
@@ -292,13 +293,15 @@ const toPayload = (form: TLSFormState): Partial<NodeTLSTemplateApiItem> => {
   };
 };
 
-const TLSPage = () => {
+const TLSPage = ({ embedded = false }: { embedded?: boolean }) => {
   const [items, setItems] = useState<NodeTLSTemplateApiItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   const [form, setForm] = useState<TLSFormState>({ ...emptyForm });
+  const isAdmin = getAdminFlag();
+  const readonlyTitle = isAdmin ? undefined : "仅管理员可修改 TLS 模板";
 
   const stats = useMemo(() => {
     return {
@@ -327,12 +330,20 @@ const TLSPage = () => {
   }, []);
 
   const openCreate = () => {
+    if (!isAdmin) {
+      toast.error("仅管理员可添加 TLS 模板");
+      return;
+    }
     setForm({ ...emptyForm });
     setShowOptions(false);
     setModalOpen(true);
   };
 
   const openEdit = (item: NodeTLSTemplateApiItem) => {
+    if (!isAdmin) {
+      toast.error("仅管理员可编辑 TLS 模板");
+      return;
+    }
     setForm(toForm(item));
     setShowOptions(false);
     setModalOpen(true);
@@ -343,6 +354,10 @@ const TLSPage = () => {
   };
 
   const handleSave = async () => {
+    if (!isAdmin) {
+      toast.error("仅管理员可保存 TLS 模板");
+      return;
+    }
     if (!form.name.trim()) {
       toast.error("请填写 TLS 名称");
 
@@ -367,6 +382,10 @@ const TLSPage = () => {
   };
 
   const handleDelete = async (item: NodeTLSTemplateApiItem) => {
+    if (!isAdmin) {
+      toast.error("仅管理员可删除 TLS 模板");
+      return;
+    }
     if (!window.confirm(`删除 TLS 模板「${item.name}」？`)) {
       return;
     }
@@ -380,6 +399,10 @@ const TLSPage = () => {
   };
 
   const handleDuplicate = async (item: NodeTLSTemplateApiItem) => {
+    if (!isAdmin) {
+      toast.error("仅管理员可复制 TLS 模板");
+      return;
+    }
     try {
       ensureOK(
         await saveTLSTemplate({
@@ -396,6 +419,10 @@ const TLSPage = () => {
   };
 
   const handleRealityKeypair = async () => {
+    if (!isAdmin) {
+      toast.error("仅管理员可生成 Reality 密钥");
+      return;
+    }
     try {
       const data = ensureOK(await generateTLSRealityKeypair());
 
@@ -407,6 +434,10 @@ const TLSPage = () => {
   };
 
   const handleRealityShortIds = async () => {
+    if (!isAdmin) {
+      toast.error("仅管理员可刷新 Short IDs");
+      return;
+    }
     try {
       const data = ensureOK(await generateTLSRealityShortIds());
 
@@ -418,7 +449,9 @@ const TLSPage = () => {
   };
 
   return (
-    <div className="min-h-full bg-gray-50 px-4 py-4 text-gray-900 dark:bg-black dark:text-gray-100 sm:px-6">
+    <div
+      className={`${embedded ? "max-h-[72vh] px-4 py-3" : "min-h-full px-4 py-4 sm:px-6"} bg-transparent text-gray-900 dark:text-gray-100`}
+    >
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
         <div className="flex flex-col gap-3 border-b border-gray-200 pb-4 dark:border-gray-800 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -429,7 +462,7 @@ const TLSPage = () => {
               <span>入站引用 {stats.used}</span>
             </div>
           </div>
-          <Button color="primary" startContent={<Plus className="h-4 w-4" />} onPress={openCreate}>
+          <Button color="primary" isDisabled={!isAdmin} startContent={<Plus className="h-4 w-4" />} title={readonlyTitle} onPress={openCreate}>
             添加
           </Button>
         </div>
@@ -439,7 +472,7 @@ const TLSPage = () => {
             正在加载 TLS 模板
           </div>
         ) : items.length === 0 ? (
-          <div className="flex h-48 items-center justify-center rounded-md border border-dashed border-gray-300 bg-white text-sm text-gray-500 dark:border-gray-800 dark:bg-gray-950">
+          <div className="flex h-48 items-center justify-center rounded-2xl border border-dashed border-white/70 bg-white/55 text-sm text-gray-500 backdrop-blur-xl dark:border-white/10 dark:bg-gray-950/50">
             暂无 TLS 模板
           </div>
         ) : (
@@ -450,7 +483,7 @@ const TLSPage = () => {
               return (
                 <div
                   key={item.id}
-                  className="flex min-h-[190px] flex-col rounded-md border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-950"
+                  className="flex min-h-[190px] flex-col rounded-3xl border border-white/70 bg-white/60 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-gray-950/55"
                 >
                   <div className="border-b border-gray-200 px-4 py-3 dark:border-gray-800">
                     <div className="truncate text-lg font-semibold" title={item.name}>
@@ -474,6 +507,7 @@ const TLSPage = () => {
                     <Button
                       isIconOnly
                       aria-label="编辑 TLS 模板"
+                      isDisabled={!isAdmin}
                       size="sm"
                       title="编辑"
                       variant="light"
@@ -484,6 +518,7 @@ const TLSPage = () => {
                     <Button
                       isIconOnly
                       aria-label="复制 TLS 模板"
+                      isDisabled={!isAdmin}
                       size="sm"
                       title="复制"
                       variant="light"
@@ -495,6 +530,7 @@ const TLSPage = () => {
                       isIconOnly
                       aria-label="删除 TLS 模板"
                       className="ml-auto text-red-600"
+                      isDisabled={!isAdmin}
                       size="sm"
                       title="删除"
                       variant="light"
@@ -625,6 +661,7 @@ const TLSPage = () => {
                     isIconOnly
                     aria-label="生成 Reality 密钥"
                     className="mt-6"
+                    isDisabled={!isAdmin}
                     title="生成 Reality 密钥"
                     variant="flat"
                     onPress={handleRealityKeypair}
@@ -647,6 +684,7 @@ const TLSPage = () => {
                     isIconOnly
                     aria-label="刷新 Short IDs"
                     className="mt-6"
+                    isDisabled={!isAdmin}
                     title="刷新 Short IDs"
                     variant="flat"
                     onPress={handleRealityShortIds}
@@ -754,7 +792,7 @@ const TLSPage = () => {
             <Button variant="bordered" onPress={() => setModalOpen(false)}>
               关闭
             </Button>
-            <Button color="primary" isLoading={saving} onPress={handleSave}>
+            <Button color="primary" isDisabled={!isAdmin} isLoading={saving} onPress={handleSave}>
               保存
             </Button>
           </ModalFooter>

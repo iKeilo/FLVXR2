@@ -1068,6 +1068,9 @@ func (h *Handler) updateConfigs(w http.ResponseWriter, r *http.Request) {
 		if key == "" {
 			continue
 		}
+		if isCommercialConfigKey(key) && !h.ensureCommercialFeature(w, "billing") {
+			return
+		}
 
 		value, err := normalizeAndValidateConfigValue(key, v)
 		if err != nil {
@@ -1098,6 +1101,10 @@ func (h *Handler) updateSingleConfig(w http.ResponseWriter, r *http.Request) {
 	name := strings.TrimSpace(req.Name)
 	if name == "" {
 		response.WriteJSON(w, response.ErrDefault("配置名称不能为空"))
+		return
+	}
+
+	if isCommercialConfigKey(name) && !h.ensureCommercialFeature(w, "billing") {
 		return
 	}
 

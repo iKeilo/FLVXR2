@@ -26,7 +26,6 @@ import {
 } from "@/shadcn-bridge/heroui/modal";
 import { Input } from "@/shadcn-bridge/heroui/input";
 import { BrandLogo } from "@/components/brand-logo";
-import { VersionFooter } from "@/components/version-footer";
 import { SunFilledIcon, MoonFilledIcon } from "@/components/icons";
 import {
   getLicenseInfo,
@@ -48,6 +47,7 @@ interface MenuItem {
   adminOnly?: boolean;
   userOnly?: boolean;
   restrictedAccessible?: boolean;
+  group?: "product";
 }
 
 interface PasswordForm {
@@ -56,6 +56,9 @@ interface PasswordForm {
   newPassword: string;
   confirmPassword: string;
 }
+
+const POWERED_BADGE_VISIBILITY_KEY = "flvx_powered_badge_visible";
+const POWERED_BADGE_VISIBILITY_EVENT = "flvxPoweredBadgeVisibilityChanged";
 
 export default function AdminLayout({
   children,
@@ -97,14 +100,21 @@ export default function AdminLayout({
   const isMobile = useMobileBreakpoint();
   const restricted = isRestricted();
   const [storeEnabled, setStoreEnabled] = useState(true);
+  const [poweredBadgeVisible, setPoweredBadgeVisible] = useState(
+    () => localStorage.getItem(POWERED_BADGE_VISIBILITY_KEY) !== "false",
+  );
   const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
 
   useEffect(() => {
-    getStoreStatus().then((res) => {
-      if (res.code === 0 && res.data) {
-        setStoreEnabled(!!res.data.enabled);
-      }
-    });
+    getStoreStatus()
+      .then((res) => {
+        if (res.code === 0 && res.data) {
+          setStoreEnabled(!!res.data.enabled);
+        } else {
+          setStoreEnabled(false);
+        }
+      })
+      .catch(() => setStoreEnabled(false));
     const handlePaymentChange = () => forceUpdate();
     const handleConfigUpdate = () => forceUpdate();
     const handleStoreEnabledChanged = (e: Event) => {
@@ -135,6 +145,28 @@ export default function AdminLayout({
         handleStoreEnabledChanged,
       );
       window.removeEventListener("storage", handleStorageChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    const syncPoweredBadgePreference = () => {
+      setPoweredBadgeVisible(
+        localStorage.getItem(POWERED_BADGE_VISIBILITY_KEY) !== "false",
+      );
+    };
+
+    window.addEventListener(
+      POWERED_BADGE_VISIBILITY_EVENT,
+      syncPoweredBadgePreference,
+    );
+    window.addEventListener("storage", syncPoweredBadgePreference);
+
+    return () => {
+      window.removeEventListener(
+        POWERED_BADGE_VISIBILITY_EVENT,
+        syncPoweredBadgePreference,
+      );
+      window.removeEventListener("storage", syncPoweredBadgePreference);
     };
   }, []);
 
@@ -210,7 +242,6 @@ export default function AdminLayout({
           />
         </svg>
       ),
-      adminOnly: true,
     },
     {
       path: "/monitor",
@@ -271,6 +302,7 @@ export default function AdminLayout({
     //    },
     {
       path: "/shop",
+      group: "product",
       label: "商城",
       restrictedAccessible: true,
       icon: (
@@ -281,6 +313,7 @@ export default function AdminLayout({
     },
     {
       path: "/admin/plans",
+      group: "product",
       label: "套餐",
       icon: (
         <svg
@@ -298,6 +331,7 @@ export default function AdminLayout({
     },
     {
       path: "/admin/orders",
+      group: "product",
       label: "订单",
       icon: (
         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -312,6 +346,7 @@ export default function AdminLayout({
     },
     {
       path: "/admin/payment",
+      group: "product",
       label: "支付",
       icon: (
         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -342,7 +377,8 @@ export default function AdminLayout({
     },
     {
       path: "/myhome",
-      label: "我的",
+      group: "product",
+      label: "套餐/订单",
       restrictedAccessible: true,
       userOnly: true,
       icon: (
@@ -666,6 +702,7 @@ export default function AdminLayout({
     (item) =>
       !(item.adminOnly && !isAdmin) &&
       !(item.userOnly && isAdmin) &&
+      item.path !== "/tls" &&
       !(item.path === "/monitor" && monitorAllowed !== true) &&
       !(item.path === "/shop" && !isAdmin && !storeEnabled) &&
       !(
@@ -699,7 +736,7 @@ export default function AdminLayout({
         className={`
         ${isMobile ? "fixed" : "relative"} 
         ${isMobile && !mobileMenuVisible ? "-translate-x-full" : "translate-x-0"}
-        ${isCollapsed ? "w-[76px]" : "w-[288px]"}
+        ${isCollapsed ? "w-[76px]" : "w-[236px]"}
         flvx-luminous-sidebar bg-white/70 dark:bg-black/60 backdrop-blur-2xl
         shadow-lg 
         border-r border-gray-200 dark:border-gray-600
@@ -711,15 +748,15 @@ export default function AdminLayout({
       `}
       >
         {/* Logo 区域 */}
-        <div className="px-5 h-14 flex items-center overflow-hidden whitespace-nowrap box-border">
-          <div className="flex-shrink-0 flex items-center justify-center w-10">
-            <BrandLogo size={28} />
+        <div className="px-4 h-20 flex items-center justify-center overflow-hidden whitespace-nowrap box-border">
+          <div className="flex-shrink-0 flex items-center justify-center w-12">
+            <BrandLogo size={42} />
           </div>
           <div
-            className={`transition-all duration-300 overflow-hidden ${isCollapsed ? "max-w-0 opacity-0 ml-0" : "max-w-[180px] opacity-100 ml-2"}`}
+            className={`transition-all duration-300 overflow-hidden ${isCollapsed ? "max-w-0 opacity-0 ml-0" : "max-w-[130px] opacity-100 ml-3"}`}
           >
             <a
-              className={`text-sm font-bold overflow-hidden whitespace-nowrap text-ellipsis transition-colors cursor-pointer no-underline ${
+              className={`text-base font-bold overflow-hidden whitespace-nowrap text-ellipsis transition-colors cursor-pointer no-underline ${
                 licenseInfo?.has_license_key
                   ? "text-foreground hover:text-primary-600 dark:hover:text-primary-300"
                   : "text-foreground hover:text-primary-600 dark:hover:text-primary-300"
@@ -743,9 +780,9 @@ export default function AdminLayout({
         </div>
 
         {/* 菜单导航 */}
-        <nav className="flex-1 px-3 py-6 overflow-y-auto overflow-x-hidden">
+        <nav className="flvx-hide-scrollbar flex-1 px-3 py-4 overflow-y-auto overflow-x-hidden">
           <ul className="space-y-1">
-            {filteredMenuItems.map((item) => {
+            {filteredMenuItems.map((item, index) => {
               const isActive = location.pathname === item.path;
               const isMonitor = item.path === "/monitor";
               const isMonitorBlocked = isMonitor && monitorAllowed !== true;
@@ -755,14 +792,24 @@ export default function AdminLayout({
                 !isAdmin && item.path === "/shop" && !storeEnabled;
               const isBlocked =
                 isMonitorBlocked || isRestrictedBlocked || isStoreBlocked;
+              const startsProductGroup =
+                item.group === "product" &&
+                filteredMenuItems[index - 1]?.group !== "product";
 
               return (
-                <li key={item.path}>
-                  <motion.button
-                    aria-disabled={isBlocked}
-                    className={`
+                <React.Fragment key={item.path}>
+                  {startsProductGroup && !isCollapsed && (
+                    <li className="px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-normal text-gray-400 dark:text-gray-500">
+                      商品管理
+                    </li>
+                  )}
+                  <li>
+                    <motion.button
+                      aria-disabled={isBlocked}
+                      className={`
                        w-full flex items-center p-1 rounded-lg text-left
                        relative min-h-[20px] overflow-hidden transition-colors
+                       ${item.group === "product" && !isCollapsed ? "pl-4" : ""}
                        ${isBlocked ? "opacity-40 cursor-not-allowed" : ""}
                        ${
                          isActive
@@ -772,50 +819,51 @@ export default function AdminLayout({
                              : "text-gray-700 dark:text-gray-200"
                        }
                       `}
-                    title={
-                      isCollapsed
-                        ? isMonitorBlocked
-                          ? `${item.label} (无权限)`
-                          : isRestrictedBlocked
-                            ? `${item.label} (请先购买套餐)`
-                            : isStoreBlocked
-                              ? `${item.label} (商城已关闭)`
-                              : item.label
-                        : undefined
-                    }
-                    transition={{ duration: 0.15 }}
-                    onClick={() => handleMenuClick(item.path)}
-                  >
-                    {isActive && (
-                      <motion.div
-                        className="absolute inset-0 rounded-lg bg-primary-100 dark:bg-primary-600/20"
-                        layoutId="sidebar-active"
-                        transition={{
-                          type: "spring",
-                          stiffness: 380,
-                          damping: 30,
-                        }}
-                      />
-                    )}
-                    {!isActive && (
-                      <motion.div
-                        className="absolute inset-0 rounded-lg bg-gray-100 dark:bg-gray-900 opacity-0"
-                        transition={{ duration: 0.15 }}
-                        whileHover={{ opacity: 1 }}
-                      />
-                    )}
-                    <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center relative z-10">
-                      {item.icon}
-                    </div>
-                    <div
-                      className={`transition-all duration-300 overflow-hidden flex items-center ${isCollapsed ? "max-w-0 opacity-0 ml-0" : "max-w-[200px] opacity-100 ml-2"}`}
+                      title={
+                        isCollapsed
+                          ? isMonitorBlocked
+                            ? `${item.label} (无权限)`
+                            : isRestrictedBlocked
+                              ? `${item.label} (请先购买套餐)`
+                              : isStoreBlocked
+                                ? `${item.label} (商城已关闭)`
+                                : item.label
+                          : undefined
+                      }
+                      transition={{ duration: 0.15 }}
+                      onClick={() => handleMenuClick(item.path)}
                     >
-                      <span className="font-medium text-sm relative z-10 whitespace-nowrap">
-                        {item.label}
-                      </span>
-                    </div>
-                  </motion.button>
-                </li>
+                      {isActive && (
+                        <motion.div
+                          className="absolute inset-0 rounded-lg bg-primary-100 dark:bg-primary-600/20"
+                          layoutId="sidebar-active"
+                          transition={{
+                            type: "spring",
+                            stiffness: 380,
+                            damping: 30,
+                          }}
+                        />
+                      )}
+                      {!isActive && (
+                        <motion.div
+                          className="absolute inset-0 rounded-lg bg-gray-100 dark:bg-gray-900 opacity-0"
+                          transition={{ duration: 0.15 }}
+                          whileHover={{ opacity: 1 }}
+                        />
+                      )}
+                      <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center relative z-10">
+                        {item.icon}
+                      </div>
+                      <div
+                        className={`transition-all duration-300 overflow-hidden flex items-center ${isCollapsed ? "max-w-0 opacity-0 ml-0" : "max-w-[200px] opacity-100 ml-2"}`}
+                      >
+                        <span className="font-medium text-sm relative z-10 whitespace-nowrap">
+                          {item.label}
+                        </span>
+                      </div>
+                    </motion.button>
+                  </li>
+                </React.Fragment>
               );
             })}
           </ul>
@@ -826,14 +874,6 @@ export default function AdminLayout({
           <div
             className={`transition-all duration-300 overflow-hidden flex items-center ${isCollapsed ? "max-w-0 opacity-0" : "max-w-[200px] opacity-100"}`}
           >
-            <VersionFooter
-              isAdmin={isAdmin}
-              poweredClassName="text-xs text-gray-600 dark:text-white"
-              showUpdateInfo={isAdmin}
-              updateBadgeClassName="inline-flex items-center h-[16px] px-1.5 rounded-xs bg-green-500/90 text-[9px] font-semibold text-white"
-              version={siteConfig.version}
-              versionClassName="text-xs text-gray-400 dark:text-gray-500"
-            />
           </div>
 
           {/* 桌面端折叠按钮 */}
@@ -1267,6 +1307,15 @@ export default function AdminLayout({
           </AnimatePresence>
         </main>
       </div>
+
+      {(!licenseInfo?.has_license_key || poweredBadgeVisible) && (
+        <div className="flvx-powered-badge" aria-label="Powered by FLVX">
+          Powered by{" "}
+          <a href={PROJECT_REPOSITORY_URL} rel="noopener noreferrer" target="_blank">
+            FLVX
+          </a>
+        </div>
+      )}
 
       {/* 修改密码弹窗 */}
       <Modal

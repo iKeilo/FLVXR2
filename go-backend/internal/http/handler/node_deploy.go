@@ -69,6 +69,9 @@ func (h *Handler) nodeTLSList(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) nodeTLSSave(w http.ResponseWriter, r *http.Request) {
+	if !h.ensureAdminAccess(w, r) {
+		return
+	}
 	var req nodeTLSRequest
 	if err := decodeJSON(r.Body, &req); err != nil {
 		response.WriteJSON(w, response.ErrDefault("请求参数无效"))
@@ -90,6 +93,9 @@ func (h *Handler) nodeTLSSave(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) nodeTLSDelete(w http.ResponseWriter, r *http.Request) {
+	if !h.ensureAdminAccess(w, r) {
+		return
+	}
 	var req nodeDeployIDRequest
 	if err := decodeJSON(r.Body, &req); err != nil || req.ID <= 0 {
 		response.WriteJSON(w, response.ErrDefault("请求参数无效"))
@@ -103,6 +109,9 @@ func (h *Handler) nodeTLSDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) nodeTLSRealityKeypair(w http.ResponseWriter, r *http.Request) {
+	if !h.ensureAdminAccess(w, r) {
+		return
+	}
 	privateKey, err := ecdh.X25519().GenerateKey(rand.Reader)
 	if err != nil {
 		response.WriteJSON(w, response.ErrDefault(err.Error()))
@@ -116,6 +125,9 @@ func (h *Handler) nodeTLSRealityKeypair(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *Handler) nodeTLSRealityShortIDs(w http.ResponseWriter, r *http.Request) {
+	if !h.ensureAdminAccess(w, r) {
+		return
+	}
 	response.WriteJSON(w, response.OK(map[string][]string{
 		"shortIds": randomRealityShortIDs(),
 	}))
