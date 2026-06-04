@@ -30,6 +30,7 @@ import {
   ModalFooter,
   ModalHeader,
 } from "@/shadcn-bridge/heroui/modal";
+import { Progress } from "@/shadcn-bridge/heroui/progress";
 import { Select, SelectItem } from "@/shadcn-bridge/heroui/select";
 import { Switch } from "@/shadcn-bridge/heroui/switch";
 
@@ -71,6 +72,30 @@ const fingerprintOptions = [
 ];
 
 type DeployView = "menu" | "add" | "manage";
+type DeployProgressState = {
+  active: boolean;
+  color: "primary" | "success" | "danger";
+  label: string;
+  percent: number;
+};
+
+const idleDeployProgress: DeployProgressState = {
+  active: false,
+  color: "primary",
+  label: "",
+  percent: 0,
+};
+const DEPLOY_POLL_INTERVAL_MS = 20 * 1000;
+const DEPLOY_POLL_MAX_ATTEMPTS = 30;
+
+type NodeInboundSaveResponse = {
+  deployStatus?: string;
+  revision?: {
+    id?: number;
+    status?: string;
+    errorMessage?: string;
+  };
+};
 
 const defaultTLS: Partial<NodeTLSTemplateApiItem> = {
   name: "",
@@ -547,6 +572,8 @@ export function NodeDeployModal({
     label: string;
     text: string;
   } | null>(null);
+  const [deployProgress, setDeployProgress] =
+    useState<DeployProgressState>(idleDeployProgress);
   const [form, setForm] = useState({
     id: 0,
     name: "",
@@ -610,6 +637,7 @@ export function NodeDeployModal({
   useEffect(() => {
     if (!isOpen) return;
     const nextPort = Math.floor(Math.random() * 40000) + 10000;
+    setDeployProgress(idleDeployProgress);
     setForm((prev) => ({
       ...prev,
       id: 0,
@@ -624,6 +652,79 @@ export function NodeDeployModal({
     }));
     setQRPayload("");
   }, [isOpen, node?.id, publishDefault]);
+
+  useEffect(() => {
+    if (!deployProgress.active || deployProgress.color !== "primary") return;
+    const timer = window.setInterval(() => {
+      setDeployProgress((prev) => {
+        if (!prev.active || prev.color !== "primary") return prev;
+        const cap = prev.percent >= 70 ? 92 : 72;
+        const step = prev.percent < 35 ? 6 : 3;
+        return { ...prev, percent: Math.min(cap, prev.percent + step) };
+      });
+    }, 900);
+    return () => window.clearInterval(timer);
+  }, [deployProgress.active, deployProgress.color]);
+
+  const updateDeployProgress = (
+    percent: number,
+    label: string,
+    color: DeployProgressState["color"] = "primary",
+  ) => {
+    setDeployProgress({ active: true, color, label, percent });
+  };
+
+  const finishDeployProgress = (
+    label: string,
+    color: DeployProgressState["color"],
+    autoHide = color === "success",
+  ) => {
+    setDeployProgress({ active: true, color, label, percent: 100 });
+    if (autoHide) {
+      window.setTimeout(() => setDeployProgress(idleDeployProgress), 1200);
+    }
+  };
+
+  const waitForDeployRevision = async (
+    revisionId: number,
+    actionLabel: string,
+  ) => {
+    if (!node?.id || revisionId <= 0) return;
+    for (let attempt = 1; attempt <= DEPLOY_POLL_MAX_ATTEMPTS; attempt += 1) {
+      updateDeployProgress(
+        Math.min(94, 40 + attempt * 3),
+        `${actionLabel}: 等待节点执行，${DEPLOY_POLL_INTERVAL_MS / 1000} 秒后第 ${attempt} 次确认`,
+      );
+      await new Promise((resolve) =>
+        window.setTimeout(resolve, DEPLOY_POLL_INTERVAL_MS),
+      );
+      const detailRes = await getNodeDeployDetail(node.id);
+      ensureOK(detailRes);
+      setDetail(detailRes.data);
+      const revision = (detailRes.data?.revisions || []).find(
+        (item) => item.id === revisionId,
+      );
+      if (!revision) {
+        updateDeployProgress(
+          Math.min(95, 45 + attempt * 3),
+          `${actionLabel}: 已确认面板响应，等待部署版本写入`,
+        );
+        continue;
+      }
+      if (revision.status === "deployed") {
+        finishDeployProgress(`${actionLabel}: 节点已确认部署完成`, "success");
+        return;
+      }
+      if (revision.status === "failed") {
+        throw new Error(revision.errorMessage || "节点部署失败");
+      }
+      updateDeployProgress(
+        Math.min(95, 45 + attempt * 3),
+        `${actionLabel}: 第 ${attempt} 次确认，当前状态 ${revision.status || "deploying"}`,
+      );
+    }
+    throw new Error("节点部署仍在执行，已停止自动等待，请稍后在管理入站中查看部署日志");
+  };
 
   const copyText = async (text: string, label: string) => {
     if (!text) {
@@ -785,8 +886,11 @@ export function NodeDeployModal({
 
   const saveInbound = async () => {
     if (!node?.id) return;
+    const actionLabel = form.id > 0 ? "更新入站" : "部署入站";
     setSaving(true);
+    updateDeployProgress(8, `${actionLabel}: 校验表单并准备配置`);
     try {
+      updateDeployProgress(26, `${actionLabel}: 提交到面板生成 sing-box 配置`);
       const res = await saveNodeDeployInbound({
         ...form,
         nodeId: node.id,
@@ -796,8 +900,21 @@ export function NodeDeployModal({
         tlsTemplateId: Number(form.tlsTemplateId || 0),
       });
       ensureOK(res);
-      toast.success(form.id > 0 ? "入站已更新并下发" : "入站已部署");
-      await load();
+      const payload = res.data as NodeInboundSaveResponse;
+      const revisionId = Number(payload?.revision?.id || 0);
+      if (form.apply && revisionId > 0) {
+        updateDeployProgress(
+          36,
+          `${actionLabel}: 已启动后台下发，开始每 ${DEPLOY_POLL_INTERVAL_MS / 1000} 秒确认结果`,
+        );
+        await waitForDeployRevision(revisionId, actionLabel);
+        toast.success(form.id > 0 ? "入站已更新并下发" : "入站已部署");
+      } else {
+        updateDeployProgress(86, `${actionLabel}: 配置已保存，正在刷新结果`);
+        await load();
+        finishDeployProgress(`${actionLabel}: 完成`, "success");
+        toast.success(form.id > 0 ? "入站已更新" : "入站已保存");
+      }
       setForm((prev) => ({
         ...prev,
         id: 0,
@@ -808,6 +925,11 @@ export function NodeDeployModal({
       }));
       setView("manage");
     } catch (err: any) {
+      finishDeployProgress(
+        `${actionLabel}: 失败 - ${err?.message || "请求失败"}`,
+        "danger",
+        false,
+      );
       toast.error(err?.message || "Failed to save inbound");
     } finally {
       setSaving(false);
@@ -1394,7 +1516,22 @@ export function NodeDeployModal({
             </div>
           </ModalBody>
           <ModalFooter>
-            <Button variant="bordered" onPress={() => setView("menu")}>
+            {deployProgress.active ? (
+              <div className="mr-auto w-full max-w-xl">
+                <Progress
+                  aria-label={deployProgress.label}
+                  color={deployProgress.color}
+                  label={deployProgress.label}
+                  showValueLabel
+                  size="sm"
+                  value={deployProgress.percent}
+                />
+                <div className="mt-2 text-xs text-default-500">
+                  首次部署可能会补全 sing-box 核心并重启服务，甲骨文等环境下载较慢时请保持窗口打开。
+                </div>
+              </div>
+            ) : null}
+            <Button disabled={saving} variant="bordered" onPress={() => setView("menu")}>
               关闭
             </Button>
             <Button color="primary" isLoading={saving} onPress={saveInbound}>

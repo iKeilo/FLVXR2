@@ -193,6 +193,8 @@ export const generateTLSRealityKeypair = () =>
   );
 export const generateTLSRealityShortIds = () =>
   Network.post<{ shortIds: string[] }>("/tls-template/reality-short-ids");
+const NODE_DEPLOY_REQUEST_TIMEOUT = 5 * 60 * 1000;
+
 export const getNodeDeployDetail = (nodeId: number) =>
   Network.post<NodeDeployDetailApiItem>("/node/deploy/detail", { nodeId });
 export const regenerateNodeIdentity = (nodeId: number) =>
@@ -210,13 +212,28 @@ export const saveNodeDeployInbound = (data: {
   inboundOptionsJson?: string;
   enabled?: number;
   apply?: boolean;
-}) => Network.post("/node/deploy/inbound/save", data);
+}) =>
+  Network.post("/node/deploy/inbound/save", data, {
+    timeout: NODE_DEPLOY_REQUEST_TIMEOUT,
+  });
 export const deleteNodeDeployInbound = (id: number) =>
-  Network.post("/node/deploy/inbound/delete", { id });
+  Network.post(
+    "/node/deploy/inbound/delete",
+    { id },
+    { timeout: NODE_DEPLOY_REQUEST_TIMEOUT },
+  );
 export const applyNodeDeployConfig = (nodeId: number) =>
-  Network.post("/node/deploy/apply", { nodeId });
+  Network.post(
+    "/node/deploy/apply",
+    { nodeId },
+    { timeout: NODE_DEPLOY_REQUEST_TIMEOUT },
+  );
 export const rollbackNodeDeployConfig = (nodeId: number, revisionId: number) =>
-  Network.post("/node/deploy/rollback", { nodeId, revisionId });
+  Network.post(
+    "/node/deploy/rollback",
+    { nodeId, revisionId },
+    { timeout: NODE_DEPLOY_REQUEST_TIMEOUT },
+  );
 
 export const upgradeNode = (
   id: number,

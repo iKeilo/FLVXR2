@@ -57,7 +57,7 @@ type nodeDeployRollbackRequest struct {
 	RevisionID int64 `json:"revisionId"`
 }
 
-const coreDeployTimeout = 180 * time.Second
+const coreDeployTimeout = 5 * time.Minute
 
 func (h *Handler) nodeTLSList(w http.ResponseWriter, r *http.Request) {
 	items, err := h.repo.ListNodeTLSTemplates()
@@ -430,19 +430,11 @@ func (h *Handler) saveNodeInboundDeployment(req nodeInboundDeployRequest) (map[s
 	}
 	deployStatus := "generated"
 	if req.Apply {
-		_, err = h.sendNodeCommandWithTimeout(req.NodeID, "ApplyCoreConfig", map[string]interface{}{
-			"coreType":   revision.CoreType,
-			"configJson": cfg,
-			"checksum":   revision.Checksum,
-		}, coreDeployTimeout, false, false)
-		if err != nil {
-			_ = h.repo.UpdateNodeConfigRevisionStatus(revision.ID, "failed", err.Error())
-			_ = h.repo.CreateNodeDeployLog(req.NodeID, revision.ID, "apply-inbound", "failed", err.Error())
-			return nil, err
-		}
-		deployStatus = "deployed"
+		deployStatus = "deploying"
+		revision.Status = deployStatus
 		_ = h.repo.UpdateNodeConfigRevisionStatus(revision.ID, deployStatus, "")
-		_ = h.repo.CreateNodeDeployLog(req.NodeID, revision.ID, "apply-inbound", "success", "OK")
+		_ = h.repo.CreateNodeDeployLog(req.NodeID, revision.ID, "apply-inbound", "deploying", "deployment started")
+		h.startNodeCoreDeploy(req.NodeID, revision.ID, revision.CoreType, cfg, revision.Checksum, "apply-inbound")
 	}
 	return map[string]interface{}{
 		"inbound":      item,
@@ -450,6 +442,23 @@ func (h *Handler) saveNodeInboundDeployment(req nodeInboundDeployRequest) (map[s
 		"configJson":   cfg,
 		"deployStatus": deployStatus,
 	}, nil
+}
+
+func (h *Handler) startNodeCoreDeploy(nodeID, revisionID int64, coreType, configJSON, checksum, action string) {
+	go func() {
+		_, err := h.sendNodeCommandWithTimeout(nodeID, "ApplyCoreConfig", map[string]interface{}{
+			"coreType":   coreType,
+			"configJson": configJSON,
+			"checksum":   checksum,
+		}, coreDeployTimeout, false, false)
+		if err != nil {
+			_ = h.repo.UpdateNodeConfigRevisionStatus(revisionID, "failed", err.Error())
+			_ = h.repo.CreateNodeDeployLog(nodeID, revisionID, action, "failed", err.Error())
+			return
+		}
+		_ = h.repo.UpdateNodeConfigRevisionStatus(revisionID, "deployed", "")
+		_ = h.repo.CreateNodeDeployLog(nodeID, revisionID, action, "success", "OK")
+	}()
 }
 
 func (h *Handler) renderAndStoreNodeConfig(nodeID int64, status string) (*model.NodeConfigRevision, string, error) {
