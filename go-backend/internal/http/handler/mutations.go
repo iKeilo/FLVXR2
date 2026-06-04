@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"net"
 	"net/http"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -30,6 +31,35 @@ import (
 )
 
 const tunnelServiceBindRetryDelay = 150 * time.Millisecond
+
+func resolvePanelInstallAddr(panelAddr string) string {
+	backendPort := strings.TrimSpace(os.Getenv("BACKEND_PORT"))
+	if backendPort == "" || backendPort == "6365" {
+		return panelAddr
+	}
+	portNum, err := strconv.Atoi(backendPort)
+	if err != nil || portNum <= 0 || portNum > 65535 {
+		return panelAddr
+	}
+
+	normalized := normalizeServerAddressInput(panelAddr)
+	host, port, err := net.SplitHostPort(normalized)
+	if err == nil {
+		if port == "6365" {
+			return net.JoinHostPort(host, backendPort)
+		}
+		return normalized
+	}
+
+	if strings.Count(normalized, ":") == 1 {
+		idx := strings.LastIndex(normalized, ":")
+		if strings.TrimSpace(normalized[idx+1:]) == "6365" {
+			return strings.TrimSpace(normalized[:idx]) + ":" + backendPort
+		}
+	}
+
+	return panelAddr
+}
 
 func (h *Handler) userCreate(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -861,7 +891,7 @@ func (h *Handler) nodeInstallDomestic(w http.ResponseWriter, r *http.Request) {
 	}
 
 	channel := normalizeReleaseChannel(req.Channel)
-	_, err := resolveLatestReleaseByChannel(channel)
+	version, err := resolveLatestReleaseByChannel(channel)
 	if err != nil {
 		response.WriteJSON(w, response.Err(-2, fmt.Sprintf("获取最新版本失败：%v", err)))
 		return
@@ -882,21 +912,8 @@ func (h *Handler) nodeInstallDomestic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 获取自定义国内加速地址
-	domesticURL, _ := h.repo.GetViteConfigValue("domestic_download_url")
-	if domesticURL == "" {
-		domesticURL = "https://chfs.646321.xyz:8/chfs/shared/flvx"
-	}
-
-	// 获取自定义全局加速地址（用于 fallback）
-	globalURL, _ := h.repo.GetViteConfigValue("global_download_url")
-	if globalURL == "" {
-		globalURL = "https://ghfast.top"
-	}
-
-	// 生成安装命令（不包含 GLOBAL_DOWNLOAD_URL 前缀）
-	cmd := fmt.Sprintf(`curl -L %s/install-auto.sh | bash -s -- -a %s -s %s`,
-		domesticURL, processServerAddress(panelAddr), secret)
+	cmd := fmt.Sprintf("curl -L https://raw.githubusercontent.com/%s/main/install.sh -o ./install.sh && chmod +x ./install.sh && VERSION=%s ./install.sh -a %s -s %s",
+		githubRepo, version, processServerAddress(resolvePanelInstallAddr(panelAddr)), secret)
 	response.WriteJSON(w, response.OK(cmd))
 }
 
@@ -935,12 +952,6 @@ func (h *Handler) nodeInstallOverseas(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 获取自定义全局加速地址
-	globalURL, _ := h.repo.GetViteConfigValue("global_download_url")
-	if globalURL == "" {
-		globalURL = "https://ghfast.top"
-	}
-
 	channel := normalizeReleaseChannel(req.Channel)
 	version, err := resolveLatestReleaseByChannel(channel)
 	if err != nil {
@@ -948,10 +959,8 @@ func (h *Handler) nodeInstallOverseas(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 使用全局加速地址下载
-	// install.sh 从 main 分支下载（保证是最新的），二进制文件从 Releases 下载指定版本
-	cmd := fmt.Sprintf("curl -L %s/https://raw.githubusercontent.com/%s/main/install.sh -o ./install.sh && chmod +x ./install.sh && VERSION=%s ./install.sh -a %s -s %s",
-		globalURL, githubRepo, version, processServerAddress(panelAddr), secret)
+	cmd := fmt.Sprintf("curl -L https://raw.githubusercontent.com/%s/main/install.sh -o ./install.sh && chmod +x ./install.sh && VERSION=%s ./install.sh -a %s -s %s",
+		githubRepo, version, processServerAddress(resolvePanelInstallAddr(panelAddr)), secret)
 	response.WriteJSON(w, response.OK(cmd))
 }
 
@@ -990,12 +999,6 @@ func (h *Handler) nodeInstallAlternative(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// 获取自定义全局加速地址
-	globalURL, _ := h.repo.GetViteConfigValue("global_download_url")
-	if globalURL == "" {
-		globalURL = "https://ghfast.top"
-	}
-
 	channel := normalizeReleaseChannel(req.Channel)
 	version, err := resolveLatestReleaseByChannel(channel)
 	if err != nil {
@@ -1003,10 +1006,8 @@ func (h *Handler) nodeInstallAlternative(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// 使用全局加速地址下载
-	// install.sh 从 main 分支下载（保证是最新的），二进制文件从 Releases 下载指定版本
-	cmd := fmt.Sprintf("curl -L %s/https://raw.githubusercontent.com/%s/main/install.sh -o ./install.sh && chmod +x ./install.sh && VERSION=%s ./install.sh -a %s -s %s",
-		globalURL, githubRepo, version, processServerAddress(panelAddr), secret)
+	cmd := fmt.Sprintf("curl -L https://raw.githubusercontent.com/%s/main/install.sh -o ./install.sh && chmod +x ./install.sh && VERSION=%s ./install.sh -a %s -s %s",
+		githubRepo, version, processServerAddress(resolvePanelInstallAddr(panelAddr)), secret)
 	response.WriteJSON(w, response.OK(cmd))
 }
 
@@ -1053,12 +1054,6 @@ func (h *Handler) nodeInstallOffline(w http.ResponseWriter, r *http.Request) {
 		nodeName = ""
 	}
 
-	// 获取自定义全局加速地址
-	globalURL, _ := h.repo.GetViteConfigValue("global_download_url")
-	if globalURL == "" {
-		globalURL = "https://ghfast.top"
-	}
-
 	type OfflineDeployPayload struct {
 		PanelAddr     string `json:"panelAddr"`
 		Secret        string `json:"secret"`
@@ -1068,11 +1063,11 @@ func (h *Handler) nodeInstallOffline(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.WriteJSON(w, response.OK(OfflineDeployPayload{
-		PanelAddr:     processServerAddress(panelAddr),
+		PanelAddr:     processServerAddress(resolvePanelInstallAddr(panelAddr)),
 		Secret:        secret,
 		NodeName:      nodeName,
-		AMD64Download: fmt.Sprintf("%s/https://github.com/%s/releases/latest/download/offline-amd64.zip", globalURL, githubRepo),
-		ARM64Download: fmt.Sprintf("%s/https://github.com/%s/releases/latest/download/offline-arm64.zip", globalURL, githubRepo),
+		AMD64Download: fmt.Sprintf("https://github.com/%s/releases/latest/download/offline-amd64.zip", githubRepo),
+		ARM64Download: fmt.Sprintf("https://github.com/%s/releases/latest/download/offline-arm64.zip", githubRepo),
 	}))
 }
 

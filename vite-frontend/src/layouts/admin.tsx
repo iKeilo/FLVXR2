@@ -682,7 +682,7 @@ export default function AdminLayout({
 
   return (
     <div
-      className={`flex ${isMobile ? "min-h-screen" : "h-screen"} bg-gray-100 dark:bg-black`}
+      className={`flvx-luminous-shell flex ${isMobile ? "min-h-screen" : "h-screen"}`}
     >
       {/* 移动端遮罩层 */}
       {isMobile && mobileMenuVisible && (
@@ -699,8 +699,8 @@ export default function AdminLayout({
         className={`
         ${isMobile ? "fixed" : "relative"} 
         ${isMobile && !mobileMenuVisible ? "-translate-x-full" : "translate-x-0"}
-        ${isCollapsed ? "w-20" : "w-[10%] min-w-[200px]"}
-        bg-white dark:bg-black 
+        ${isCollapsed ? "w-[76px]" : "w-[288px]"}
+        flvx-luminous-sidebar bg-white/70 dark:bg-black/60 backdrop-blur-2xl
         shadow-lg 
         border-r border-gray-200 dark:border-gray-600
         z-50 
@@ -1056,7 +1056,7 @@ export default function AdminLayout({
           )}
 
         {/* 顶部导航栏 */}
-        <header className="bg-white dark:bg-black shadow-md border-b border-gray-200 dark:border-gray-600 h-14 flex items-center px-4 lg:px-6 relative z-10">
+        <header className="flvx-luminous-topbar bg-white/80 dark:bg-black/70 shadow-sm border-b border-gray-200/80 dark:border-gray-600/60 h-14 flex items-center px-4 lg:px-6 relative z-10 backdrop-blur-xl">
           {/* 左侧：菜单按钮 */}
           <div className="flex items-center gap-4">
             {isMobile && (
@@ -1252,7 +1252,7 @@ export default function AdminLayout({
         </header>
 
         {/* 主内容 */}
-        <main className="flex-1 bg-gray-100 dark:bg-black overflow-y-auto">
+        <main className="flvx-luminous-main flex-1 overflow-y-auto">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}

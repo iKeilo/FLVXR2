@@ -1469,7 +1469,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                 </span>
               </div>
               <div className="p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                <div className="flvx-card-grid grid gap-4">
                   {nodes.map((node) => {
                     const metric = realtimeNodeMetrics[node.id] || null;
 

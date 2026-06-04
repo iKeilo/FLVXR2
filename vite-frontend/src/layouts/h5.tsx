@@ -495,9 +495,9 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-black overflow-x-hidden">
+    <div className="flvx-luminous-shell flex flex-col min-h-screen overflow-x-hidden">
       {/* 顶部导航栏 */}
-      <header className="fixed top-0 left-0 w-full bg-white dark:bg-black shadow-sm border-b border-gray-200 dark:border-gray-600 h-14 safe-top flex-shrink-0 flex items-center justify-between px-3 sm:px-4 z-40">
+      <header className="flvx-luminous-topbar fixed top-0 left-0 w-full bg-white/80 dark:bg-black/70 shadow-sm border-b border-gray-200/80 dark:border-gray-600/60 h-14 safe-top flex-shrink-0 flex items-center justify-between px-3 sm:px-4 z-40 backdrop-blur-xl">
         <div className="flex items-center gap-2 sm:gap-3">
           <button
             className="p-1.5 -ml-1.5 text-gray-600 dark:text-gray-300 hover:text-foreground rounded-md active:bg-gray-200 dark:active:bg-gray-800 transition-colors"
@@ -720,7 +720,7 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
 
       {/* 侧边滑动 Drawer */}
       <aside
-        className={`fixed ${!mobileMenuVisible ? "-translate-x-full" : "translate-x-0"} w-[40%] min-w-[140px] bg-white dark:bg-black shadow-2xl border-r border-gray-200 dark:border-gray-600 z-50 transition-transform duration-300 ease-in-out flex flex-col h-[100dvh] top-0 left-0`}
+        className={`flvx-luminous-sidebar fixed ${!mobileMenuVisible ? "-translate-x-full" : "translate-x-0"} w-[40%] min-w-[140px] bg-white/90 dark:bg-black/80 shadow-2xl border-r border-gray-200/80 dark:border-gray-600/60 z-50 transition-transform duration-300 ease-in-out flex flex-col h-[100dvh] top-0 left-0 backdrop-blur-xl`}
       >
         <div className="px-5 h-14 flex items-center overflow-hidden whitespace-nowrap box-border border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
           {/* 注释掉侧边栏顶部 logo  */}
@@ -783,7 +783,7 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
 
       {/* 主内容区域 */}
       <main
-        className="flex-1 bg-gray-100 dark:bg-black relative pb-8 pt-14 overflow-y-auto"
+          className="flvx-luminous-main flex-1 relative pb-8 pt-14 overflow-y-auto"
         id="h5-main"
       >
         <GlobalPullToRefresh />

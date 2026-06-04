@@ -124,20 +124,7 @@ get_architecture() {
 # 自动检测下载源
 # 根据脚本下载 URL 判断使用哪个下载源
 detect_download_host() {
-    local script_url="$1"
-    if [[ "$script_url" == *"chfs.646321.xyz"* ]]; then
-        echo "https://chfs.646321.xyz:8/chfs/shared/flvx"
-    elif [[ "$script_url" == *"git-proxy.abai.eu.org"* ]]; then
-        # 提取代理地址和 GitHub 路径
-        echo "$script_url" | sed 's|/releases/.*||'
-    elif [[ "$script_url" == *"ghfast.top"* ]]; then
-        echo "https://ghfast.top/https://github.com/${REPO}/releases/latest/download"
-    elif [[ "$script_url" == *"github.com"* ]]; then
-        echo "https://github.com/${REPO}/releases/latest/download"
-    else
-        # 默认使用 GitHub
-        echo "https://github.com/${REPO}/releases/latest/download"
-    fi
+    echo "https://github.com/${REPO}/releases/latest/download"
 }
 
 # 获取下载脚本的 URL
@@ -189,48 +176,23 @@ resolve_version() {
   return 1
 }
 
-# 构建下载地址
-# 国内 CDN：硬编码完整路径
-# GitHub：需要带版本号
+# 构建 GitHub Release 下载地址
 build_download_url() {
     local ARCH=$(get_architecture)
-    
-    # 国内 CDN 直接硬编码完整路径
-    if [[ "$DOWNLOAD_HOST" == *"chfs.646321.xyz"* ]]; then
-        echo "https://chfs.646321.xyz:8/chfs/shared/flvx/gost-${ARCH}"
-        return
-    fi
-    
+
     # 从仓库 main 分支下载（新增支持）
     if [[ "$RESOLVED_VERSION" == "main" ]] || [[ "$RESOLVED_VERSION" == "dev" ]]; then
         echo "https://raw.githubusercontent.com/${REPO}/main/go-gost/flux_agent"
         return
     fi
     
-    # GitHub 或其他源需要版本号
-    local actual_version="$RESOLVED_VERSION"
-    # 只有当用户没有显式指定版本时，才从 GitHub API 获取最新版本号
-    if [[ "$DOWNLOAD_HOST" == *"/latest"* ]] && [[ -z "${VERSION:-}" ]] && [[ -z "${FLUX_VERSION:-}" ]]; then
-        # 从 GitHub API 获取最新版本号
-        actual_version=$(curl -fsSL --max-time 10 "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null | grep -m1 '"tag_name"' | sed -E 's/.*"tag_name"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/' || echo "")
-        if [ -n "$actual_version" ]; then
-            RESOLVED_VERSION="$actual_version"
-        fi
-    fi
-    
-        echo "https://github.com/${REPO}/releases/download/${RESOLVED_VERSION}/gost-${ARCH}"
+    echo "https://github.com/${REPO}/releases/download/${RESOLVED_VERSION}/gost-${ARCH}"
 }
 
 # 显示下载源信息
 show_download_source() {
     local url="$1"
-    if [[ "$url" == *"chfs.646321.xyz"* ]]; then
-        echo "🌏 正在通过国内镜像源下载 ${SERVICE_NAME} 中..."
-    elif [[ "$url" == *"github.com"* ]]; then
-        echo "🌍 正在通过 GitHub 镜像源下载 ${SERVICE_NAME} 中..."
-    else
-        echo "🌐 正在通过自定义镜像源下载 ${SERVICE_NAME} 中..."
-    fi
+    echo "🌍 正在通过 GitHub 下载 ${SERVICE_NAME} 中..."
 }
 
 # 解析版本并构建下载地址
@@ -482,9 +444,7 @@ install_service() {
   # 构建备用源列表
   DOWNLOAD_URLS=(
     "$DOWNLOAD_URL"
-	"https://github.com/${REPO}/releases/latest/download/gost-${ARCH}"
-    "https://gh-proxy.com/https://github.com/${REPO}/releases/latest/download/gost-${ARCH}"
-    "https://ghfast.top/https://github.com/${REPO}/releases/latest/download/gost-${ARCH}"
+    "https://github.com/${REPO}/releases/latest/download/gost-${ARCH}"
   )
   
   # 循环尝试每个下载源
@@ -668,8 +628,7 @@ update_service() {
   # 构建备用源列表
   DOWNLOAD_URLS=(
     "$DOWNLOAD_URL"
-    "https://gh-proxy.com/https://github.com/${REPO}/releases/latest/download/gost-${ARCH}"
-    "https://ghfast.top/https://github.com/${REPO}/releases/latest/download/gost-${ARCH}"
+    "https://github.com/${REPO}/releases/latest/download/gost-${ARCH}"
   )
   
   # 循环尝试每个下载源

@@ -84,20 +84,6 @@ const CONFIG_ITEMS: ConfigItem[] = [
     type: "input",
   },
   {
-    key: "global_download_url",
-    label: "自定义全局加速源",
-    placeholder: "https://ghfast.top",
-    description: "海外机器安装和更新时使用的加速地址，留空使用默认值",
-    type: "input",
-  },
-  {
-    key: "domestic_download_url",
-    label: "自定义国内镜像源",
-    placeholder: "https://chfs.646321.xyz:8/chfs/shared/flvx",
-    description: "国内机器首次对接安装时使用的加速地址，留空使用默认值",
-    type: "input",
-  },
-  {
     key: "app_logo",
     label: "网页角标 Logo",
     description: "用于页面左上角导航角标，上传后会自动转换为 PNG 并持久化保存",
@@ -179,8 +165,6 @@ const getInitialConfigs = (): Record<string, string> => {
     "cloudflare_site_key",
     "cloudflare_secret_key",
     "forward_compact_mode",
-    "ghfast_url",
-    "domestic_download_host",
     "ip",
     "panel_domain",
     "app_logo",
@@ -813,7 +797,7 @@ export default function ConfigPage() {
                 input: "font-mono text-sm",
               }}
               minRows={3}
-              placeholder={"https://gcode.hostcentral.cc\nhttps://ghfast.top"}
+              placeholder={"https://github.com"}
               size="md"
               value={displayValue}
               variant="bordered"

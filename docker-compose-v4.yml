@@ -16,6 +16,7 @@ services:
       DATABASE_URL: ${DATABASE_URL:-}
       JWT_SECRET: ${JWT_SECRET}
       SERVER_ADDR: :6365
+      BACKEND_PORT: ${BACKEND_PORT}
       TZ: Asia/Shanghai
       FLUX_VERSION: ${FLUX_VERSION:-dev}
       PANEL_DEPLOY_DIR: /opt/flvx-svc

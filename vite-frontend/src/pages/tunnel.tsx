@@ -2483,7 +2483,7 @@ export default function TunnelPage() {
                     items={sortableTunnelIds}
                     strategy={rectSortingStrategy}
                   >
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                    <div className="flvx-card-grid grid gap-4">
                       {sortedTunnels.map((tunnel) => {
                         const typeDisplay = getTunnelTypeDisplay(tunnel.type);
                         const tunnelTypeChipClassName =
@@ -2497,6 +2497,7 @@ export default function TunnelPage() {
                               <Card
                                 key={tunnel.id}
                                 className="group shadow-sm border border-divider hover:shadow-md transition-shadow duration-200 overflow-hidden h-full"
+                                data-tunnel-card="true"
                               >
                                 <CardHeader className="pb-0 md:pb-0">
                                   {/* 顶部工具栏：选择框 + 拖拽 */}

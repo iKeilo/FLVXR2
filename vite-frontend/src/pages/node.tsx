@@ -82,7 +82,6 @@ import {
   recordNodeOfflineLog,
   getNodeTrafficResetLogs,
   deleteNodeTrafficResetLog,
-  getConfigByName,
   type ReleaseChannel,
 } from "@/api";
 import { compareVersions } from "@/utils/version-update";
@@ -424,7 +423,6 @@ export default function NodePage() {
   const [upgradeTargetNodeId, setUpgradeTargetNodeId] = useState<number | null>(
     null,
   );
-  const [ghfastURL, setGhfastURL] = useState<string>("https://ghfast.top");
   const [latestVersion, setLatestVersion] = useState<string>("");
   const [releases, setReleases] = useState<
     Array<{
@@ -1195,9 +1193,6 @@ export default function NodePage() {
         setInstallServiceName(installServiceName);
         let command = res.data as string;
 
-        // 移除 GLOBAL_DOWNLOAD_URL 前缀
-        command = command.replace(/^GLOBAL_DOWNLOAD_URL="[^"]*"\s*/, "");
-        command = command.replace("/install.sh", "/install-auto.sh");
         setInstallCommand(command);
         setCurrentNodeName(node.name);
         setInstallCommandModal(true);
@@ -1306,14 +1301,6 @@ export default function NodePage() {
     target: "single" | "batch",
     nodeId?: number,
   ) => {
-    // 获取 ghfast_url 配置
-    const configRes = await getConfigByName("global_download_url");
-
-    if (configRes.code === 0 && configRes.data?.value) {
-      setGhfastURL(configRes.data.value);
-    } else {
-      setGhfastURL("https://ghfast.top");
-    }
     const defaultChannel: ReleaseChannel = "stable";
 
     setUpgradeTarget(target);
@@ -1329,13 +1316,7 @@ export default function NodePage() {
     const version = selectedVersion || latestVersion;
     const releaseType = version || "latest";
 
-    // 检测是否为 GitHub 代理（不包含 github.com 的都需要拼接完整 GitHub URL）
-    if (!ghfastURL.includes("github.com")) {
-      return `${ghfastURL}/https://github.com/iKeilo/flvxt2/releases/download/${releaseType}/gost-{ARCH}`;
-    }
-
-    // 直连 GitHub（如 https://github.com）
-    return `${ghfastURL}/iKeilo/flvxt2/releases/download/${releaseType}/gost-{ARCH}`;
+    return `https://github.com/iKeilo/flvxt2/releases/download/${releaseType}/gost-{ARCH}`;
   };
   // 获取地址前缀文本（升级地址/回退地址）
   const getAddressPrefix = (): string => {
@@ -2658,7 +2639,7 @@ export default function NodePage() {
                       items={sortableNodeIds}
                       strategy={rectSortingStrategy}
                     >
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                      <div className="flvx-card-grid grid gap-4">
                         {displayNodes.map((node) => (
                           <SortableItem key={node.id} id={node.id}>
                             {(listeners) => renderNodeCard(node, listeners)}

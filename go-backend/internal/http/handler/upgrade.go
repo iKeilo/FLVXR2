@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"go-backend/internal/http/response"
-	"go-backend/internal/store/model"
 )
 
 const (
@@ -140,47 +139,6 @@ func resolveLatestReleaseByChannel(channel string) (string, error) {
 	return "", fmt.Errorf("未找到%s版本号", releaseChannelLabel(normalizedChannel))
 }
 
-func resolveGitHubProxyURLs(repo interface {
-	GetConfigByName(string) (*model.ViteConfig, error)
-}) []string {
-	if repo == nil {
-		return []string{"https://git-proxy.abai.eu.org"}
-	}
-
-	enabledCfg, _ := repo.GetConfigByName("github_proxy_enabled")
-	enabled := enabledCfg == nil || enabledCfg.Value == "" || enabledCfg.Value == "true"
-	if !enabled {
-		return nil
-	}
-
-	urlsCfg, _ := repo.GetConfigByName("github_proxy_urls")
-	if urlsCfg == nil || urlsCfg.Value == "" {
-		return []string{"https://git-proxy.abai.eu.org"}
-	}
-
-	var urls []string
-	if err := json.Unmarshal([]byte(urlsCfg.Value), &urls); err != nil {
-		return []string{"https://git-proxy.abai.eu.org"}
-	}
-
-	var filtered []string
-	for _, u := range urls {
-		u = strings.TrimSpace(u)
-		if u != "" {
-			filtered = append(filtered, u)
-		}
-	}
-	if len(filtered) == 0 {
-		return []string{"https://git-proxy.abai.eu.org"}
-	}
-	return filtered
-}
-
-func buildProxyURL(proxy, path string) string {
-	proxy = strings.TrimRight(proxy, "/")
-	return fmt.Sprintf("%s/%s", proxy, strings.TrimLeft(path, "/"))
-}
-
 func (h *Handler) nodeUpgrade(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		response.WriteJSON(w, response.ErrDefault("请求失败"))
@@ -212,18 +170,11 @@ func (h *Handler) nodeUpgrade(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// 获取自定义全局加速地址
-	globalURL, _ := h.repo.GetViteConfigValue("global_download_url")
-	if globalURL == "" {
-		globalURL = "https://ghfast.top"
-	}
-
-	// 构建下载源（只使用全局加速地址）
 	downloadURLs := []string{
-		fmt.Sprintf("%s/https://github.com/%s/releases/download/%s/gost-{ARCH}", globalURL, githubRepo, version),
+		fmt.Sprintf("https://github.com/%s/releases/download/%s/gost-{ARCH}", githubRepo, version),
 	}
 	checksumURLs := []string{
-		fmt.Sprintf("%s/https://github.com/%s/releases/download/%s/gost-{ARCH}.sha256", globalURL, githubRepo, version),
+		fmt.Sprintf("https://github.com/%s/releases/download/%s/gost-{ARCH}.sha256", githubRepo, version),
 	}
 
 	result, err := h.wsServer.SendCommand(req.ID, "UpgradeAgent", map[string]interface{}{
@@ -281,18 +232,11 @@ func (h *Handler) nodeBatchUpgrade(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// 获取自定义全局加速地址
-	globalURL, _ := h.repo.GetViteConfigValue("global_download_url")
-	if globalURL == "" {
-		globalURL = "https://ghfast.top"
-	}
-
-	// 构建下载源（只使用全局加速地址）
 	downloadURLs := []string{
-		fmt.Sprintf("%s/https://github.com/%s/releases/download/%s/gost-{ARCH}", globalURL, githubRepo, version),
+		fmt.Sprintf("https://github.com/%s/releases/download/%s/gost-{ARCH}", githubRepo, version),
 	}
 	checksumURLs := []string{
-		fmt.Sprintf("%s/https://github.com/%s/releases/download/%s/gost-{ARCH}.sha256", globalURL, githubRepo, version),
+		fmt.Sprintf("https://github.com/%s/releases/download/%s/gost-{ARCH}.sha256", githubRepo, version),
 	}
 
 	if len(downloadURLs) == 0 {
@@ -621,14 +565,7 @@ func (h *Handler) executePanelUpgrade(currentVersion, targetVersion string) erro
 	}()
 
 	latestComposeURL := fmt.Sprintf("https://github.com/%s/releases/download/%s/docker-compose-v4.yml", githubRepo, targetVersion)
-
-	globalURL, _ := h.repo.GetViteConfigValue("global_download_url")
-	if globalURL == "" {
-		globalURL = "https://ghfast.top"
-	}
-	// 构建下载 URL：代理模式需要拼接完整 GitHub URL
-	// 例如：https://ghfast.top/https://github.com/iKeilo/flvxt2/releases/download/...
-	downloadURL := fmt.Sprintf("%s/%s", strings.TrimRight(globalURL, "/"), latestComposeURL)
+	downloadURL := latestComposeURL
 
 	h.broadcastPanelUpgradeProgress("downloading", 10, "下载 docker-compose.yml...", false)
 	client := &http.Client{Timeout: 60 * time.Second}
