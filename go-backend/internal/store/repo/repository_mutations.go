@@ -1221,7 +1221,7 @@ func (r *Repository) GetMinForwardPort(forwardID int64) sql.NullInt64 {
 	return p
 }
 
-func (r *Repository) UpdateForward(id int64, name string, tunnelID int64, remoteAddr, strategy string, now int64, speedID interface{}, maxConnections int, trafficLimit int64, expiryTime interface{}, speedLimitEnabled bool, speedLimit int, mode string) error {
+func (r *Repository) UpdateForward(id int64, name string, tunnelID int64, remoteAddr, strategy string, now int64, speedID interface{}, maxConnections int, trafficLimit int64, expiryTime interface{}, speedLimitEnabled bool, speedLimit int, mode string, wgPathID int64, wgRuleType, sourceCIDR, targetCIDR string, snatEnabled bool) error {
 	if r == nil || r.db == nil {
 		return errors.New("repository not initialized")
 	}
@@ -1239,6 +1239,11 @@ func (r *Repository) UpdateForward(id int64, name string, tunnelID int64, remote
 			"speed_limit_enabled": speedLimitEnabled,
 			"speed_limit":         speedLimit,
 			"mode":                mode,
+			"wg_path_id":          wgPathID,
+			"wg_rule_type":        wgRuleType,
+			"source_cidr":         sourceCIDR,
+			"target_cidr":         targetCIDR,
+			"snat_enabled":        snatEnabled,
 			"updated_time":        now,
 		}).Error
 }
@@ -2514,7 +2519,7 @@ func (r *Repository) EnsureUserTunnelGrant(userID, tunnelID int64) (int64, bool,
 	return ut.ID, true, nil
 }
 
-func (r *Repository) CreateForwardTx(userID int64, userName, name string, tunnelID int64, remoteAddr, strategy string, now int64, inx int, entryNodeIDs []int64, port int, inIp string, speedID interface{}, maxConnections int, trafficLimit int64, expiryTime interface{}, speedLimitEnabled bool, speedLimit int, mode string) (int64, error) {
+func (r *Repository) CreateForwardTx(userID int64, userName, name string, tunnelID int64, remoteAddr, strategy string, now int64, inx int, entryNodeIDs []int64, port int, inIp string, speedID interface{}, maxConnections int, trafficLimit int64, expiryTime interface{}, speedLimitEnabled bool, speedLimit int, mode string, wgPathID int64, wgRuleType, sourceCIDR, targetCIDR string, snatEnabled bool) (int64, error) {
 	if r == nil || r.db == nil {
 		return 0, errors.New("repository not initialized")
 	}
@@ -2540,6 +2545,11 @@ func (r *Repository) CreateForwardTx(userID int64, userName, name string, tunnel
 			ExpiryTime:        nullInt64FromInterface(expiryTime),
 			SpeedLimitEnabled: speedLimitEnabled,
 			SpeedLimit:        speedLimit,
+			WGPathID:          wgPathID,
+			WGRuleType:        wgRuleType,
+			SourceCIDR:        sourceCIDR,
+			TargetCIDR:        targetCIDR,
+			SNATEnabled:       snatEnabled,
 		}
 		if err := tx.Create(&fwd).Error; err != nil {
 			return err

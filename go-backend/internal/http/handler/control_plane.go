@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"bytes"
@@ -131,9 +131,9 @@ const exitTestCommandTimeout = 18 * time.Second
 const exitTestPingCount = 3
 
 var exitTestTargets = []struct {
-	name   string
-	host   string
-	port   int
+	name string
+	host string
+	port int
 }{
 	{"www.google.com", "www.google.com", 443},
 	{"www.bing.com", "www.bing.com", 443},
@@ -158,6 +158,9 @@ func (h *Handler) ensureForwardAccessByActor(actorUserID int64, actorRole int, f
 		return nil, err
 	}
 	if actorRole != 0 && forward.UserID != actorUserID {
+		return nil, errForwardNotFound
+	}
+	if actorRole != 0 && strings.EqualFold(forward.Mode, "wg_path") {
 		return nil, errForwardNotFound
 	}
 	return forward, nil
@@ -255,10 +258,6 @@ func (h *Handler) syncForwardServicesWithWarnings(forward *forwardRecord, method
 		return nil, errors.New("invalid forward sync context")
 	}
 
-	tunnel, err := h.getTunnelRecord(forward.TunnelID)
-	if err != nil {
-		return nil, err
-	}
 	// nftables mode handling
 	ports, err := h.listForwardPorts(forward.ID)
 	if err != nil {
@@ -266,6 +265,15 @@ func (h *Handler) syncForwardServicesWithWarnings(forward *forwardRecord, method
 	}
 	if len(ports) == 0 {
 		return nil, errors.New("转发入口端口不存在")
+	}
+
+	if strings.EqualFold(forward.Mode, "wg_path") {
+		return nil, h.syncWGForwardRule(forward, ports, method)
+	}
+
+	tunnel, err := h.getTunnelRecord(forward.TunnelID)
+	if err != nil {
+		return nil, err
 	}
 
 	warnings := make([]string, 0)
@@ -463,8 +471,8 @@ func (h *Handler) deleteForwardServicesOnNode(forward *forwardRecord, nodeID int
 	if h == nil || forward == nil {
 		return errors.New("invalid forward delete context")
 	}
-	// nftables mode: skip gost service deletion
-	if strings.EqualFold(forward.Mode, "nftables") {
+	// nftables/WG modes skip gost service deletion
+	if strings.EqualFold(forward.Mode, "nftables") || strings.EqualFold(forward.Mode, "wg_path") {
 		return nil
 	}
 	bases, err := h.forwardServiceBaseCandidates(forward)
@@ -512,8 +520,8 @@ func (h *Handler) controlForwardServices(forward *forwardRecord, commandType str
 	if h == nil || forward == nil {
 		return errors.New("invalid forward control context")
 	}
-	// nftables mode: skip gost service control
-	if strings.EqualFold(forward.Mode, "nftables") {
+	// nftables/WG modes skip gost service control
+	if strings.EqualFold(forward.Mode, "nftables") || strings.EqualFold(forward.Mode, "wg_path") {
 		return nil
 	}
 	ports, err := h.listForwardPorts(forward.ID)
@@ -731,6 +739,9 @@ func (h *Handler) diagnoseForwardRuntime(ctx context.Context, forward *forwardRe
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	if forward != nil && strings.EqualFold(forward.Mode, "wg_path") {
+		return h.diagnoseWGForwardRuntime(forward)
+	}
 	forwardName, workItems, err := h.prepareForwardDiagnosis(forward)
 	if err != nil {
 		return nil, err
@@ -744,6 +755,75 @@ func (h *Handler) diagnoseForwardRuntime(ctx context.Context, forward *forwardRe
 		"results":     results,
 	}
 	return payload, nil
+}
+
+func (h *Handler) diagnoseWGForwardRuntime(forward *forwardRecord) (map[string]interface{}, error) {
+	if forward == nil {
+		return nil, errForwardNotFound
+	}
+	nodeOrder, err := h.wgPathNodeOrder(forward.WGPathID)
+	if err != nil {
+		return nil, err
+	}
+	results := make([]map[string]interface{}, 0, len(nodeOrder)+1)
+	for idx, nodeID := range nodeOrder {
+		node, _ := h.getNodeRecord(nodeID)
+		nodeName := fmt.Sprintf("%d", nodeID)
+		if node != nil && strings.TrimSpace(node.Name) != "" {
+			nodeName = strings.TrimSpace(node.Name)
+		}
+		role := "中转"
+		chainType := 2
+		if idx == 0 {
+			role = "入口"
+			chainType = 1
+		} else if idx == len(nodeOrder)-1 {
+			role = "出口"
+			chainType = 3
+		}
+		success := false
+		message := "节点状态未知"
+		if _, err := h.sendNodeCommandWithTimeout(nodeID, "GetWGForwardRuleStatus", map[string]interface{}{
+			"forward_id": forward.ID,
+			"path_id":    forward.WGPathID,
+			"interface":  wgInterfaceName(forward.WGPathID),
+		}, 20*time.Second, false, false); err == nil {
+			success = true
+			message = "WG 规则状态正常"
+		} else {
+			message = err.Error()
+		}
+		results = append(results, map[string]interface{}{
+			"success":       success,
+			"description":   fmt.Sprintf("WG %s节点检查(%s)", role, nodeName),
+			"nodeName":      nodeName,
+			"nodeId":        fmt.Sprintf("%d", nodeID),
+			"targetIp":      fmt.Sprintf("wg-path-%d", forward.WGPathID),
+			"targetPort":    0,
+			"message":       message,
+			"fromChainType": chainType,
+			"fromInx":       idx,
+		})
+	}
+	target := strings.TrimSpace(forward.RemoteAddr)
+	if strings.EqualFold(forward.WGRuleType, "cidr") && strings.TrimSpace(forward.TargetCIDR) != "" {
+		target = strings.TrimSpace(forward.TargetCIDR)
+	}
+	results = append(results, map[string]interface{}{
+		"success":       target != "",
+		"description":   "WG 转发目标检查",
+		"nodeName":      "出口节点",
+		"nodeId":        fmt.Sprintf("%d", nodeOrder[len(nodeOrder)-1]),
+		"targetIp":      target,
+		"targetPort":    0,
+		"message":       "目标配置已解析",
+		"fromChainType": 3,
+	})
+	return map[string]interface{}{
+		"forwardName": forward.Name,
+		"timestamp":   time.Now().UnixMilli(),
+		"results":     results,
+	}, nil
 }
 
 func (h *Handler) prepareForwardDiagnosis(forward *forwardRecord) (string, []diagnosisWorkItem, error) {
@@ -1396,7 +1476,10 @@ func (h *Handler) appendExitTestRotation(results *[]map[string]interface{}, from
 
 	for i, t := range exitTestTargets {
 		wg.Add(1)
-		go func(idx int, target struct{ name, host string; port int }) {
+		go func(idx int, target struct {
+			name, host string
+			port       int
+		}) {
 			defer wg.Done()
 			single := make([]map[string]interface{}, 0, 1)
 			h.appendPathDiagnosis(&single, map[int64]*nodeRecord{}, fromNodeID, target.host, target.port, description, metadata, options)
@@ -2013,8 +2096,6 @@ func (h *Handler) upsertLimiterOnNode(nodeID int64, limiterID int64, speed int) 
 	return nil
 }
 
-
-
 // NftablesRulePayload nftables rule payload (matches agent side)
 type NftablesRulePayload struct {
 	ForwardID    int64  `json:"forward_id"`
@@ -2040,6 +2121,97 @@ type DeleteNftablesRulesRequest struct {
 	ForwardIDs []int64  `json:"forward_ids"`
 	Protocols  []string `json:"protocols"`
 	Ports      []int    `json:"ports"`
+}
+
+type WGForwardRulePlan struct {
+	ForwardID  int64   `json:"forward_id"`
+	PathID     int64   `json:"path_id"`
+	Interface  string  `json:"interface"`
+	RuleType   string  `json:"rule_type"`
+	Role       string  `json:"role"`
+	Protocol   string  `json:"protocol"`
+	ListenAddr string  `json:"listen_addr"`
+	ListenPort int     `json:"listen_port"`
+	RemoteAddr string  `json:"remote_addr"`
+	SourceCIDR string  `json:"source_cidr"`
+	TargetCIDR string  `json:"target_cidr"`
+	SNAT       bool    `json:"snat"`
+	NodeOrder  []int64 `json:"node_order"`
+	Fwmark     string  `json:"fwmark"`
+	Table      int     `json:"table"`
+	Comment    string  `json:"comment"`
+}
+
+func (h *Handler) syncWGForwardRule(forward *forwardRecord, ports []forwardPortRecord, method string) error {
+	if h == nil || forward == nil {
+		return errors.New("invalid WG forward sync context")
+	}
+	if forward.WGPathID <= 0 {
+		return errors.New("WG 规则缺少 Path")
+	}
+	nodeOrder, err := h.wgPathNodeOrder(forward.WGPathID)
+	if err != nil {
+		return err
+	}
+	if len(nodeOrder) < 2 {
+		return errors.New("WG 隧道链路不完整")
+	}
+	entryNodeID := nodeOrder[0]
+	exitNodeID := nodeOrder[len(nodeOrder)-1]
+	port := 0
+	listenAddr := ""
+	if len(ports) > 0 {
+		port = ports[0].Port
+		listenAddr = strings.TrimSpace(ports[0].InIP)
+	}
+	ruleType := strings.TrimSpace(forward.WGRuleType)
+	if ruleType == "" {
+		ruleType = "port"
+	}
+	plan := WGForwardRulePlan{
+		ForwardID:  forward.ID,
+		PathID:     forward.WGPathID,
+		Interface:  wgInterfaceName(forward.WGPathID),
+		RuleType:   ruleType,
+		Protocol:   "tcpudp",
+		ListenAddr: listenAddr,
+		ListenPort: port,
+		RemoteAddr: strings.TrimSpace(forward.RemoteAddr),
+		SourceCIDR: strings.TrimSpace(forward.SourceCIDR),
+		TargetCIDR: strings.TrimSpace(forward.TargetCIDR),
+		SNAT:       forward.SNATEnabled,
+		NodeOrder:  nodeOrder,
+		Fwmark:     fmt.Sprintf("0x%x", 0x100000+forward.WGPathID*4096+forward.ID%4096),
+		Table:      int(100000 + forward.WGPathID*100 + forward.ID%100),
+		Comment:    fmt.Sprintf("flvx:path=%d:forward=%d", forward.WGPathID, forward.ID),
+	}
+	commandType := "ApplyWGForwardRule"
+	if strings.EqualFold(method, "DeleteService") || strings.EqualFold(method, "PauseService") || forward.Status != 1 {
+		commandType = "RemoveWGForwardRule"
+	}
+	targetNodes := []int64{entryNodeID}
+	if exitNodeID != entryNodeID {
+		targetNodes = append(targetNodes, exitNodeID)
+	}
+	for _, nodeID := range targetNodes {
+		node, err := h.getNodeRecord(nodeID)
+		if err != nil {
+			return err
+		}
+		nodePlan := plan
+		if nodeID == entryNodeID {
+			nodePlan.Role = "entry"
+		} else {
+			nodePlan.Role = "exit"
+		}
+		if _, err := h.sendNodeCommand(node.ID, commandType, nodePlan, true, false); err != nil {
+			if isNodeOfflineOrTimeoutError(err) {
+				continue
+			}
+			return fmt.Errorf("节点 %s WG 规则下发失败: %w", node.Name, err)
+		}
+	}
+	return nil
 }
 
 // syncNftablesRules sync nftables forwarding rules to nodes
@@ -2158,18 +2330,18 @@ func buildNftablesRulePayloads(forward *forwardRecord, tunnel *tunnelRecord, por
 	for _, fp := range ports {
 		for _, protocol := range protocols {
 			for _, target := range targets {
-			if tunnel.Type == 1 {
-				rules = append(rules, NftablesRulePayload{
-					ForwardID:    forward.ID,
-					NodeID:       fp.NodeID,
-					UserID:       forward.UserID,
-					UserTunnelID: userTunnelID,
-					Protocol:     protocol,
-					Port:         fp.Port,
-					Target:       target,
-					SpeedLimit:   spdLimit,
-					ChainType:    1,
-				})
+				if tunnel.Type == 1 {
+					rules = append(rules, NftablesRulePayload{
+						ForwardID:    forward.ID,
+						NodeID:       fp.NodeID,
+						UserID:       forward.UserID,
+						UserTunnelID: userTunnelID,
+						Protocol:     protocol,
+						Port:         fp.Port,
+						Target:       target,
+						SpeedLimit:   spdLimit,
+						ChainType:    1,
+					})
 				} else if tunnel.Type == 2 {
 					rules = append(rules, buildChainNftablesRule(forward.ID, forward.UserID, userTunnelID, chainNodes, fp, protocol, target, spdLimit))
 				}

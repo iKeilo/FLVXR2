@@ -2749,27 +2749,56 @@ func (h *Handler) forwardCreate(w http.ResponseWriter, r *http.Request) {
 			userID = reqUserID
 		}
 	}
-	tunnelID := asInt64(req["tunnelId"], 0)
-	if tunnelID <= 0 {
-		response.WriteJSON(w, response.ErrDefault("隧道ID不能为空"))
+	mode := defaultString(asString(req["mode"]), "gost")
+	if mode != "gost" && mode != "nftables" && mode != "wg_path" {
+		response.WriteJSON(w, response.ErrDefault("转发模式无效，仅支持 gost、nftables 或 WG 隧道"))
 		return
 	}
-	if err := h.ensureTunnelPermission(userID, roleID, tunnelID); err != nil {
-		response.WriteJSON(w, response.ErrDefault(err.Error()))
+	if mode == "wg_path" && roleID != 0 {
+		response.WriteJSON(w, response.Err(403, "权限不足，WG 隧道规则仅管理员可创建"))
 		return
 	}
-	tunnel, err := h.getTunnelRecord(tunnelID)
+	wgPathID, wgRuleType, sourceCIDR, targetCIDR, snatEnabled, err := parseWGForwardRequest(req)
 	if err != nil {
-		response.WriteJSON(w, response.ErrDefault("隧道不存在"))
-		return
-	}
-	if tunnel.Status != 1 {
-		response.WriteJSON(w, response.ErrDefault("隧道已禁用，无法创建转发"))
-		return
-	}
-	if err := h.ensureUserTunnelForwardAllowed(userID, tunnelID, time.Now().UnixMilli()); err != nil {
 		response.WriteJSON(w, response.ErrDefault(err.Error()))
 		return
+	}
+	tunnelID := asInt64(req["tunnelId"], 0)
+	var entryNodes []int64
+	if mode == "wg_path" {
+		if wgPathID <= 0 {
+			response.WriteJSON(w, response.ErrDefault("请选择 WG 隧道"))
+			return
+		}
+		entryNodes, err = h.wgPathEntryNodeIDs(wgPathID)
+		if err != nil {
+			response.WriteJSON(w, response.ErrDefault(err.Error()))
+			return
+		}
+		tunnelID = 0
+	} else {
+		if tunnelID <= 0 {
+			response.WriteJSON(w, response.ErrDefault("隧道ID不能为空"))
+			return
+		}
+		if err := h.ensureTunnelPermission(userID, roleID, tunnelID); err != nil {
+			response.WriteJSON(w, response.ErrDefault(err.Error()))
+			return
+		}
+		tunnel, err := h.getTunnelRecord(tunnelID)
+		if err != nil {
+			response.WriteJSON(w, response.ErrDefault("隧道不存在"))
+			return
+		}
+		if tunnel.Status != 1 {
+			response.WriteJSON(w, response.ErrDefault("隧道已禁用，无法创建转发"))
+			return
+		}
+		if err := h.ensureUserTunnelForwardAllowed(userID, tunnelID, time.Now().UnixMilli()); err != nil {
+			response.WriteJSON(w, response.ErrDefault(err.Error()))
+			return
+		}
+		entryNodes, _ = h.tunnelEntryNodeIDs(tunnelID)
 	}
 	name := asString(req["name"])
 	remoteAddr := asString(req["remoteAddr"])
@@ -2806,7 +2835,6 @@ func (h *Handler) forwardCreate(w http.ResponseWriter, r *http.Request) {
 	if port <= 0 {
 		port = 10000
 	}
-	entryNodes, _ := h.tunnelEntryNodeIDs(tunnelID)
 	inIp := strings.TrimSpace(asString(req["inIp"]))
 	if inIp != "" && len(entryNodes) > 1 {
 		response.WriteJSON(w, response.ErrDefault("多入口隧道的转发不支持自定义监听IP"))
@@ -2840,12 +2868,7 @@ func (h *Handler) forwardCreate(w http.ResponseWriter, r *http.Request) {
 	expiryTime := asAnyToInt64Ptr(req["expiryTime"])
 	speedLimitEnabled := asBool(req["speedLimitEnabled"], false)
 	speedLimit := asInt(req["speedLimit"], 0)
-	mode := defaultString(asString(req["mode"]), "gost")
-	if mode != "gost" && mode != "nftables" {
-		response.WriteJSON(w, response.ErrDefault("转发模式无效，仅支持 gost 或 nftables"))
-		return
-	}
-	forwardID, err := h.repo.CreateForwardTx(userID, userName, name, tunnelID, remoteAddr, defaultString(asString(req["strategy"]), "fifo"), now, inx, entryNodes, port, inIp, nullableInt(speedID), asInt(req["maxConnections"], 0), trafficLimit, expiryTime, speedLimitEnabled, speedLimit, mode)
+	forwardID, err := h.repo.CreateForwardTx(userID, userName, name, tunnelID, remoteAddr, defaultString(asString(req["strategy"]), "fifo"), now, inx, entryNodes, port, inIp, nullableInt(speedID), asInt(req["maxConnections"], 0), trafficLimit, expiryTime, speedLimitEnabled, speedLimit, mode, wgPathID, wgRuleType, sourceCIDR, targetCIDR, snatEnabled)
 	if err != nil {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return
@@ -2896,23 +2919,74 @@ func (h *Handler) forwardUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tunnelID := asInt64(req["tunnelId"], forward.TunnelID)
-	if tunnelID <= 0 {
-		response.WriteJSON(w, response.ErrDefault("隧道ID不能为空"))
+	mode := asString(req["mode"])
+	if mode == "" {
+		mode = forward.Mode
+	}
+	if mode != "gost" && mode != "nftables" && mode != "wg_path" {
+		response.WriteJSON(w, response.ErrDefault("转发模式无效，仅支持 gost、nftables 或 WG 隧道"))
 		return
 	}
-	if err := h.ensureTunnelPermission(actorUserID, actorRole, tunnelID); err != nil {
+	if mode == "wg_path" && actorRole != 0 {
+		response.WriteJSON(w, response.Err(403, "权限不足，WG 隧道规则仅管理员可更新"))
+		return
+	}
+	wgPathID, wgRuleType, sourceCIDR, targetCIDR, snatEnabled, err := parseWGForwardRequest(req)
+	if err != nil {
 		response.WriteJSON(w, response.ErrDefault(err.Error()))
 		return
 	}
-	tunnel, err := h.getTunnelRecord(tunnelID)
-	if err != nil {
-		response.WriteJSON(w, response.ErrDefault("隧道不存在"))
-		return
+	if wgPathID <= 0 {
+		wgPathID = forward.WGPathID
 	}
-	if tunnel.Status != 1 {
-		response.WriteJSON(w, response.ErrDefault("隧道已禁用，无法更新转发"))
-		return
+	if _, ok := req["wgRuleType"]; !ok && wgRuleType == "port" && forward.WGRuleType != "" {
+		wgRuleType = forward.WGRuleType
+	}
+	if _, ok := req["sourceCidr"]; !ok {
+		sourceCIDR = forward.SourceCIDR
+	}
+	if _, ok := req["targetCidr"]; !ok {
+		targetCIDR = forward.TargetCIDR
+	}
+	if _, ok := req["snatEnabled"]; !ok {
+		snatEnabled = forward.SNATEnabled
+	}
+	tunnelID := asInt64(req["tunnelId"], forward.TunnelID)
+	var fwdEntryNodes []int64
+	if mode == "wg_path" {
+		if wgPathID <= 0 {
+			response.WriteJSON(w, response.ErrDefault("请选择 WG 隧道"))
+			return
+		}
+		fwdEntryNodes, err = h.wgPathEntryNodeIDs(wgPathID)
+		if err != nil {
+			response.WriteJSON(w, response.ErrDefault(err.Error()))
+			return
+		}
+		tunnelID = 0
+	} else {
+		wgPathID = 0
+		wgRuleType = "port"
+		sourceCIDR = ""
+		targetCIDR = ""
+		if tunnelID <= 0 {
+			response.WriteJSON(w, response.ErrDefault("隧道ID不能为空"))
+			return
+		}
+		if err := h.ensureTunnelPermission(actorUserID, actorRole, tunnelID); err != nil {
+			response.WriteJSON(w, response.ErrDefault(err.Error()))
+			return
+		}
+		tunnel, err := h.getTunnelRecord(tunnelID)
+		if err != nil {
+			response.WriteJSON(w, response.ErrDefault("隧道不存在"))
+			return
+		}
+		if tunnel.Status != 1 {
+			response.WriteJSON(w, response.ErrDefault("隧道已禁用，无法更新转发"))
+			return
+		}
+		fwdEntryNodes, _ = h.tunnelEntryNodeIDs(tunnelID)
 	}
 
 	name := strings.TrimSpace(asString(req["name"]))
@@ -2962,7 +3036,6 @@ func (h *Handler) forwardUpdate(w http.ResponseWriter, r *http.Request) {
 		hasInIP = true
 		inIp = asString(rawInIP)
 	}
-	fwdEntryNodes, _ := h.tunnelEntryNodeIDs(tunnelID)
 	if hasInIP && strings.TrimSpace(inIp) != "" && len(fwdEntryNodes) > 1 {
 		response.WriteJSON(w, response.ErrDefault("多入口隧道的转发不支持自定义监听IP"))
 		return
@@ -3020,11 +3093,7 @@ func (h *Handler) forwardUpdate(w http.ResponseWriter, r *http.Request) {
 		speedLimit = forward.SpeedLimit
 	}
 
-	mode := asString(req["mode"])
-	if mode == "" {
-		mode = forward.Mode
-	}
-	if err := h.repo.UpdateForward(id, name, tunnelID, remoteAddr, strategy, now, newSpeedID, maxConnections, trafficLimit, newExpiryTime, speedLimitEnabled, speedLimit, mode); err != nil {
+	if err := h.repo.UpdateForward(id, name, tunnelID, remoteAddr, strategy, now, newSpeedID, maxConnections, trafficLimit, newExpiryTime, speedLimitEnabled, speedLimit, mode, wgPathID, wgRuleType, sourceCIDR, targetCIDR, snatEnabled); err != nil {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return
 	}
@@ -3132,7 +3201,12 @@ func (h *Handler) forwardDelete(w http.ResponseWriter, r *http.Request) {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return
 	}
-	if strings.EqualFold(forward.Mode, "nftables") {
+	if strings.EqualFold(forward.Mode, "wg_path") {
+		ports, _ := h.listForwardPorts(forward.ID)
+		if err := h.syncWGForwardRule(forward, ports, "DeleteService"); err != nil {
+			fmt.Printf("⚠️ WG规则删除失败: %v\n", err)
+		}
+	} else if strings.EqualFold(forward.Mode, "nftables") {
 		ports, _ := h.listForwardPorts(forward.ID)
 		if err := h.deleteNftablesRules(forward, ports); err != nil {
 			fmt.Printf("⚠️ nftables规则删除失败: %v, 尝试gost回退\n", err)
@@ -3184,7 +3258,12 @@ func (h *Handler) forwardForceDelete(w http.ResponseWriter, r *http.Request) {
 	// Force delete: remove DB record without touching node services.
 	// This is used when nodes are offline or service deletion fails.
 	// Still try to clean up nftables rules as best-effort.
-	if forward != nil && strings.EqualFold(forward.Mode, "nftables") {
+	if forward != nil && strings.EqualFold(forward.Mode, "wg_path") {
+		ports, _ := h.listForwardPorts(id)
+		if err := h.syncWGForwardRule(forward, ports, "DeleteService"); err != nil {
+			fmt.Printf("️ forceDelete WG规则清理异常: %v\n", err)
+		}
+	} else if forward != nil && strings.EqualFold(forward.Mode, "nftables") {
 		ports, _ := h.listForwardPorts(id)
 		if err := h.deleteNftablesRules(&forwardRecord{ID: id}, ports); err != nil {
 			fmt.Printf("️ forceDelete nftables规则清理异常: %v\n", err)
@@ -3219,7 +3298,13 @@ func (h *Handler) forwardPause(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.EqualFold(forward.Mode, "nftables") {
+	if strings.EqualFold(forward.Mode, "wg_path") {
+		ports, _ := h.listForwardPorts(forward.ID)
+		if err := h.syncWGForwardRule(forward, ports, "PauseService"); err != nil {
+			response.WriteJSON(w, response.Err(-2, fmt.Sprintf("暂停WG转发失败，规则清理异常: %v", err)))
+			return
+		}
+	} else if strings.EqualFold(forward.Mode, "nftables") {
 		ports, _ := h.listForwardPorts(forward.ID)
 		if err := h.deleteNftablesRules(forward, ports); err != nil {
 			response.WriteJSON(w, response.Err(-2, fmt.Sprintf("暂停nftables转发失败，规则清理异常: %v", err)))
@@ -3266,9 +3351,11 @@ func (h *Handler) forwardResume(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	now := time.Now().UnixMilli()
-	if err := h.ensureUserTunnelForwardAllowed(forward.UserID, forward.TunnelID, now); err != nil {
-		response.WriteJSON(w, response.ErrDefault(err.Error()))
-		return
+	if !strings.EqualFold(forward.Mode, "wg_path") {
+		if err := h.ensureUserTunnelForwardAllowed(forward.UserID, forward.TunnelID, now); err != nil {
+			response.WriteJSON(w, response.ErrDefault(err.Error()))
+			return
+		}
 	}
 
 	// 先更新状态为 1，避免 syncForwardServicesWithWarnings 末尾的暂停检查删除刚添加的规则
@@ -3276,7 +3363,7 @@ func (h *Handler) forwardResume(w http.ResponseWriter, r *http.Request) {
 	forward.Status = 1
 
 	// nftables mode: re-sync rules to resume traffic
-	if strings.EqualFold(forward.Mode, "nftables") {
+	if strings.EqualFold(forward.Mode, "nftables") || strings.EqualFold(forward.Mode, "wg_path") {
 		log.Printf("[nft.debug] forwardResume: nft mode, calling syncForwardServicesWithWarnings forwardID=%d", forward.ID)
 		_, err := h.syncForwardServicesWithWarnings(forward, "UpdateService", true)
 		if err != nil {
@@ -5178,6 +5265,73 @@ func (h *Handler) batchForwardStatus(ids []int64, status int) (int, int) {
 	return h.repo.BatchUpdateForwardStatus(ids, status)
 }
 
+func parseWGForwardRequest(req map[string]interface{}) (int64, string, string, string, bool, error) {
+	wgPathID := asInt64(req["wgPathId"], 0)
+	if wgPathID <= 0 {
+		wgPathID = asInt64(req["pathId"], 0)
+	}
+	ruleType := strings.TrimSpace(asString(req["wgRuleType"]))
+	if ruleType == "" {
+		ruleType = "port"
+	}
+	if ruleType != "port" && ruleType != "cidr" && ruleType != "local" {
+		return 0, "", "", "", true, errors.New("WG 规则类型无效")
+	}
+	sourceCIDR := strings.TrimSpace(asString(req["sourceCidr"]))
+	targetCIDR := strings.TrimSpace(asString(req["targetCidr"]))
+	snatEnabled := true
+	if _, ok := req["snatEnabled"]; ok {
+		snatEnabled = asBool(req["snatEnabled"], true)
+	}
+	if ruleType == "cidr" {
+		if targetCIDR == "" {
+			return 0, "", "", "", true, errors.New("WG 内网转发需要填写目标网段")
+		}
+		if _, _, err := net.ParseCIDR(targetCIDR); err != nil {
+			return 0, "", "", "", true, errors.New("WG 目标网段格式无效")
+		}
+		if sourceCIDR != "" {
+			if _, _, err := net.ParseCIDR(sourceCIDR); err != nil {
+				return 0, "", "", "", true, errors.New("WG 源网段格式无效")
+			}
+		}
+	}
+	return wgPathID, ruleType, sourceCIDR, targetCIDR, snatEnabled, nil
+}
+
+func (h *Handler) wgPathEntryNodeIDs(pathID int64) ([]int64, error) {
+	detail, err := h.repo.GetPathTunnelDetail(pathID)
+	if err != nil {
+		return nil, err
+	}
+	if detail == nil || detail.Path.ID <= 0 {
+		return nil, errors.New("WG 隧道不存在")
+	}
+	if !strings.EqualFold(detail.Path.Transport, "wireguard") {
+		return nil, errors.New("所选 Path 不是 WG 隧道")
+	}
+	nodeIDs := orderedWGPathNodeIDs(detail.Segments)
+	if len(nodeIDs) < 2 {
+		return nil, errors.New("WG 隧道链路不完整")
+	}
+	return []int64{nodeIDs[0]}, nil
+}
+
+func (h *Handler) wgPathNodeOrder(pathID int64) ([]int64, error) {
+	detail, err := h.repo.GetPathTunnelDetail(pathID)
+	if err != nil {
+		return nil, err
+	}
+	if detail == nil || detail.Path.ID <= 0 {
+		return nil, errors.New("WG 隧道不存在")
+	}
+	nodeIDs := orderedWGPathNodeIDs(detail.Segments)
+	if len(nodeIDs) < 2 {
+		return nil, errors.New("WG 隧道链路不完整")
+	}
+	return nodeIDs, nil
+}
+
 func (h *Handler) tunnelEntryNodeIDs(tunnelID int64) ([]int64, error) {
 	return h.repo.TunnelEntryNodeIDs(tunnelID)
 }
@@ -6162,8 +6316,9 @@ func (h *Handler) userRegister(w http.ResponseWriter, r *http.Request) {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return
 	}
+	setSessionCookie(w, r, token)
 	response.WriteJSON(w, response.OK(map[string]interface{}{
-		"token":   token,
+		"user_id": userID,
 		"name":    req.User,
 		"role_id": 1,
 	}))

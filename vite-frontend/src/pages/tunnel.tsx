@@ -1,5 +1,7 @@
 import type {
   BatchOperationFailure,
+  PathTunnelApiItem,
+  PathTunnelDetailApiItem,
   TunnelBatchDeletePreviewApiData,
   TunnelDeletePreviewApiData,
 } from "@/api/types";
@@ -27,6 +29,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 import { TunnelGroupManager } from "./tunnel/tunnel-group-manager";
+import { WGPathManager } from "./tunnel/wg-path-manager";
 
 import { SearchBar } from "@/components/search-bar";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
@@ -48,6 +51,7 @@ import { Spinner } from "@/shadcn-bridge/heroui/spinner";
 import { Divider } from "@/shadcn-bridge/heroui/divider";
 import { Alert } from "@/shadcn-bridge/heroui/alert";
 import { Checkbox } from "@/shadcn-bridge/heroui/checkbox";
+import { Switch } from "@/shadcn-bridge/heroui/switch";
 import { Progress } from "@/shadcn-bridge/heroui/progress";
 import { Radio, RadioGroup } from "@/shadcn-bridge/heroui/radio";
 import {
@@ -63,10 +67,17 @@ import {
   batchRedeployTunnels,
   previewBatchTunnelDelete,
   previewTunnelDelete,
+  applyPathTunnel,
+  deletePathTunnel,
+  getPathTunnelDetail,
+  getPathTunnelList,
+  getPathTunnelStatus,
+  removePathTunnel,
 } from "@/api";
 import { PageLoadingState } from "@/components/page-state";
 import {
   buildDiagnosisFallbackResult,
+  type DiagnosisEntry,
   getDiagnosisQualityDisplay,
   type DiagnosisResult,
 } from "@/pages/tunnel/diagnosis";
@@ -78,6 +89,7 @@ import {
   validateTunnelForm,
 } from "@/pages/tunnel/form";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
+import { getRoleId } from "@/utils/session";
 import { loadStoredOrder, saveOrder } from "@/utils/order-storage";
 import {
   buildBatchFailureMessage,
@@ -112,6 +124,9 @@ interface BestExitState {
 }
 interface Tunnel {
   id: number;
+  wgPathId?: number;
+  isWGPath?: boolean;
+  wgStatus?: string;
   inx?: number;
   name: string;
   type: number;
@@ -308,6 +323,52 @@ const mapTunnelApiItems = (items: any[]): Tunnel[] => {
   }));
 };
 
+const orderedWGPathNodeIds = (detail: PathTunnelDetailApiItem) => {
+  const segments = [...(detail.segments || [])].sort(
+    (a, b) => (a.sequence || 0) - (b.sequence || 0),
+  );
+
+  if (segments.length === 0) return [] as number[];
+  const ids = [Number(segments[0].fromNodeId)];
+
+  segments.forEach((segment) => {
+    const id = Number(segment.toNodeId);
+
+    if (Number.isFinite(id) && !ids.includes(id)) ids.push(id);
+  });
+
+  return ids.filter((id) => Number.isFinite(id) && id > 0);
+};
+
+const mapWGPathToTunnel = (detail: PathTunnelDetailApiItem): Tunnel => {
+  const path = detail.path;
+  const nodeIds = orderedWGPathNodeIds(detail);
+  const entryNodeId = nodeIds[0] || 0;
+  const exitNodeId = nodeIds[nodeIds.length - 1] || 0;
+  const chainNodeIds = nodeIds.slice(1, -1);
+
+  return {
+    id: -Number(path.id),
+    wgPathId: Number(path.id),
+    isWGPath: true,
+    wgStatus: path.status,
+    inx: 0,
+    name: path.name,
+    type: 3,
+    inNodeId: entryNodeId ? [{ nodeId: entryNodeId, chainType: 1 }] : [],
+    outNodeId: exitNodeId ? [{ nodeId: exitNodeId, chainType: 2 }] : [],
+    chainNodes: chainNodeIds.map((nodeId) => [{ nodeId, chainType: 2 }]),
+    inIp: "",
+    flow: path.flow ?? 1,
+    trafficRatio: path.trafficRatio ?? 1,
+    status: path.status === "active" ? 1 : 0,
+    createdTime: path.createdTime ? String(path.createdTime) : "",
+    tunnelGroupId: path.tunnelGroupId ?? null,
+    remark: path.remark || "",
+    bestExitState: null,
+  };
+};
+
 const bestExitOwnerRoleText = (role: BestExitStateItem["ownerRole"]) => {
   return role === "chain" ? "中转" : "入口";
 };
@@ -351,6 +412,7 @@ const renderBestExitState = (state?: BestExitState | null) => {
 };
 
 export default function TunnelPage() {
+  const isAdmin = getRoleId() === 0;
   const [loading, setLoading] = useState(true);
   const [tunnels, setTunnels] = useState<Tunnel[]>([]);
   const [tunnelOrder, setTunnelOrder] = useState<number[]>([]);
@@ -365,6 +427,8 @@ export default function TunnelPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [diagnosisModalOpen, setDiagnosisModalOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
+  const [wgTunnelMode, setWGTunnelMode] = useState(false);
+  const [wgEditPathId, setWGEditPathId] = useState<number | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deletePreviewLoading, setDeletePreviewLoading] = useState(false);
@@ -506,10 +570,29 @@ export default function TunnelPage() {
         setLoading(true);
       }
       try {
-        const tunnelsRes = await getTunnelList();
+        const [tunnelsRes, wgPathsRes] = await Promise.all([
+          getTunnelList(),
+          isAdmin
+            ? getPathTunnelList()
+            : Promise.resolve({ code: 0, msg: "", data: [] }),
+        ]);
 
         if (tunnelsRes.code === 0) {
-          applyTunnelList(mapTunnelApiItems(tunnelsRes.data || []));
+          const normalTunnels = mapTunnelApiItems(tunnelsRes.data || []);
+          let wgTunnels: Tunnel[] = [];
+
+          if (wgPathsRes.code === 0 && Array.isArray(wgPathsRes.data)) {
+            const details = await Promise.all(
+              (wgPathsRes.data as PathTunnelApiItem[]).map((path) =>
+                getPathTunnelDetail(path.id),
+              ),
+            );
+
+            wgTunnels = details
+              .filter((res) => res.code === 0 && res.data)
+              .map((res) => mapWGPathToTunnel(res.data));
+          }
+          applyTunnelList([...normalTunnels, ...wgTunnels]);
         } else {
           toast.error(tunnelsRes.msg || "获取隧道列表失败");
         }
@@ -521,7 +604,7 @@ export default function TunnelPage() {
         }
       }
     },
-    [applyTunnelList],
+    [applyTunnelList, isAdmin],
   );
   const refreshNodes = useCallback(async () => {
     try {
@@ -673,13 +756,22 @@ export default function TunnelPage() {
   // 新增隧道
   const handleAdd = () => {
     setIsEdit(false);
+    setWGTunnelMode(false);
     setForm(createTunnelFormDefaults());
     setErrors({});
     setModalOpen(true);
   };
   // 编辑隧道 - 只能修改部分字段
   const handleEdit = (tunnel: Tunnel) => {
+    if (tunnel.isWGPath) {
+      setIsEdit(false);
+      setWGTunnelMode(true);
+      setWGEditPathId(tunnel.wgPathId || null);
+      setModalOpen(true);
+      return;
+    }
     setIsEdit(true);
+    setWGTunnelMode(false);
     setForm({
       id: tunnel.id,
       name: tunnel.name,
@@ -709,6 +801,21 @@ export default function TunnelPage() {
   };
   // 删除隧道
   const handleDelete = async (tunnel: Tunnel) => {
+    if (tunnel.isWGPath && tunnel.wgPathId) {
+      try {
+        const res = await deletePathTunnel(tunnel.wgPathId);
+
+        if (res.code === 0) {
+          toast.success("WG 隧道已删除");
+          refreshTunnelList(false);
+        } else {
+          toast.error(res.msg || "删除失败");
+        }
+      } catch (error) {
+        toast.error(extractApiErrorMessage(error, "删除失败"));
+      }
+      return;
+    }
     setTunnelToDelete(tunnel);
     setDeleteModalOpen(true);
     setDeletePreviewLoading(true);
@@ -1316,6 +1423,188 @@ export default function TunnelPage() {
       setSubmitLoading(false);
     }
   };
+  const handleWGDeploy = async (tunnel: Tunnel) => {
+    if (!tunnel.wgPathId) return;
+    try {
+      const res = await applyPathTunnel(tunnel.wgPathId);
+
+      if (res.code === 0) {
+        toast.success("WG 隧道部署已下发");
+        refreshTunnelList(false);
+      } else {
+        toast.error(res.msg || "部署失败");
+      }
+    } catch (error) {
+      toast.error(extractApiErrorMessage(error, "部署失败"));
+    }
+  };
+  const handleWGRemove = async (tunnel: Tunnel) => {
+    if (!tunnel.wgPathId) return;
+    try {
+      const res = await removePathTunnel(tunnel.wgPathId);
+
+      if (res.code === 0) {
+        toast.success("WG 隧道已从节点移除");
+        refreshTunnelList(false);
+      } else {
+        toast.error(res.msg || "移除失败");
+      }
+    } catch (error) {
+      toast.error(extractApiErrorMessage(error, "移除失败"));
+    }
+  };
+
+  const buildWGDiagnosisResult = (
+    tunnel: Tunnel,
+    statusData: Record<string, unknown> | undefined,
+  ): DiagnosisResult => {
+    const nodeNameById = new Map(nodes.map((node) => [Number(node.id), node.name]));
+    const chainIds = (tunnel.chainNodes || [])
+      .flat()
+      .map((item) => Number(item.nodeId))
+      .filter((id) => Number.isFinite(id) && id > 0);
+    const orderedNodeIds = [
+      ...(tunnel.inNodeId || []).map((item) => Number(item.nodeId)),
+      ...chainIds,
+      ...(tunnel.outNodeId || []).map((item) => Number(item.nodeId)),
+    ].filter((id, index, arr) => Number.isFinite(id) && id > 0 && arr.indexOf(id) === index);
+
+    const formatPayload = (payload: unknown) => {
+      if (!payload || typeof payload !== "object") {
+        return payload == null ? "" : String(payload);
+      }
+
+      const item = payload as Record<string, unknown>;
+      const message = item.message || item.error || item.status || item.state;
+
+      if (typeof message === "string" && message.trim()) {
+        return message;
+      }
+
+      try {
+        return JSON.stringify(item);
+      } catch {
+        return "已返回状态信息";
+      }
+    };
+
+    const results: DiagnosisEntry[] = orderedNodeIds.map((nodeId, index) => {
+      const payload = statusData?.[String(nodeId)] as Record<string, unknown> | undefined;
+      const success = payload?.success === false ? false : true;
+      const isEntry = index === 0;
+      const isExit = index === orderedNodeIds.length - 1;
+      const role = isEntry ? "入口" : isExit ? "出口" : `中转 ${index}`;
+      const nodeName = nodeNameById.get(nodeId) || `节点 ${nodeId}`;
+
+      return {
+        success,
+        description: `WG ${role}节点状态`,
+        nodeName,
+        nodeId: String(nodeId),
+        targetIp: `wg-path-${tunnel.wgPathId || tunnel.id}`,
+        targetPort: 0,
+        actualTarget: nodeName,
+        message: formatPayload(payload),
+        fromChainType: isEntry ? 1 : isExit ? 3 : 2,
+        fromInx: isEntry || isExit ? undefined : index,
+      };
+    });
+
+    return {
+      tunnelName: tunnel.name,
+      tunnelType: "WG 隧道",
+      timestamp: Date.now(),
+      results:
+        results.length > 0
+          ? results
+          : [
+              {
+                success: false,
+                description: "WG 隧道状态",
+                nodeName: "-",
+                nodeId: "-",
+                targetIp: `wg-path-${tunnel.wgPathId || tunnel.id}`,
+                targetPort: 0,
+                message: "没有可诊断的节点链路",
+              },
+            ],
+    };
+  };
+
+  const handleWGDiagnose = async (tunnel: Tunnel) => {
+    if (!tunnel.wgPathId) return;
+    setCurrentDiagnosisTunnel(tunnel);
+    setDiagnosisModalOpen(true);
+    setDiagnosisLoading(true);
+    setDiagnosisProgress({
+      total: 0,
+      completed: 0,
+      success: 0,
+      failed: 0,
+      timedOut: false,
+    });
+    setDiagnosisResult({
+      tunnelName: tunnel.name,
+      tunnelType: "WG 隧道",
+      timestamp: Date.now(),
+      results: [],
+    });
+
+    try {
+      const res = await getPathTunnelStatus(tunnel.wgPathId);
+
+      if (res.code === 0) {
+        const result = buildWGDiagnosisResult(tunnel, res.data);
+        const successCount = result.results.filter((item) => item.success).length;
+        const failedCount = result.results.length - successCount;
+
+        setDiagnosisResult(result);
+        setDiagnosisProgress({
+          total: result.results.length,
+          completed: result.results.length,
+          success: successCount,
+          failed: failedCount,
+          timedOut: false,
+        });
+      } else {
+        toast.error(res.msg || "诊断失败");
+        const result = buildDiagnosisFallbackResult({
+          tunnelName: tunnel.name,
+          tunnelType: tunnel.type,
+          description: "WG 诊断失败",
+          message: res.msg || "WG 状态接口返回失败",
+        });
+
+        setDiagnosisResult({ ...result, tunnelType: "WG 隧道" });
+        setDiagnosisProgress({
+          total: 1,
+          completed: 1,
+          success: 0,
+          failed: 1,
+          timedOut: false,
+        });
+      }
+    } catch (error) {
+      toast.error(extractApiErrorMessage(error, "诊断失败"));
+      setDiagnosisResult(
+        buildDiagnosisFallbackResult({
+          tunnelName: tunnel.name,
+          tunnelType: tunnel.type,
+          description: "WG 诊断失败",
+          message: extractApiErrorMessage(error, "无法连接到服务器"),
+        }),
+      );
+      setDiagnosisProgress({
+        total: 1,
+        completed: 1,
+        success: 0,
+        failed: 1,
+        timedOut: false,
+      });
+    } finally {
+      setDiagnosisLoading(false);
+    }
+  };
   // 诊断隧道
   const handleDiagnose = async (tunnel: Tunnel) => {
     diagnosisAbortRef.current?.abort();
@@ -1525,7 +1814,10 @@ export default function TunnelPage() {
     saveOrder(TUNNEL_ORDER_KEY, newOrder);
     // 持久化到数据库
     try {
-      const tunnelsToUpdate = newOrder.map((id, index) => ({ id, inx: index }));
+      const tunnelsToUpdate = newOrder
+        .filter((id) => id > 0)
+        .map((id, index) => ({ id, inx: index }));
+      if (tunnelsToUpdate.length === 0) return;
       const response = await updateTunnelOrder({ tunnels: tunnelsToUpdate });
 
       if (response.code === 0) {
@@ -2423,7 +2715,7 @@ export default function TunnelPage() {
                                   )}
                                 </td>
                                 <td className="py-3 px-4 align-middle">
-                                  <div className="flex gap-1.5">
+                                  <div className="flex flex-wrap gap-1.5">
                                     <Button
                                       className="min-h-7 px-2"
                                       color="primary"
@@ -2438,10 +2730,36 @@ export default function TunnelPage() {
                                       color="secondary"
                                       size="sm"
                                       variant="flat"
-                                      onPress={() => handleDiagnose(tunnel)}
+                                      onPress={() =>
+                                        tunnel.isWGPath
+                                          ? handleWGDiagnose(tunnel)
+                                          : handleDiagnose(tunnel)
+                                      }
                                     >
                                       诊断
                                     </Button>
+                                    {tunnel.isWGPath && (
+                                      <>
+                                        <Button
+                                          className="min-h-7 px-2"
+                                          color="success"
+                                          size="sm"
+                                          variant="flat"
+                                          onPress={() => handleWGDeploy(tunnel)}
+                                        >
+                                          部署
+                                        </Button>
+                                        <Button
+                                          className="min-h-7 px-2"
+                                          color="warning"
+                                          size="sm"
+                                          variant="flat"
+                                          onPress={() => handleWGRemove(tunnel)}
+                                        >
+                                          移除
+                                        </Button>
+                                      </>
+                                    )}
                                     <Button
                                       className="min-h-7 px-2"
                                       color="danger"
@@ -2705,7 +3023,7 @@ export default function TunnelPage() {
                                         )}
                                     </div>
                                   </div>
-                                  <div className="flex gap-1.5 mt-3">
+                                  <div className="flex flex-wrap gap-1.5 mt-3">
                                     <Button
                                       className="flex-1 min-h-8"
                                       color="primary"
@@ -2720,10 +3038,36 @@ export default function TunnelPage() {
                                       color="warning"
                                       size="sm"
                                       variant="flat"
-                                      onPress={() => handleDiagnose(tunnel)}
+                                      onPress={() =>
+                                        tunnel.isWGPath
+                                          ? handleWGDiagnose(tunnel)
+                                          : handleDiagnose(tunnel)
+                                      }
                                     >
                                       诊断
                                     </Button>
+                                    {tunnel.isWGPath && (
+                                      <>
+                                        <Button
+                                          className="flex-1 min-h-8"
+                                          color="success"
+                                          size="sm"
+                                          variant="flat"
+                                          onPress={() => handleWGDeploy(tunnel)}
+                                        >
+                                          部署
+                                        </Button>
+                                        <Button
+                                          className="flex-1 min-h-8"
+                                          color="secondary"
+                                          size="sm"
+                                          variant="flat"
+                                          onPress={() => handleWGRemove(tunnel)}
+                                        >
+                                          移除
+                                        </Button>
+                                      </>
+                                    )}
                                     <Button
                                       className="flex-1 min-h-8"
                                       color="danger"
@@ -2792,12 +3136,18 @@ export default function TunnelPage() {
         placement="center"
         scrollBehavior="inside"
         size="xl"
-        onOpenChange={setModalOpen}
+        onOpenChange={(open) => {
+          setModalOpen(open);
+          if (!open) {
+            setWGTunnelMode(false);
+            setWGEditPathId(null);
+          }
+        }}
       >
         <ModalContent>
           {(onClose) => (
             <>
-              <ModalHeader className="flex flex-col gap-1">
+              <ModalHeader className="flex flex-row items-start justify-between gap-4">
                 <h2 className="text-xl font-bold">
                   {isEdit ? "编辑隧道" : "新增隧道"}
                 </h2>
@@ -2808,9 +3158,32 @@ export default function TunnelPage() {
                       : "" /* "创建新的隧道配置" */
                   }
                 </p>
+                {!isEdit && isAdmin && (
+                  <Switch
+                    isSelected={wgTunnelMode}
+                    className="mt-1 shrink-0"
+                    onValueChange={setWGTunnelMode}
+                  >
+                    WG 隧道
+                  </Switch>
+                )}
               </ModalHeader>
               <ModalBody>
-                <div className="space-y-4">
+                {wgTunnelMode && !isEdit ? (
+                  <WGPathManager
+                    groups={tunnelGroupsNew}
+                    pathId={wgEditPathId}
+                    nodes={nodes}
+                    onCreated={() => {
+                      setModalOpen(false);
+                      setWGTunnelMode(false);
+                      setWGEditPathId(null);
+                      refreshTunnelList(false);
+                    }}
+                  />
+                ) : (
+                  <>
+                    <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Input
                       errorMessage={errors.name}
@@ -3996,11 +4369,14 @@ export default function TunnelPage() {
                   description="屏蔽协议会在入口节点生效，用于拦截对应协议的流量。"
                   variant="flat"
                 />
+                  </>
+                )}
               </ModalBody>
               <ModalFooter>
                 <Button variant="flat" onPress={onClose}>
                   取消
                 </Button>
+                {!(wgTunnelMode && !isEdit) && (
                 <Button
                   color="primary"
                   isLoading={submitLoading}
@@ -4014,6 +4390,7 @@ export default function TunnelPage() {
                       ? "保存"
                       : "创建"}
                 </Button>
+                )}
               </ModalFooter>
             </>
           )}
@@ -4230,14 +4607,18 @@ export default function TunnelPage() {
                     </span>
                     <Chip
                       color={
-                        currentDiagnosisTunnel.type === 1
+                        currentDiagnosisTunnel.isWGPath
+                          ? "success"
+                          : currentDiagnosisTunnel.type === 1
                           ? "primary"
                           : "secondary"
                       }
                       size="sm"
                       variant="flat"
                     >
-                      {currentDiagnosisTunnel.type === 1
+                      {currentDiagnosisTunnel.isWGPath
+                        ? "WG 隧道"
+                        : currentDiagnosisTunnel.type === 1
                         ? "端口转发"
                         : "隧道转发"}
                     </Chip>
@@ -4742,7 +5123,11 @@ export default function TunnelPage() {
                   <Button
                     color="primary"
                     isLoading={diagnosisLoading}
-                    onPress={() => handleDiagnose(currentDiagnosisTunnel)}
+                    onPress={() =>
+                      currentDiagnosisTunnel.isWGPath
+                        ? handleWGDiagnose(currentDiagnosisTunnel)
+                        : handleDiagnose(currentDiagnosisTunnel)
+                    }
                   >
                     重新诊断
                   </Button>

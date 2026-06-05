@@ -6,6 +6,8 @@ import type {
   NodeGroupApiItem,
   NodeGroupMutationPayload,
   NodeDeployDetailApiItem,
+  PathTunnelApiItem,
+  PathTunnelDetailApiItem,
   NodeTLSTemplateApiItem,
   NodeReleaseApiItem,
   NodeApiItem,
@@ -82,7 +84,8 @@ export interface LoginData {
 }
 
 export interface LoginResponse {
-  token: string;
+  token?: string;
+  user_id?: number;
   role_id: number;
   name: string;
   requirePasswordChange?: boolean;
@@ -234,6 +237,41 @@ export const rollbackNodeDeployConfig = (nodeId: number, revisionId: number) =>
     { nodeId, revisionId },
     { timeout: NODE_DEPLOY_REQUEST_TIMEOUT },
   );
+
+export const getPathTunnelList = () =>
+  Network.post<PathTunnelApiItem[]>("/path/list");
+export const getPathTunnelDetail = (id: number) =>
+  Network.post<PathTunnelDetailApiItem>("/path/detail", { id });
+export const createPathTunnel = (data: {
+  name: string;
+  transport?: string;
+  nodeIds: number[];
+  remark?: string;
+  listenStart?: number;
+  mtu?: number;
+  tunnelGroupId?: number | null;
+  flow?: number;
+  trafficRatio?: number;
+}) => Network.post<PathTunnelDetailApiItem>("/path/create", data);
+export const updatePathTunnel = (data: {
+  id: number;
+  name: string;
+  transport?: string;
+  nodeIds: number[];
+  remark?: string;
+  listenStart?: number;
+  mtu?: number;
+  tunnelGroupId?: number | null;
+  flow?: number;
+  trafficRatio?: number;
+}) => Network.post<PathTunnelDetailApiItem>("/path/update", data);
+export const applyPathTunnel = (id: number) =>
+  Network.post("/path/apply", { id }, { timeout: NODE_DEPLOY_REQUEST_TIMEOUT });
+export const removePathTunnel = (id: number) =>
+  Network.post("/path/remove", { id }, { timeout: NODE_DEPLOY_REQUEST_TIMEOUT });
+export const deletePathTunnel = (id: number) => Network.post("/path/delete", { id });
+export const getPathTunnelStatus = (id: number) =>
+  Network.post<Record<string, unknown>>("/path/status", { id });
 
 export const upgradeNode = (
   id: number,
@@ -611,9 +649,10 @@ export const exportBackup = async (
       { types, mode },
       {
         headers: {
-          Authorization: token,
+          ...(token ? { Authorization: token } : {}),
           "Content-Type": "application/json",
         },
+        withCredentials: true,
         responseType: "blob",
       },
     );

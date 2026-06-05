@@ -10,6 +10,14 @@ interface JWTPayload {
   iat: number;
 }
 
+const parseStoredNumber = (key: string): number | null => {
+  const value = localStorage.getItem(key);
+  if (value === null) return null;
+  const num = Number.parseInt(value, 10);
+
+  return Number.isNaN(num) ? null : num;
+};
+
 /**
  * 从JWT Token中获取payload
  * @param token JWT Token
@@ -89,7 +97,7 @@ export const JwtUtil = {
   getUserIdFromToken(): number | null {
     const token = localStorage.getItem("token");
 
-    return token ? getUserIdFromToken(token) : null;
+    return token ? getUserIdFromToken(token) : parseStoredNumber("user_id");
   },
 
   /**
@@ -99,7 +107,7 @@ export const JwtUtil = {
   getRoleIdFromToken(): number | null {
     const token = localStorage.getItem("token");
 
-    return token ? getRoleIdFromToken(token) : null;
+    return token ? getRoleIdFromToken(token) : parseStoredNumber("role_id");
   },
 
   /**
@@ -109,7 +117,7 @@ export const JwtUtil = {
   getUsernameFromToken(): string | null {
     const token = localStorage.getItem("token");
 
-    return token ? getUsernameFromToken(token) : null;
+    return token ? getUsernameFromToken(token) : localStorage.getItem("name");
   },
 
   /**
@@ -119,6 +127,6 @@ export const JwtUtil = {
   isTokenValid(): boolean {
     const token = localStorage.getItem("token");
 
-    return token ? isTokenValid(token) : false;
+    return token ? isTokenValid(token) : parseStoredNumber("role_id") !== null;
   },
 };

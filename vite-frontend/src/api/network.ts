@@ -18,6 +18,7 @@ const setPanelAddressesFunc = (newAddress: PanelAddress[]) => {
     if (item.inx) {
       baseURL = `${item.address}/api/v1/`;
       axios.defaults.baseURL = baseURL;
+      axios.defaults.withCredentials = true;
     }
   });
 };
@@ -37,6 +38,7 @@ export const reinitializeBaseURL = () => {
       ? `${import.meta.env.VITE_API_BASE}/api/v1/`
       : "/api/v1/";
     axios.defaults.baseURL = baseURL;
+    axios.defaults.withCredentials = true;
   }
 };
 
@@ -90,6 +92,7 @@ const Network = {
         .get(path, {
           params: data,
           timeout: options.timeout ?? 30000,
+          withCredentials: true,
         })
         .then(function (response: AxiosResponse<ApiResponse<T>>) {
           resolve(response.data);
@@ -134,9 +137,8 @@ const Network = {
         .get(path, {
           params: data,
           timeout: options.timeout ?? 30000,
-          headers: {
-            Authorization: getToken(),
-          },
+          withCredentials: true,
+          headers: authHeaders(),
         })
         .then(function (response: AxiosResponse<ApiResponse<T>>) {
           // 检查是否token失效
@@ -187,8 +189,9 @@ const Network = {
       axios
         .post(path, data, {
           timeout: options.timeout ?? 30000,
+          withCredentials: true,
           headers: {
-            Authorization: getToken(),
+            ...authHeaders(),
             "Content-Type": "application/json",
           },
         })
@@ -225,5 +228,11 @@ const Network = {
     });
   },
 };
+
+function authHeaders(): Record<string, string> {
+  const token = getToken();
+
+  return token ? { Authorization: token } : {};
+}
 
 export default Network;

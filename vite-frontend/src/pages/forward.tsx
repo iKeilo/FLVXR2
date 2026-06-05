@@ -1,4 +1,9 @@
-﻿import type { ForwardApiItem, SpeedLimitApiItem } from "@/api/types";
+﻿import type {
+  ForwardApiItem,
+  PathTunnelApiItem,
+  PathTunnelDetailApiItem,
+  SpeedLimitApiItem,
+} from "@/api/types";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import toast from "react-hot-toast";
@@ -72,6 +77,8 @@ import {
   batchResetForward,
   getForwardTrafficResetLogs,
   deleteForwardTrafficResetLog,
+  getPathTunnelDetail,
+  getPathTunnelList,
 } from "@/api";
 import {
   type ForwardAddressItem,
@@ -133,7 +140,13 @@ interface Forward {
   speedLimit?: number;
   inSpeed?: number; // 新增：实时上行速度 (bytes/s)
   outSpeed?: number; // 新增：实时下行速度 (bytes/s)
-  mode?: "gost" | "nftables";
+  mode?: "gost" | "nftables" | "wg_path";
+  wgPathId?: number;
+  wgRuleType?: "port" | "cidr" | "local";
+  sourceCidr?: string;
+  targetCidr?: string;
+  snatEnabled?: boolean;
+  pathName?: string;
 }
 interface Tunnel {
   id: number;
@@ -172,7 +185,12 @@ interface ForwardForm {
   expiryTime: number | null;
   speedLimitEnabled: boolean;
   speedLimit: number;
-  mode: "gost" | "nftables";
+  mode: "gost" | "nftables" | "wg_path";
+  wgPathId: number | null;
+  wgRuleType: "port" | "cidr" | "local";
+  sourceCidr: string;
+  targetCidr: string;
+  snatEnabled: boolean;
 }
 interface ForwardUserGroup {
   userId: number;
@@ -540,7 +558,10 @@ const mapForwardApiItems = (items: ForwardApiItem[]): Forward[] => {
     id: forward.id,
     name: forward.name,
     tunnelId: forward.tunnelId ?? 0,
-    tunnelName: forward.tunnelName || "",
+    tunnelName:
+      (forward as any).mode === "wg_path"
+        ? ((forward as any).pathName || "WG 隧道")
+        : forward.tunnelName || "",
     tunnelTrafficRatio: normalizeTunnelTrafficRatio(forward.tunnelTrafficRatio),
     inIp: forward.inIp || "",
     inPort: forward.inPort ?? 0,
@@ -573,6 +594,12 @@ const mapForwardApiItems = (items: ForwardApiItem[]): Forward[] => {
     inSpeed: (forward as any).inSpeed ?? 0,
     outSpeed: (forward as any).outSpeed ?? 0,
     mode: (forward as any).mode || "gost",
+    wgPathId: Number((forward as any).wgPathId || 0) || undefined,
+    wgRuleType: (forward as any).wgRuleType || "port",
+    sourceCidr: (forward as any).sourceCidr || "",
+    targetCidr: (forward as any).targetCidr || "",
+    snatEnabled: (forward as any).snatEnabled ?? true,
+    pathName: (forward as any).pathName || "",
   }));
 };
 const SortableTunnelGroupContainer = ({
@@ -1388,6 +1415,10 @@ export default function ForwardPage() {
   const [forwards, setForwards] = useState<Forward[]>([]);
   const [tunnels, setTunnels] = useState<Tunnel[]>([]);
   const [allTunnels, setAllTunnels] = useState<Tunnel[]>([]);
+  const [wgPaths, setWGPaths] = useState<PathTunnelApiItem[]>([]);
+  const [wgPathDetails, setWGPathDetails] = useState<
+    Record<number, PathTunnelDetailApiItem>
+  >({});
   const [nodes, setNodes] = useState<Node[]>([]);
   const [speedLimits, setSpeedLimits] = useState<SpeedLimitApiItem[]>([]);
   const [forwardPage, setForwardPage] = useState(1);
@@ -1504,6 +1535,11 @@ export default function ForwardPage() {
     speedLimitEnabled: false,
     speedLimit: 0,
     mode: "gost",
+    wgPathId: null,
+    wgRuleType: "port",
+    sourceCidr: "",
+    targetCidr: "",
+    snatEnabled: true,
   });
   const [inIpTouched, setInIpTouched] = useState(false);
   // 表单验证错误
@@ -2124,10 +2160,14 @@ export default function ForwardPage() {
       setLoading(lod);
       try {
         const params = {}; // 永远拉取全量数据
-        const [tunnelsRes, forwardsRes, speedLimitsRes] = await Promise.all([
+        const [tunnelsRes, forwardsRes, speedLimitsRes, wgPathsRes] =
+          await Promise.all([
           userTunnel(),
           getForwardList(params),
           getSpeedLimitList(),
+          isAdmin
+            ? getPathTunnelList()
+            : Promise.resolve({ code: 0, msg: "", data: [] }),
         ]);
 
         if (tunnelsRes.code === 0) {
@@ -2141,6 +2181,28 @@ export default function ForwardPage() {
         }
         if (speedLimitsRes.code === 0)
           setSpeedLimits(speedLimitsRes.data || []);
+        if (wgPathsRes.code === 0) {
+          const paths = (wgPathsRes.data || []) as PathTunnelApiItem[];
+
+          setWGPaths(paths);
+          const detailEntries = await Promise.all(
+            paths.map(async (path) => {
+              const res = await getPathTunnelDetail(path.id);
+
+              return res.code === 0 && res.data
+                ? ([path.id, res.data] as const)
+                : null;
+            }),
+          );
+
+          setWGPathDetails(
+            Object.fromEntries(
+              detailEntries.filter(Boolean) as Array<
+                readonly [number, PathTunnelDetailApiItem]
+              >,
+            ),
+          );
+        }
         if (isAdmin) {
           const nodesRes = await getNodeList();
 
@@ -2217,7 +2279,18 @@ export default function ForwardPage() {
     } else if (form.name.length < 2 || form.name.length > 50) {
       newErrors.name = "规则名称长度应在2-50个字符之间";
     }
-    if (!form.tunnelId) {
+    if (form.mode === "wg_path") {
+      if (!form.wgPathId) {
+        newErrors.wgPathId = "请选择 WG 隧道";
+      }
+      if (form.wgRuleType === "cidr") {
+        if (!form.targetCidr.trim()) {
+          newErrors.targetCidr = "请输入目标网段";
+        }
+      } else if (!form.remoteAddr.trim()) {
+        newErrors.remoteAddr = "请输入落地地址";
+      }
+    } else if (!form.tunnelId) {
       newErrors.tunnelId = "请选择关联隧道";
     }
     if (
@@ -2233,7 +2306,9 @@ export default function ForwardPage() {
         newErrors.inPort = `端口 ${currentTunnelPortRange.min}-${currentTunnelPortRange.max} 超出允许范围`;
       }
     }
-    if (!form.remoteAddr.trim()) {
+    if (form.mode === "wg_path" && form.wgRuleType === "cidr") {
+      // CIDR 内网转发使用目标网段，不校验落地地址。
+    } else if (!form.remoteAddr.trim()) {
       newErrors.remoteAddr = "请输入落地地址";
     } else {
       // 验证地址格式
@@ -2285,6 +2360,11 @@ export default function ForwardPage() {
       speedLimitEnabled: false,
       speedLimit: 0,
       mode: "gost",
+      wgPathId: null,
+      wgRuleType: "port",
+      sourceCidr: "",
+      targetCidr: "",
+      snatEnabled: true,
     });
     setErrors({});
     setModalOpen(true);
@@ -2311,6 +2391,11 @@ export default function ForwardPage() {
       speedLimitEnabled: forward.speedLimitEnabled ?? false,
       speedLimit: forward.speedLimit ?? 0,
       mode: forward.mode || "gost",
+      wgPathId: forward.wgPathId || null,
+      wgRuleType: forward.wgRuleType || "port",
+      sourceCidr: forward.sourceCidr || "",
+      targetCidr: forward.targetCidr || "",
+      snatEnabled: forward.snatEnabled ?? true,
     });
     setErrors({});
     setModalOpen(true);
@@ -2336,6 +2421,11 @@ export default function ForwardPage() {
       speedLimitEnabled: forward.speedLimitEnabled ?? false,
       speedLimit: forward.speedLimit ?? 0,
       mode: forward.mode || "gost",
+      wgPathId: forward.wgPathId || null,
+      wgRuleType: forward.wgRuleType || "port",
+      sourceCidr: forward.sourceCidr || "",
+      targetCidr: forward.targetCidr || "",
+      snatEnabled: forward.snatEnabled ?? true,
     });
     setErrors({});
     setModalOpen(true);
@@ -2502,7 +2592,11 @@ export default function ForwardPage() {
 
     setSubmitLoading(true);
     try {
-      const processedRemoteAddr = form.remoteAddr
+      const processedRemoteAddr = (
+        form.mode === "wg_path" && form.wgRuleType === "cidr"
+          ? form.targetCidr
+          : form.remoteAddr
+      )
         .split("\n")
         .map((addr) => addr.trim())
         .filter((addr) => addr)
@@ -2528,6 +2622,11 @@ export default function ForwardPage() {
           speedLimitEnabled: form.speedLimitEnabled,
           speedLimit: form.speedLimit,
           mode: form.mode,
+          wgPathId: form.wgPathId,
+          wgRuleType: form.wgRuleType,
+          sourceCidr: form.sourceCidr,
+          targetCidr: form.targetCidr,
+          snatEnabled: form.snatEnabled,
         };
 
         res = await updateForward(updateData);
@@ -2546,6 +2645,11 @@ export default function ForwardPage() {
           speedLimitEnabled: form.speedLimitEnabled,
           speedLimit: form.speedLimit,
           mode: form.mode,
+          wgPathId: form.wgPathId,
+          wgRuleType: form.wgRuleType,
+          sourceCidr: form.sourceCidr,
+          targetCidr: form.targetCidr,
+          snatEnabled: form.snatEnabled,
         };
 
         if (isAdmin && form.userId) {
@@ -5345,6 +5449,7 @@ export default function ForwardPage() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
                     {/* 选择隧道 */}
+                    {form.mode !== "wg_path" && (
                     <Select
                       description={
                         isEdit
@@ -5405,26 +5510,138 @@ export default function ForwardPage() {
                         );
                       })}
                     </Select>
+                    )}
                     {/* 转发模式选择 */}
                     <Select
-                      description="NFtables模式协议阻断暂不可用，不会用勿选"
+                      description="WG 隧道用于承载出入口和内网转发规则"
                       label="转发模式"
                       selectedKeys={[form.mode]}
                       variant="bordered"
                       onSelectionChange={(keys) => {
                         const selectedKey = Array.from(keys)[0] as string;
+                        const nextMode =
+                          selectedKey === "wg_path" && !isAdmin
+                            ? "gost"
+                            : selectedKey;
 
                         setForm((prev) => ({
                           ...prev,
-                          mode: selectedKey as "gost" | "nftables",
+                          mode: nextMode as "gost" | "nftables" | "wg_path",
+                          tunnelId:
+                            nextMode === "wg_path" ? null : prev.tunnelId,
                         }));
                       }}
                     >
                       <SelectItem key="gost">Gost 模式</SelectItem>
                       <SelectItem key="nftables">NFtables 模式</SelectItem>
+                      {isAdmin && <SelectItem key="wg_path">WG 隧道</SelectItem>}
                     </Select>
                   </div>
+                  {form.mode === "wg_path" && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
+                      <Select
+                        errorMessage={errors.wgPathId}
+                        isInvalid={!!errors.wgPathId}
+                        label="WG 隧道"
+                        placeholder="请选择 WG Path"
+                        selectedKeys={
+                          form.wgPathId ? [String(form.wgPathId)] : []
+                        }
+                        variant="bordered"
+                        onSelectionChange={(keys) => {
+                          const selectedKey = Array.from(keys)[0] as string;
+
+                          setForm((prev) => ({
+                            ...prev,
+                            wgPathId: selectedKey ? Number(selectedKey) : null,
+                          }));
+                        }}
+                      >
+                        {wgPaths.map((path) => (
+                          <SelectItem key={String(path.id)}>
+                            {path.name}
+                          </SelectItem>
+                        ))}
+                      </Select>
+                      <Select
+                        label="WG 转发类型"
+                        selectedKeys={[form.wgRuleType]}
+                        variant="bordered"
+                        onSelectionChange={(keys) => {
+                          const selectedKey = Array.from(keys)[0] as
+                            | "port"
+                            | "cidr"
+                            | "local";
+
+                          setForm((prev) => ({
+                            ...prev,
+                            wgRuleType: selectedKey || "port",
+                          }));
+                        }}
+                      >
+                        <SelectItem key="port">端口转发</SelectItem>
+                        <SelectItem key="local">本机服务转发</SelectItem>
+                        <SelectItem key="cidr">内网网段转发</SelectItem>
+                      </Select>
+                      {form.wgPathId && wgPathDetails[form.wgPathId] && (
+                        <div className="md:col-span-2 rounded-xl border border-default-200 bg-default-50/70 px-3 py-2 text-sm text-default-600">
+                          链路：
+                          {[...wgPathDetails[form.wgPathId].segments]
+                            .sort((a, b) => (a.sequence || 0) - (b.sequence || 0))
+                            .map((segment, index) =>
+                              index === 0
+                                ? `${segment.fromNodeId} -> ${segment.toNodeId}`
+                                : ` -> ${segment.toNodeId}`,
+                            )
+                            .join("") || "未生成链路"}
+                        </div>
+                      )}
+                      {form.wgRuleType === "cidr" && (
+                        <>
+                          <Input
+                            label="源网段"
+                            placeholder="可选，例如 10.0.1.0/24"
+                            value={form.sourceCidr}
+                            variant="bordered"
+                            onChange={(e) =>
+                              setForm((prev) => ({
+                                ...prev,
+                                sourceCidr: e.target.value,
+                              }))
+                            }
+                          />
+                          <Input
+                            errorMessage={errors.targetCidr}
+                            isInvalid={!!errors.targetCidr}
+                            label="目标网段"
+                            placeholder="例如 192.168.50.0/24"
+                            value={form.targetCidr}
+                            variant="bordered"
+                            onChange={(e) =>
+                              setForm((prev) => ({
+                                ...prev,
+                                targetCidr: e.target.value,
+                              }))
+                            }
+                          />
+                        </>
+                      )}
+                      <Switch
+                        isSelected={form.snatEnabled}
+                        onValueChange={(value) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            snatEnabled: value,
+                          }))
+                        }
+                      >
+                        启用 SNAT
+                      </Switch>
+                    </div>
+                  )}
                   <div className="space-y-4 pb-4">
+                    {!(form.mode === "wg_path" && form.wgRuleType === "cidr") && (
+                      <>
                     <Textarea
                       description="格式: IP:端口 或 域名:端口，支持多个地址（每行一个）"
                       errorMessage={errors.remoteAddr}
@@ -5463,6 +5680,8 @@ export default function ForwardPage() {
                         <SelectItem key="rand">随机模式 - 随机选择</SelectItem>
                         <SelectItem key="hash">哈希模式 - IP 哈希</SelectItem>
                       </Select>
+                    )}
+                      </>
                     )}
                   </div>
                   {/* 高级功能折叠面板 - 移到最底部 */}

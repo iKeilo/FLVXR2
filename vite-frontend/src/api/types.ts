@@ -94,6 +94,79 @@ export interface NodeDeployDetailApiItem {
   logs: NodeDeployLogApiItem[];
 }
 
+export interface WGNodeIdentityApiItem {
+  id: number;
+  nodeId: number;
+  publicKey: string;
+  defaultListenPort: number;
+  enabled: number;
+  createdTime?: number;
+  updatedTime?: number;
+}
+
+export interface PathTunnelApiItem {
+  id: number;
+  name: string;
+  transport: string;
+  status: string;
+  ownerUserId?: number;
+  createdBy?: number;
+  tunnelGroupId?: number;
+  flow?: number;
+  trafficRatio?: number;
+  remark?: string;
+  createdTime?: number;
+  updatedTime?: number;
+}
+
+export interface PathSegmentApiItem {
+  id: number;
+  pathId: number;
+  sequence: number;
+  fromNodeId: number;
+  toNodeId: number;
+  transport: string;
+  status: string;
+  endpoint?: string;
+  listenPort?: number;
+  tunnelIpFrom?: string;
+  tunnelIpTo?: string;
+  lastHandshake?: number;
+  latencyMs?: number;
+  rxBytes?: number;
+  txBytes?: number;
+}
+
+export interface NodeRuntimeResourceApiItem {
+  id: number;
+  nodeId: number;
+  ownerType: string;
+  ownerId: number;
+  resourceType: string;
+  resourceKey: string;
+  protocol?: string;
+  port?: number;
+  status?: string;
+}
+
+export interface PathRuntimeVersionApiItem {
+  id: number;
+  pathId: number;
+  version: number;
+  expectedHash?: string;
+  actualHash?: string;
+  status: string;
+  message?: string;
+  createdTime?: number;
+}
+
+export interface PathTunnelDetailApiItem {
+  path: PathTunnelApiItem;
+  segments: PathSegmentApiItem[];
+  resources?: NodeRuntimeResourceApiItem[];
+  runtime?: PathRuntimeVersionApiItem | null;
+}
+
 export interface UserApiItem {
   id: number;
   user: string;
@@ -523,6 +596,11 @@ export interface ForwardMutationPayload {
   speedId?: number | null;
   maxConnections?: number;
   mode?: string;
+  wgPathId?: number | null;
+  wgRuleType?: string;
+  sourceCidr?: string;
+  targetCidr?: string;
+  snatEnabled?: boolean;
 }
 
 export interface SpeedLimitMutationPayload {

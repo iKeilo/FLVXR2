@@ -1181,8 +1181,11 @@ export default function UserPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: localStorage.token,
+          ...(localStorage.getItem("token")
+            ? { Authorization: localStorage.getItem("token") || "" }
+            : {}),
         },
+        credentials: "include",
         body: JSON.stringify({
           userId: user.id,
           limit: 50,
@@ -1214,8 +1217,11 @@ export default function UserPage() {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: localStorage.token,
+                ...(localStorage.getItem("token")
+                  ? { Authorization: localStorage.getItem("token") || "" }
+                  : {}),
               },
+              credentials: "include",
               body: JSON.stringify({
                 userId: selectedRenewalLogUser.id,
                 limit: 50,

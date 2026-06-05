@@ -1358,6 +1358,32 @@ func (w *WebSocketReporter) routeCommand(cmd CommandMessage) {
 		err = w.handleRestartCore(cmd.Data)
 		response.Type = "RestartCoreResponse"
 
+	case "CheckWireGuardSupport":
+		var support map[string]interface{}
+		support, err = w.handleCheckWireGuardSupport(cmd.Data)
+		response.Type = "CheckWireGuardSupportResponse"
+		response.Data = support
+	case "ApplyWireGuardPath":
+		var result map[string]interface{}
+		result, err = w.handleApplyWireGuardPath(cmd.Data)
+		response.Type = "ApplyWireGuardPathResponse"
+		response.Data = result
+	case "RemoveWireGuardPath":
+		var result map[string]interface{}
+		result, err = w.handleRemoveWireGuardPath(cmd.Data)
+		response.Type = "RemoveWireGuardPathResponse"
+		response.Data = result
+	case "GetWireGuardPathStatus":
+		var result map[string]interface{}
+		result, err = w.handleGetWireGuardPathStatus(cmd.Data)
+		response.Type = "GetWireGuardPathStatusResponse"
+		response.Data = result
+	case "ProbeWireGuardPath":
+		var result map[string]interface{}
+		result, err = w.handleProbeWireGuardPath(cmd.Data)
+		response.Type = "ProbeWireGuardPathResponse"
+		response.Data = result
+
 	// 升级 Agent 命令（异步执行，不需要保存配置）
 	case "UpgradeAgent":
 		err = w.handleUpgradeAgent(cmd.Data)
@@ -1391,6 +1417,21 @@ func (w *WebSocketReporter) routeCommand(cmd CommandMessage) {
 		rawData, _ := json.Marshal(cmd.Data)
 		err = w.handleResetNftablesCounters(rawData)
 		response.Type = "ResetNftablesCountersResponse"
+	case "ApplyWGForwardRule":
+		var result map[string]interface{}
+		result, err = w.handleApplyWGForwardRule(cmd.Data)
+		response.Data = result
+		response.Type = "ApplyWGForwardRuleResponse"
+	case "RemoveWGForwardRule":
+		var result map[string]interface{}
+		result, err = w.handleRemoveWGForwardRule(cmd.Data)
+		response.Data = result
+		response.Type = "RemoveWGForwardRuleResponse"
+	case "GetWGForwardRuleStatus":
+		var result map[string]interface{}
+		result, err = w.handleGetWGForwardRuleStatus(cmd.Data)
+		response.Data = result
+		response.Type = "GetWGForwardRuleStatusResponse"
 
 	default:
 		err = fmt.Errorf("未知命令类型: %s", cmd.Type)

@@ -1,4 +1,5 @@
 import { getRoleIdFromToken, isTokenValid } from "./jwt";
+import { getRoleId } from "./session";
 
 /**
  * 权限工具类
@@ -19,11 +20,11 @@ export function getToken(): string | null {
 export function getCurrentUserRoleId(): number | null {
   const token = getToken();
 
-  if (!token || !isTokenValid(token)) {
-    return null;
+  if (token && isTokenValid(token)) {
+    return getRoleIdFromToken(token);
   }
 
-  return getRoleIdFromToken(token);
+  return getRoleId();
 }
 
 /**
@@ -54,7 +55,7 @@ export function hasRole(targetRoleId: number): boolean {
 export function isLoggedIn(): boolean {
   const token = getToken();
 
-  return token ? isTokenValid(token) : false;
+  return token ? isTokenValid(token) : getRoleId() !== null;
 }
 
 /**

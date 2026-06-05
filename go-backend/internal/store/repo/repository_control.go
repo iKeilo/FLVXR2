@@ -56,6 +56,11 @@ func (r *Repository) ListForwardsByTunnelTx(tx *gorm.DB, tunnelID int64) ([]mode
 			SpeedID:        f.SpeedID,
 			MaxConnections: f.MaxConnections,
 			Mode:           f.Mode,
+			WGPathID:       f.WGPathID,
+			WGRuleType:     f.WGRuleType,
+			SourceCIDR:     f.SourceCIDR,
+			TargetCIDR:     f.TargetCIDR,
+			SNATEnabled:    f.SNATEnabled,
 		})
 	}
 	for i := range rows {

@@ -1,5 +1,6 @@
 export const SESSION_STORAGE_KEYS = {
   token: "token",
+  userId: "user_id",
   roleId: "role_id",
   name: "name",
   admin: "admin",
@@ -14,7 +15,8 @@ export interface SessionData {
 }
 
 export interface LoginSessionPayload {
-  token: string;
+  token?: string;
+  user_id?: number;
   role_id: number;
   name: string;
   restricted?: boolean;
@@ -38,6 +40,10 @@ export const getToken = (): string | null => {
 
 export const getRoleId = (): number | null => {
   return parseRoleId(localStorage.getItem(SESSION_STORAGE_KEYS.roleId));
+};
+
+export const getUserId = (): number | null => {
+  return parseRoleId(localStorage.getItem(SESSION_STORAGE_KEYS.userId));
 };
 
 export const getSessionName = (): string | null => {
@@ -75,7 +81,10 @@ export const readSession = (): SessionData => {
 };
 
 export const writeLoginSession = (payload: LoginSessionPayload): void => {
-  localStorage.setItem(SESSION_STORAGE_KEYS.token, payload.token);
+  localStorage.removeItem(SESSION_STORAGE_KEYS.token);
+  if (payload.user_id !== undefined) {
+    localStorage.setItem(SESSION_STORAGE_KEYS.userId, String(payload.user_id));
+  }
   localStorage.setItem(SESSION_STORAGE_KEYS.roleId, String(payload.role_id));
   localStorage.setItem(SESSION_STORAGE_KEYS.name, payload.name);
   localStorage.setItem(
@@ -91,6 +100,7 @@ export const writeLoginSession = (payload: LoginSessionPayload): void => {
 
 export const clearSession = (): void => {
   localStorage.removeItem(SESSION_STORAGE_KEYS.token);
+  localStorage.removeItem(SESSION_STORAGE_KEYS.userId);
   localStorage.removeItem(SESSION_STORAGE_KEYS.roleId);
   localStorage.removeItem(SESSION_STORAGE_KEYS.name);
   localStorage.removeItem(SESSION_STORAGE_KEYS.admin);

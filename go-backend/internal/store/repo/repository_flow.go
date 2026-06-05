@@ -1,4 +1,4 @@
-﻿package repo
+package repo
 
 import (
 	"errors"
@@ -170,6 +170,11 @@ func (r *Repository) GetForwardRecord(forwardID int64) (*model.ForwardRecord, er
 		Mode:              f.Mode,
 		InFlow:            f.InFlow,
 		OutFlow:           f.OutFlow,
+		WGPathID:          f.WGPathID,
+		WGRuleType:        f.WGRuleType,
+		SourceCIDR:        f.SourceCIDR,
+		TargetCIDR:        f.TargetCIDR,
+		SNATEnabled:       f.SNATEnabled,
 	}
 	if strings.TrimSpace(fr.Strategy) == "" {
 		fr.Strategy = "fifo"
@@ -312,18 +317,18 @@ func (r *Repository) GetSpeedLimitSpeed(id int64) (int, error) {
 }
 
 type ForwardTrafficResetLogItem struct {
-	ID           int64  `json:"id"`
-	ForwardID    int64  `json:"forwardId"`
-	ForwardName  string `json:"forwardName"`
-	UserID       int64  `json:"userId"`
-	UserName     string `json:"userName"`
-	ResetTime    int64  `json:"resetTime"`
-	InFlowBefore int64  `json:"inFlowBefore"`
-	OutFlowBefore int64 `json:"outFlowBefore"`
-	OperatorID   int64  `json:"operatorId"`
-	OperatorName string `json:"operatorName"`
-	Reason       string `json:"reason"`
-	CreatedTime  int64  `json:"createdTime"`
+	ID            int64  `json:"id"`
+	ForwardID     int64  `json:"forwardId"`
+	ForwardName   string `json:"forwardName"`
+	UserID        int64  `json:"userId"`
+	UserName      string `json:"userName"`
+	ResetTime     int64  `json:"resetTime"`
+	InFlowBefore  int64  `json:"inFlowBefore"`
+	OutFlowBefore int64  `json:"outFlowBefore"`
+	OperatorID    int64  `json:"operatorId"`
+	OperatorName  string `json:"operatorName"`
+	Reason        string `json:"reason"`
+	CreatedTime   int64  `json:"createdTime"`
 }
 
 func (r *Repository) GetForwardTrafficResetLogs(forwardID int64, limit int) ([]ForwardTrafficResetLogItem, error) {

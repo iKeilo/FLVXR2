@@ -66,6 +66,11 @@ type Forward struct {
 	UploadSpeed       int           `gorm:"column:upload_speed;not null;default:0"`
 	DownloadSpeed     int           `gorm:"column:download_speed;not null;default:0"`
 	Mode              string        `gorm:"type:varchar(20);not null;default:'gost'"`
+	WGPathID          int64         `gorm:"column:wg_path_id;not null;default:0;index"`
+	WGRuleType        string        `gorm:"column:wg_rule_type;type:varchar(20);not null;default:'port'"`
+	SourceCIDR        string        `gorm:"column:source_cidr;type:varchar(100);not null;default:''"`
+	TargetCIDR        string        `gorm:"column:target_cidr;type:varchar(100);not null;default:''"`
+	SNATEnabled       bool          `gorm:"column:snat_enabled;not null;default:true"`
 }
 
 func (Forward) TableName() string { return "forward" }
@@ -211,6 +216,87 @@ type NodeDeployLog struct {
 }
 
 func (NodeDeployLog) TableName() string { return "node_deploy_log" }
+
+type WGNodeIdentity struct {
+	ID                  int64  `gorm:"primaryKey;autoIncrement" json:"id"`
+	NodeID              int64  `gorm:"column:node_id;not null;uniqueIndex" json:"nodeId"`
+	PrivateKeyEncrypted string `gorm:"column:private_key_encrypted;type:text;not null" json:"privateKeyEncrypted,omitempty"`
+	PublicKey           string `gorm:"column:public_key;type:varchar(120);not null" json:"publicKey"`
+	DefaultListenPort   int    `gorm:"column:default_listen_port;not null;default:0" json:"defaultListenPort"`
+	Enabled             int    `gorm:"not null;default:1" json:"enabled"`
+	CreatedTime         int64  `gorm:"column:created_time;not null" json:"createdTime"`
+	UpdatedTime         int64  `gorm:"column:updated_time;not null" json:"updatedTime"`
+}
+
+func (WGNodeIdentity) TableName() string { return "wg_node_identity" }
+
+type PathTunnel struct {
+	ID            int64   `gorm:"primaryKey;autoIncrement" json:"id"`
+	Name          string  `gorm:"type:varchar(160);not null" json:"name"`
+	Transport     string  `gorm:"type:varchar(40);not null;default:'wireguard'" json:"transport"`
+	Status        string  `gorm:"type:varchar(40);not null;default:'pending'" json:"status"`
+	OwnerUserID   int64   `gorm:"column:owner_user_id;not null;default:1;index" json:"ownerUserId"`
+	CreatedBy     int64   `gorm:"column:created_by;not null;default:1" json:"createdBy"`
+	TunnelGroupID int64   `gorm:"column:tunnel_group_id;not null;default:0;index" json:"tunnelGroupId"`
+	Flow          int     `gorm:"not null;default:1" json:"flow"`
+	TrafficRatio  float64 `gorm:"column:traffic_ratio;not null;default:1" json:"trafficRatio"`
+	Remark        string  `gorm:"type:text" json:"remark"`
+	CreatedTime   int64   `gorm:"column:created_time;not null" json:"createdTime"`
+	UpdatedTime   int64   `gorm:"column:updated_time;not null" json:"updatedTime"`
+}
+
+func (PathTunnel) TableName() string { return "path_tunnel" }
+
+type PathSegment struct {
+	ID              int64  `gorm:"primaryKey;autoIncrement" json:"id"`
+	PathID          int64  `gorm:"column:path_id;not null;index" json:"pathId"`
+	Sequence        int    `gorm:"not null" json:"sequence"`
+	FromNodeID      int64  `gorm:"column:from_node_id;not null;index" json:"fromNodeId"`
+	ToNodeID        int64  `gorm:"column:to_node_id;not null;index" json:"toNodeId"`
+	Transport       string `gorm:"type:varchar(40);not null;default:'wireguard'" json:"transport"`
+	Status          string `gorm:"type:varchar(40);not null;default:'pending'" json:"status"`
+	Endpoint        string `gorm:"type:varchar(200)" json:"endpoint"`
+	ListenPort      int    `gorm:"column:listen_port;not null;default:0" json:"listenPort"`
+	TunnelIPFrom    string `gorm:"column:tunnel_ip_from;type:varchar(100);not null" json:"tunnelIpFrom"`
+	TunnelIPTo      string `gorm:"column:tunnel_ip_to;type:varchar(100);not null" json:"tunnelIpTo"`
+	LatestHandshake int64  `gorm:"column:latest_handshake;not null;default:0" json:"latestHandshake"`
+	LatencyMS       int    `gorm:"column:latency_ms;not null;default:0" json:"latencyMs"`
+	RXBytes         int64  `gorm:"column:rx_bytes;not null;default:0" json:"rxBytes"`
+	TXBytes         int64  `gorm:"column:tx_bytes;not null;default:0" json:"txBytes"`
+	CreatedTime     int64  `gorm:"column:created_time;not null" json:"createdTime"`
+	UpdatedTime     int64  `gorm:"column:updated_time;not null" json:"updatedTime"`
+}
+
+func (PathSegment) TableName() string { return "path_segment" }
+
+type NodeRuntimeResource struct {
+	ID           int64  `gorm:"primaryKey;autoIncrement" json:"id"`
+	NodeID       int64  `gorm:"column:node_id;not null;index" json:"nodeId"`
+	OwnerType    string `gorm:"column:owner_type;type:varchar(40);not null;index" json:"ownerType"`
+	OwnerID      int64  `gorm:"column:owner_id;not null;index" json:"ownerId"`
+	ResourceType string `gorm:"column:resource_type;type:varchar(60);not null;index" json:"resourceType"`
+	ResourceKey  string `gorm:"column:resource_key;type:varchar(200);not null" json:"resourceKey"`
+	Protocol     string `gorm:"type:varchar(20)" json:"protocol"`
+	Port         int    `gorm:"not null;default:0;index" json:"port"`
+	Status       string `gorm:"type:varchar(40);not null;default:'active'" json:"status"`
+	CreatedTime  int64  `gorm:"column:created_time;not null" json:"createdTime"`
+	UpdatedTime  int64  `gorm:"column:updated_time;not null" json:"updatedTime"`
+}
+
+func (NodeRuntimeResource) TableName() string { return "node_runtime_resource" }
+
+type PathRuntimeVersion struct {
+	ID           int64  `gorm:"primaryKey;autoIncrement" json:"id"`
+	PathID       int64  `gorm:"column:path_id;not null;index" json:"pathId"`
+	Version      int    `gorm:"not null" json:"version"`
+	ExpectedHash string `gorm:"column:expected_hash;type:varchar(128);not null" json:"expectedHash"`
+	ActualHash   string `gorm:"column:actual_hash;type:varchar(128)" json:"actualHash"`
+	Status       string `gorm:"type:varchar(40);not null;default:'pending'" json:"status"`
+	Message      string `gorm:"type:text" json:"message"`
+	CreatedTime  int64  `gorm:"column:created_time;not null" json:"createdTime"`
+}
+
+func (PathRuntimeVersion) TableName() string { return "path_runtime_version" }
 
 type SpeedLimit struct {
 	ID          int64          `gorm:"primaryKey;autoIncrement"`
@@ -733,6 +819,11 @@ type ForwardRecord struct {
 	Mode              string
 	InFlow            int64
 	OutFlow           int64
+	WGPathID          int64
+	WGRuleType        string
+	SourceCIDR        string
+	TargetCIDR        string
+	SNATEnabled       bool
 }
 
 // TunnelRecord is a minimal tunnel view used by control plane.

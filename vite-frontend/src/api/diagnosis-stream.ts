@@ -172,8 +172,9 @@ const runDiagnosisStream = async ({
       headers: {
         "Content-Type": "application/json",
         Accept: "application/x-ndjson, application/json",
-        Authorization: getToken() || "",
+        ...(getToken() ? { Authorization: getToken() || "" } : {}),
       },
+      credentials: "include",
       body: JSON.stringify(body),
       signal: mergedSignal,
     });

@@ -12,6 +12,7 @@ import (
 type contextKey string
 
 const ClaimsContextKey contextKey = "claims"
+const SessionCookieName = "flvx_session"
 
 type AuthOptions struct {
 	JWTSecret string
@@ -30,7 +31,12 @@ func JWT(opts AuthOptions) func(http.Handler) http.Handler {
 				return
 			}
 
-			token := strings.TrimSpace(r.Header.Get("Authorization"))
+			token := bearerToken(strings.TrimSpace(r.Header.Get("Authorization")))
+			if token == "" {
+				if cookie, err := r.Cookie(SessionCookieName); err == nil {
+					token = strings.TrimSpace(cookie.Value)
+				}
+			}
 			if token == "" {
 				response.WriteJSON(w, response.Err(401, "未登录或token已过期"))
 				return
@@ -51,6 +57,13 @@ func JWT(opts AuthOptions) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+func bearerToken(value string) string {
+	if strings.HasPrefix(strings.ToLower(value), "bearer ") {
+		return strings.TrimSpace(value[7:])
+	}
+	return value
 }
 
 func RequireAdmin(next http.Handler) http.Handler {
@@ -86,6 +99,8 @@ func shouldSkip(path string) bool {
 	case path == "/api/v1/config/list":
 		return true
 	case path == "/api/v1/user/login":
+		return true
+	case path == "/api/v1/user/logout":
 		return true
 	case path == "/api/v1/user/register":
 		return true

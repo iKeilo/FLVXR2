@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
 
-import { getToken } from "@/utils/session";
-
 interface NodeRealtimeMessage {
   id?: string | number;
   type?: string;
@@ -29,7 +27,7 @@ const getRealtimeWsUrl = (): string => {
 
   return (
     baseUrl.replace(/^http/, "ws").replace(/\/api\/v1\/$/, "") +
-    `/system-info?type=0&secret=${getToken() || ""}`
+    `/system-info?type=0`
   );
 };
 

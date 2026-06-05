@@ -152,6 +152,7 @@ func (h *Handler) WebSocketHandler() http.Handler {
 
 func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/user/login", h.login)
+	mux.HandleFunc("/api/v1/user/logout", h.logout)
 	mux.HandleFunc("/api/v1/user/register", h.userRegister)
 	mux.HandleFunc("/api/v1/user/list", h.userList)
 	mux.HandleFunc("/api/v1/user/create", h.userCreate)
@@ -219,6 +220,17 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/node/deploy/inbound/delete", h.nodeDeployDeleteInbound)
 	mux.HandleFunc("/api/v1/node/deploy/apply", h.nodeDeployApply)
 	mux.HandleFunc("/api/v1/node/deploy/rollback", h.nodeDeployRollback)
+	mux.HandleFunc("/api/v1/node/wg/identity", h.wgIdentity)
+	mux.HandleFunc("/api/v1/node/wg/identity/regenerate", h.wgIdentityRegenerate)
+	mux.HandleFunc("/api/v1/path/list", h.pathList)
+	mux.HandleFunc("/api/v1/path/detail", h.pathDetail)
+	mux.HandleFunc("/api/v1/path/create", h.pathCreate)
+	mux.HandleFunc("/api/v1/path/update", h.pathUpdate)
+	mux.HandleFunc("/api/v1/path/apply", h.pathApply)
+	mux.HandleFunc("/api/v1/path/remove", h.pathRemove)
+	mux.HandleFunc("/api/v1/path/delete", h.pathDelete)
+	mux.HandleFunc("/api/v1/path/status", h.pathStatus)
+	mux.HandleFunc("/api/v1/path/probe", h.pathProbe)
 	mux.HandleFunc("/api/v1/tunnel/list", h.tunnelList)
 	mux.HandleFunc("/api/v1/tunnel/create", h.tunnelCreate)
 	mux.HandleFunc("/api/v1/tunnel/get", h.tunnelGet)
@@ -484,15 +496,55 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return
 	}
+	setSessionCookie(w, r, token)
 
 	requirePasswordChange := req.Username == "admin_user" || req.Password == "admin_user"
 	response.WriteJSON(w, response.OK(map[string]interface{}{
-		"token":                 token,
+		"user_id":               user.ID,
 		"name":                  user.User,
 		"role_id":               user.RoleID,
 		"restricted":            restricted,
 		"requirePasswordChange": requirePasswordChange,
 	}))
+}
+
+func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
+	clearSessionCookie(w, r)
+	response.WriteJSON(w, response.OKEmpty())
+}
+
+func setSessionCookie(w http.ResponseWriter, r *http.Request, token string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     middleware.SessionCookieName,
+		Value:    token,
+		Path:     "/",
+		MaxAge:   int((90 * 24 * time.Hour).Seconds()),
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   isHTTPSRequest(r),
+	})
+}
+
+func clearSessionCookie(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     middleware.SessionCookieName,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   isHTTPSRequest(r),
+	})
+}
+
+func isHTTPSRequest(r *http.Request) bool {
+	if r == nil {
+		return false
+	}
+	if r.TLS != nil {
+		return true
+	}
+	return strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
 }
 
 func (h *Handler) getConfigByName(w http.ResponseWriter, r *http.Request) {
@@ -673,7 +725,7 @@ func (h *Handler) forwardList(w http.ResponseWriter, r *http.Request) {
 		if roleID != 0 {
 			filtered := make([]map[string]interface{}, 0, len(items))
 			for _, item := range items {
-				if asInt64(item["userId"], 0) == userID {
+				if asInt64(item["userId"], 0) == userID && !strings.EqualFold(asString(item["mode"]), "wg_path") {
 					filtered = append(filtered, item)
 				}
 			}
@@ -688,7 +740,7 @@ func (h *Handler) forwardList(w http.ResponseWriter, r *http.Request) {
 		if roleID != 0 {
 			filtered := make([]map[string]interface{}, 0, len(items))
 			for _, item := range items {
-				if asInt64(item["userId"], 0) == userID {
+				if asInt64(item["userId"], 0) == userID && !strings.EqualFold(asString(item["mode"]), "wg_path") {
 					filtered = append(filtered, item)
 				}
 			}
