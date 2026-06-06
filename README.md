@@ -112,7 +112,6 @@ This fork (FLVX) is no longer a light patch on top of the upstream project. It h
 
 | 网络       | 地址                                                                 |
 |------------|----------------------------------------------------------------------|
-| BNB(BEP20) | `暂无`                          |
-| TRC20      | `暂无`                                  |
-| Aptos      | `暂无`  |
-| polygon    | `暂无`    |
+| BNB(USDT) | `0xC6D4FbD6a3f7d89Bb5f6a15F735B6281134a83be`                          |
+| Base(ETH)      | `0xC6D4FbD6a3f7d89Bb5f6a15F735B6281134a83be`                                  |
+
