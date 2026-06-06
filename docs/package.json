@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vitepress build --srcDir ../doc --outDir ."
+    "build": "vitepress build --srcDir ../doc --outDir ../docs/.vitepress/dist"
   },
   "version": "1.0.0",
   "description": "",
