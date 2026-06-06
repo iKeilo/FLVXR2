@@ -630,6 +630,38 @@ export const importRemoteNode = (data: { remoteUrl: string; token: string }) =>
   }>("/federation/node/import", data);
 export const deleteRemoteNode = (nodeId: number) =>
   Network.post("/federation/node/delete", { nodeId });
+export interface RemoteNodeDeleteForwardPreviewApiItem {
+  id: number;
+  name: string;
+  tunnelId: number;
+  tunnelName: string;
+  inPort: number;
+  reason: string;
+}
+export interface RemoteNodeDeleteTunnelPreviewApiItem {
+  tunnelId: number;
+  tunnelName: string;
+  reason: string;
+  forwards: RemoteNodeDeleteForwardPreviewApiItem[];
+}
+export interface RemoteNodeDeletePreviewApiData {
+  nodeId: number;
+  nodeName: string;
+  remoteUrl: string;
+  deleteTunnels: RemoteNodeDeleteTunnelPreviewApiItem[];
+  deleteForwards: RemoteNodeDeleteForwardPreviewApiItem[];
+  keepTunnels: Array<{
+    tunnelId: number;
+    tunnelName: string;
+    reason: string;
+  }>;
+  warnings?: string[];
+}
+export const getRemoteNodeDeletePreview = (nodeId: number) =>
+  Network.post<RemoteNodeDeletePreviewApiData>(
+    "/federation/node/delete-preview",
+    { nodeId },
+  );
 
 export interface BackupTypes {
   users?: boolean;

@@ -3,6 +3,9 @@ package repo
 import (
 	"database/sql"
 	"errors"
+	"strconv"
+	"strings"
+	"time"
 
 	"go-backend/internal/store/model"
 
@@ -40,10 +43,18 @@ type FederationBindingRow struct {
 
 type ActiveForwardPortRow struct {
 	ForwardID   int64
+	ForwardName string
 	TunnelID    int64
 	TunnelName  string
 	Port        int
 	UpdatedTime int64
+}
+
+type RemoteNodeChainTunnelRow struct {
+	TunnelID   int64
+	TunnelName string
+	ChainType  int
+	HopInx     int
 }
 
 type RemoteNodeReferenceCounts struct {
@@ -127,7 +138,7 @@ func (r *Repository) ListActiveForwardPortsForNode(nodeID int64) ([]ActiveForwar
 	}
 	var result []ActiveForwardPortRow
 	err := r.db.Model(&model.ForwardPort{}).
-		Select("forward_port.forward_id, forward.tunnel_id, COALESCE(tunnel.name, '') AS tunnel_name, forward_port.port, forward.updated_time").
+		Select("forward_port.forward_id, COALESCE(forward.name, '') AS forward_name, forward.tunnel_id, COALESCE(tunnel.name, '') AS tunnel_name, forward_port.port, forward.updated_time").
 		Joins("JOIN forward ON forward.id = forward_port.forward_id").
 		Joins("LEFT JOIN tunnel ON tunnel.id = forward.tunnel_id").
 		Where("forward_port.node_id = ? AND forward_port.port > 0", nodeID).
@@ -140,6 +151,93 @@ func (r *Repository) ListActiveForwardPortsForNode(nodeID int64) ([]ActiveForwar
 		result = make([]ActiveForwardPortRow, 0)
 	}
 	return result, nil
+}
+
+func (r *Repository) ListRemoteNodeChainTunnels(nodeID int64) ([]RemoteNodeChainTunnelRow, error) {
+	if r == nil || r.db == nil {
+		return nil, errors.New("repository not initialized")
+	}
+	type row struct {
+		TunnelID   int64
+		TunnelName string
+		ChainType  string
+		HopInx     sql.NullInt64
+	}
+	var rows []row
+	err := r.db.Model(&model.ChainTunnel{}).
+		Select("chain_tunnel.tunnel_id, COALESCE(tunnel.name, '') AS tunnel_name, chain_tunnel.chain_type, chain_tunnel.inx AS hop_inx").
+		Joins("LEFT JOIN tunnel ON tunnel.id = chain_tunnel.tunnel_id").
+		Where("chain_tunnel.node_id = ?", nodeID).
+		Order("chain_tunnel.tunnel_id ASC, chain_tunnel.chain_type ASC, chain_tunnel.inx ASC, chain_tunnel.id ASC").
+		Find(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	result := make([]RemoteNodeChainTunnelRow, 0, len(rows))
+	for _, item := range rows {
+		chainType := 0
+		if strings.TrimSpace(item.ChainType) != "" {
+			if parsed, parseErr := strconv.Atoi(strings.TrimSpace(item.ChainType)); parseErr == nil {
+				chainType = parsed
+			}
+		}
+		hopInx := 0
+		if item.HopInx.Valid {
+			hopInx = int(item.HopInx.Int64)
+		}
+		result = append(result, RemoteNodeChainTunnelRow{
+			TunnelID:   item.TunnelID,
+			TunnelName: item.TunnelName,
+			ChainType:  chainType,
+			HopInx:     hopInx,
+		})
+	}
+	return result, nil
+}
+
+func (r *Repository) ListForwardPreviewRowsByTunnel(tunnelID int64) ([]ActiveForwardPortRow, error) {
+	if r == nil || r.db == nil {
+		return nil, errors.New("repository not initialized")
+	}
+	var result []ActiveForwardPortRow
+	err := r.db.Model(&model.Forward{}).
+		Select("forward.id AS forward_id, COALESCE(forward.name, '') AS forward_name, forward.tunnel_id, COALESCE(tunnel.name, '') AS tunnel_name, COALESCE(MIN(forward_port.port), 0) AS port, forward.updated_time").
+		Joins("LEFT JOIN tunnel ON tunnel.id = forward.tunnel_id").
+		Joins("LEFT JOIN forward_port ON forward_port.forward_id = forward.id").
+		Where("forward.tunnel_id = ?", tunnelID).
+		Group("forward.id, forward.name, forward.tunnel_id, tunnel.name, forward.updated_time").
+		Order("forward.id ASC").
+		Find(&result).Error
+	if err != nil {
+		return nil, err
+	}
+	if result == nil {
+		result = make([]ActiveForwardPortRow, 0)
+	}
+	return result, nil
+}
+
+func (r *Repository) DeleteRemoteNodeMiddleReferences(nodeID int64, keepTunnelIDs []int64) error {
+	if r == nil || r.db == nil {
+		return errors.New("repository not initialized")
+	}
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		q := tx.Where("node_id = ? AND chain_type = ?", nodeID, "2")
+		if len(keepTunnelIDs) > 0 {
+			q = q.Where("tunnel_id IN ?", keepTunnelIDs)
+		}
+		if err := q.Delete(&model.ChainTunnel{}).Error; err != nil {
+			return err
+		}
+		qb := tx.Where("node_id = ? AND chain_type = ? AND status = 1", nodeID, 2)
+		if len(keepTunnelIDs) > 0 {
+			qb = qb.Where("tunnel_id IN ?", keepTunnelIDs)
+		}
+		return qb.Model(&model.FederationTunnelBinding{}).Updates(map[string]interface{}{
+			"status":       0,
+			"updated_time": time.Now().UnixMilli(),
+		}).Error
+	})
 }
 
 // GetNodeBasicInfo returns the name, server_ip, and status for a given node.

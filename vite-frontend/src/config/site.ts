@@ -309,6 +309,26 @@ export const updateSiteConfig = async (configMap?: Record<string, string>) => {
   updateDocumentBackground(siteConfig.app_bg_image);
 };
 
+export const refreshAppBackground = async () => {
+  const response = await getConfigByName("app_bg_image");
+
+  if (
+    response.code === 0 &&
+    response.data &&
+    typeof response.data.value === "string"
+  ) {
+    const value = response.data.value.trim();
+
+    await updateSiteConfig({ app_bg_image: value });
+
+    return value;
+  }
+
+  updateDocumentBackground(siteConfig.app_bg_image);
+
+  return siteConfig.app_bg_image;
+};
+
 // 清除配置缓存的工具函数（用于需要强制重拉配置的场景）
 export const clearConfigCache = (keys?: string[]) => {
   if (keys && keys.length > 0) {

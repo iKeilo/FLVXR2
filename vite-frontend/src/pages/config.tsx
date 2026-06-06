@@ -34,7 +34,12 @@ import {
 } from "@/api";
 // 主题设置暂时放在这里，后续可以独立成一个页面或者组件
 import { isAdmin } from "@/utils/auth";
-import { getCachedConfigs, configCache, updateSiteConfig } from "@/config/site";
+import {
+  getCachedConfigs,
+  configCache,
+  refreshAppBackground,
+  updateSiteConfig,
+} from "@/config/site";
 import {
   convertBrandAssetToPngDataURL,
   isBrandImageDataURL,
@@ -624,9 +629,17 @@ export default function ConfigPage() {
             ].includes(key),
           )
         ) {
+          if (
+            changedKeys.some((key) =>
+              ["app_bg_image", "global_app_bg_image"].includes(key),
+            )
+          ) {
+            await refreshAppBackground();
+          }
           await updateSiteConfig({
-            ...configs,
-            app_bg_image: configs.app_bg_image || configs.global_app_bg_image || "",
+            app_name: configs.app_name || "",
+            app_logo: configs.app_logo || "",
+            app_favicon: configs.app_favicon || "",
           });
           window.dispatchEvent(
             new CustomEvent("configUpdated", {

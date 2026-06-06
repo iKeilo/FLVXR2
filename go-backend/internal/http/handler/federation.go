@@ -14,6 +14,7 @@ import (
 
 	"go-backend/internal/http/client"
 	"go-backend/internal/http/response"
+	"go-backend/internal/store/model"
 	"go-backend/internal/store/repo"
 )
 
@@ -60,6 +61,45 @@ type nodeImportRequest struct {
 
 type remoteNodeDeleteRequest struct {
 	NodeID int64 `json:"nodeId"`
+}
+
+type remoteNodeDeleteForwardPreview struct {
+	ID         int64  `json:"id"`
+	Name       string `json:"name"`
+	TunnelID   int64  `json:"tunnelId"`
+	TunnelName string `json:"tunnelName"`
+	InPort     int    `json:"inPort"`
+	Reason     string `json:"reason"`
+}
+
+type remoteNodeDeleteTunnelPreview struct {
+	TunnelID   int64                            `json:"tunnelId"`
+	TunnelName string                           `json:"tunnelName"`
+	Reason     string                           `json:"reason"`
+	Forwards   []remoteNodeDeleteForwardPreview `json:"forwards"`
+}
+
+type remoteNodeKeepTunnelPreview struct {
+	TunnelID   int64  `json:"tunnelId"`
+	TunnelName string `json:"tunnelName"`
+	Reason     string `json:"reason"`
+}
+
+type remoteNodeDeletePreview struct {
+	NodeID         int64                            `json:"nodeId"`
+	NodeName       string                           `json:"nodeName"`
+	RemoteURL      string                           `json:"remoteUrl"`
+	DeleteTunnels  []remoteNodeDeleteTunnelPreview  `json:"deleteTunnels"`
+	DeleteForwards []remoteNodeDeleteForwardPreview `json:"deleteForwards"`
+	KeepTunnels    []remoteNodeKeepTunnelPreview    `json:"keepTunnels"`
+	Warnings       []string                         `json:"warnings,omitempty"`
+}
+
+type remoteNodeDeleteResult struct {
+	DeletedTunnelCount  int      `json:"deletedTunnelCount"`
+	DeletedForwardCount int      `json:"deletedForwardCount"`
+	KeptTunnelCount     int      `json:"keptTunnelCount"`
+	Warnings            []string `json:"warnings,omitempty"`
 }
 
 type federationRuntimeReservePortRequest struct {
@@ -657,27 +697,246 @@ func (h *Handler) federationRemoteNodeDelete(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	counts, err := h.repo.CountRemoteNodeReferences(req.NodeID)
+	preview, err := h.buildRemoteNodeDeletePreview(node)
 	if err != nil {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return
 	}
-	if counts.ChainTunnel > 0 || counts.ForwardPort > 0 || counts.ActiveFederationBindings > 0 {
-		response.WriteJSON(w, response.ErrDefault(fmt.Sprintf(
-			"Remote node is still in use: tunnels=%d, forwards=%d, activeBindings=%d",
-			counts.ChainTunnel,
-			counts.ForwardPort,
-			counts.ActiveFederationBindings,
-		)))
-		return
-	}
-
-	if err := h.deleteNodeByID(req.NodeID); err != nil {
+	result, err := h.deleteRemoteNodeWithPreview(preview)
+	if err != nil {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return
 	}
 
-	response.WriteJSON(w, response.OKEmpty())
+	response.WriteJSON(w, response.OK(result))
+}
+
+func (h *Handler) federationRemoteNodeDeletePreview(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		response.WriteJSON(w, response.ErrDefault("Invalid method"))
+		return
+	}
+	if !h.ensureAdminAccess(w, r) {
+		return
+	}
+
+	var req remoteNodeDeleteRequest
+	if err := decodeJSON(r.Body, &req); err != nil {
+		response.WriteJSON(w, response.ErrDefault("Invalid JSON"))
+		return
+	}
+	if req.NodeID <= 0 {
+		response.WriteJSON(w, response.ErrDefault("Remote node ID is required"))
+		return
+	}
+
+	node, err := h.repo.GetNodeByID(req.NodeID)
+	if err != nil {
+		response.WriteJSON(w, response.Err(-2, err.Error()))
+		return
+	}
+	if node == nil {
+		response.WriteJSON(w, response.ErrDefault("Remote node not found"))
+		return
+	}
+	if node.IsRemote != 1 {
+		response.WriteJSON(w, response.ErrDefault("Only imported remote nodes can be previewed here"))
+		return
+	}
+
+	preview, err := h.buildRemoteNodeDeletePreview(node)
+	if err != nil {
+		response.WriteJSON(w, response.Err(-2, err.Error()))
+		return
+	}
+	response.WriteJSON(w, response.OK(preview))
+}
+
+func (h *Handler) buildRemoteNodeDeletePreview(node *model.Node) (*remoteNodeDeletePreview, error) {
+	if h == nil || h.repo == nil {
+		return nil, fmt.Errorf("repository not initialized")
+	}
+	if node == nil || node.ID <= 0 {
+		return nil, fmt.Errorf("remote node not found")
+	}
+
+	preview := &remoteNodeDeletePreview{
+		NodeID:         node.ID,
+		NodeName:       node.Name,
+		RemoteURL:      strings.TrimSpace(node.RemoteURL.String),
+		DeleteTunnels:  []remoteNodeDeleteTunnelPreview{},
+		DeleteForwards: []remoteNodeDeleteForwardPreview{},
+		KeepTunnels:    []remoteNodeKeepTunnelPreview{},
+	}
+
+	chainRows, err := h.repo.ListRemoteNodeChainTunnels(node.ID)
+	if err != nil {
+		return nil, err
+	}
+	deleteTunnelReasons := make(map[int64]string)
+	keepTunnelReasons := make(map[int64]string)
+	tunnelNames := make(map[int64]string)
+	for _, row := range chainRows {
+		tunnelNames[row.TunnelID] = row.TunnelName
+		switch row.ChainType {
+		case 1:
+			deleteTunnelReasons[row.TunnelID] = "该远程节点为入口节点"
+		case 3:
+			if _, exists := deleteTunnelReasons[row.TunnelID]; !exists {
+				deleteTunnelReasons[row.TunnelID] = "该远程节点为出口节点"
+			}
+		case 2:
+			keepTunnelReasons[row.TunnelID] = "该远程节点仅作为中继节点"
+		default:
+			preview.Warnings = append(preview.Warnings, fmt.Sprintf("隧道 %d 存在未知链路角色 %d", row.TunnelID, row.ChainType))
+		}
+	}
+
+	deleteTunnelIDs := sortedRemoteDeleteInt64Keys(deleteTunnelReasons)
+	for _, tunnelID := range deleteTunnelIDs {
+		forwardRows, err := h.repo.ListForwardPreviewRowsByTunnel(tunnelID)
+		if err != nil {
+			return nil, err
+		}
+		forwards := make([]remoteNodeDeleteForwardPreview, 0, len(forwardRows))
+		for _, f := range forwardRows {
+			forwards = append(forwards, remoteNodeDeleteForwardPreview{
+				ID:         f.ForwardID,
+				Name:       f.ForwardName,
+				TunnelID:   f.TunnelID,
+				TunnelName: f.TunnelName,
+				InPort:     f.Port,
+				Reason:     "所属隧道将被删除",
+			})
+		}
+		preview.DeleteTunnels = append(preview.DeleteTunnels, remoteNodeDeleteTunnelPreview{
+			TunnelID:   tunnelID,
+			TunnelName: tunnelNames[tunnelID],
+			Reason:     deleteTunnelReasons[tunnelID],
+			Forwards:   forwards,
+		})
+	}
+
+	directForwardRows, err := h.repo.ListActiveForwardPortsForNode(node.ID)
+	if err != nil {
+		return nil, err
+	}
+	deletedForwardIDs := make(map[int64]struct{})
+	for _, tunnel := range preview.DeleteTunnels {
+		for _, forward := range tunnel.Forwards {
+			deletedForwardIDs[forward.ID] = struct{}{}
+		}
+	}
+	for _, f := range directForwardRows {
+		if _, alreadyDeletedWithTunnel := deletedForwardIDs[f.ForwardID]; alreadyDeletedWithTunnel {
+			continue
+		}
+		preview.DeleteForwards = append(preview.DeleteForwards, remoteNodeDeleteForwardPreview{
+			ID:         f.ForwardID,
+			Name:       f.ForwardName,
+			TunnelID:   f.TunnelID,
+			TunnelName: f.TunnelName,
+			InPort:     f.Port,
+			Reason:     "该远程节点为转发入口",
+		})
+		deletedForwardIDs[f.ForwardID] = struct{}{}
+	}
+
+	keepTunnelIDs := sortedRemoteDeleteInt64Keys(keepTunnelReasons)
+	for _, tunnelID := range keepTunnelIDs {
+		if _, deleted := deleteTunnelReasons[tunnelID]; deleted {
+			continue
+		}
+		preview.KeepTunnels = append(preview.KeepTunnels, remoteNodeKeepTunnelPreview{
+			TunnelID:   tunnelID,
+			TunnelName: tunnelNames[tunnelID],
+			Reason:     keepTunnelReasons[tunnelID],
+		})
+	}
+
+	return preview, nil
+}
+
+func (h *Handler) deleteRemoteNodeWithPreview(preview *remoteNodeDeletePreview) (remoteNodeDeleteResult, error) {
+	if preview == nil || preview.NodeID <= 0 {
+		return remoteNodeDeleteResult{}, fmt.Errorf("remote node delete preview is invalid")
+	}
+	result := remoteNodeDeleteResult{KeptTunnelCount: len(preview.KeepTunnels)}
+	warnings := append([]string(nil), preview.Warnings...)
+
+	deletedForwardIDs := make(map[int64]struct{})
+	for _, item := range preview.DeleteForwards {
+		if _, exists := deletedForwardIDs[item.ID]; exists {
+			continue
+		}
+		if err := h.deleteForwardRuntimeAndRecord(item.ID); err != nil {
+			warnings = append(warnings, fmt.Sprintf("规则 %s(%d) 清理运行态失败: %v", item.Name, item.ID, err))
+			if dbErr := h.deleteForwardByID(item.ID); dbErr != nil {
+				return result, dbErr
+			}
+		}
+		deletedForwardIDs[item.ID] = struct{}{}
+		result.DeletedForwardCount++
+	}
+
+	for _, tunnel := range preview.DeleteTunnels {
+		for _, item := range tunnel.Forwards {
+			if _, exists := deletedForwardIDs[item.ID]; exists {
+				continue
+			}
+			deletedForwardIDs[item.ID] = struct{}{}
+			result.DeletedForwardCount++
+		}
+		if err := h.deleteTunnelAndCleanup(tunnel.TunnelID); err != nil {
+			return result, err
+		}
+		result.DeletedTunnelCount++
+	}
+
+	keepTunnelIDs := make([]int64, 0, len(preview.KeepTunnels))
+	for _, item := range preview.KeepTunnels {
+		keepTunnelIDs = append(keepTunnelIDs, item.TunnelID)
+	}
+	if err := h.repo.DeleteRemoteNodeMiddleReferences(preview.NodeID, keepTunnelIDs); err != nil {
+		return result, err
+	}
+	for _, item := range preview.KeepTunnels {
+		if err := h.redeployTunnelAndForwards(item.TunnelID); err != nil {
+			warnings = append(warnings, fmt.Sprintf("隧道 %s(%d) 保留后重下发失败: %v", item.TunnelName, item.TunnelID, err))
+		}
+	}
+	if err := h.deleteNodeByID(preview.NodeID); err != nil {
+		return result, err
+	}
+
+	result.Warnings = warnings
+	return result, nil
+}
+
+func (h *Handler) deleteForwardRuntimeAndRecord(forwardID int64) error {
+	forward, err := h.getForwardRecord(forwardID)
+	if err != nil {
+		return err
+	}
+	if forward != nil {
+		h.deleteForwardDynamicLimiter(forward)
+		if err := h.syncForwardServices(forward, "DeleteService", true); err != nil {
+			if dbErr := h.deleteForwardByID(forwardID); dbErr != nil {
+				return dbErr
+			}
+			return err
+		}
+	}
+	return h.deleteForwardByID(forwardID)
+}
+
+func sortedRemoteDeleteInt64Keys(input map[int64]string) []int64 {
+	out := make([]int64, 0, len(input))
+	for id := range input {
+		out = append(out, id)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i] < out[j] })
+	return out
 }
 
 func remoteNodePortRange(node *nodeRecord) (int, int) {

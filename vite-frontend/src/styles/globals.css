@@ -581,6 +581,26 @@ textarea:focus-visible {
   opacity: 0.9 !important;
 }
 
+.flvx-has-custom-bg .flvx-luminous-shell {
+  background:
+    linear-gradient(120deg, rgba(248, 250, 252, 0.66), rgba(226, 232, 240, 0.42)),
+    var(--flvx-custom-bg-image),
+    var(--background) !important;
+  background-attachment: fixed !important;
+  background-position: center !important;
+  background-size: cover !important;
+}
+
+.dark.flvx-has-custom-bg .flvx-luminous-shell {
+  background:
+    linear-gradient(120deg, rgba(5, 8, 13, 0.62), rgba(15, 23, 42, 0.46)),
+    var(--flvx-custom-bg-image),
+    var(--background) !important;
+  background-attachment: fixed !important;
+  background-position: center !important;
+  background-size: cover !important;
+}
+
 .flvx-luminous-sidebar {
   margin: 18px 0 18px 18px;
   height: calc(100% - 36px) !important;

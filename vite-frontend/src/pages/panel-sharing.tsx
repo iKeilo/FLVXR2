@@ -23,10 +23,12 @@ import {
   getPeerShareList,
   deletePeerShare,
   deleteRemoteNode,
+  getRemoteNodeDeletePreview,
   resetPeerShareFlow,
   getPeerRemoteUsageList,
   importRemoteNode,
   updatePeerShare,
+  type RemoteNodeDeletePreviewApiData,
 } from "@/api";
 import { getAdminFlag } from "@/utils/session";
 interface Node {
@@ -104,6 +106,13 @@ export default function PanelSharingPage() {
   const [createShareOpen, setCreateShareOpen] = useState(false);
   const [editShareOpen, setEditShareOpen] = useState(false);
   const [importNodeOpen, setImportNodeOpen] = useState(false);
+  const [deletePreviewOpen, setDeletePreviewOpen] = useState(false);
+  const [deletePreviewLoading, setDeletePreviewLoading] = useState(false);
+  const [deleteExecuting, setDeleteExecuting] = useState(false);
+  const [deleteTargetNode, setDeleteTargetNode] =
+    useState<RemoteUsageNode | null>(null);
+  const [deletePreview, setDeletePreview] =
+    useState<RemoteNodeDeletePreviewApiData | null>(null);
   // Forms
   const [shareForm, setShareForm] = useState({
     name: "",
@@ -383,24 +392,65 @@ export default function PanelSharingPage() {
     }
   };
   const handleDeleteRemoteNode = async (node: RemoteUsageNode) => {
-    if (
-      !window.confirm(
-        `确定删除远程节点「${node.nodeName}」吗？正在被隧道或转发使用的节点不会被删除。`,
-      )
-    ) {
+    setDeleteTargetNode(node);
+    setDeletePreview(null);
+    setDeletePreviewOpen(true);
+    setDeletePreviewLoading(true);
+
+    try {
+      const res = await getRemoteNodeDeletePreview(node.nodeId);
+
+      if (res.code === 0 && res.data) {
+        setDeletePreview(res.data);
+      } else {
+        toast.error(res.msg || "删除影响分析失败");
+        setDeletePreviewOpen(false);
+      }
+    } catch {
+      toast.error("网络错误");
+      setDeletePreviewOpen(false);
+    } finally {
+      setDeletePreviewLoading(false);
+    }
+  };
+  const resetDeletePreview = () => {
+    setDeletePreviewOpen(false);
+    setDeletePreview(null);
+    setDeleteTargetNode(null);
+    setDeletePreviewLoading(false);
+    setDeleteExecuting(false);
+  };
+  const confirmDeleteRemoteNode = async () => {
+    if (!deleteTargetNode) {
       return;
     }
+    setDeleteExecuting(true);
     try {
-      const res = await deleteRemoteNode(node.nodeId);
+      const res = await deleteRemoteNode(deleteTargetNode.nodeId);
 
       if (res.code === 0) {
-        toast.success("远程节点已删除");
+        const data = (res.data || {}) as {
+          deletedTunnelCount?: number;
+          deletedForwardCount?: number;
+          keptTunnelCount?: number;
+          warnings?: string[];
+        };
+
+        toast.success(
+          `远程节点已删除，删除 ${data.deletedTunnelCount || 0} 条隧道、${data.deletedForwardCount || 0} 条规则，保留 ${data.keptTunnelCount || 0} 条中继隧道`,
+        );
+        if (data.warnings?.length) {
+          toast.error(data.warnings[0]);
+        }
+        resetDeletePreview();
         loadRemoteUsage();
       } else {
         toast.error(res.msg || "删除远程节点失败");
       }
     } catch {
       toast.error("网络错误");
+    } finally {
+      setDeleteExecuting(false);
     }
   };
   const copyToken = (token: string) => {
@@ -1011,6 +1061,168 @@ export default function PanelSharingPage() {
             <Button onPress={() => setImportNodeOpen(false)}>取消</Button>
             <Button color="secondary" onPress={handleImportNode}>
               导入
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      {/* Remote Node Delete Preview Modal */}
+      <Modal
+        backdrop="blur"
+        classNames={{
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-3xl overflow-hidden",
+        }}
+        isOpen={deletePreviewOpen}
+        onClose={resetDeletePreview}
+        size="4xl"
+      >
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            <span>删除远程节点</span>
+            <span className="text-sm font-normal text-default-500">
+              {deletePreview?.nodeName ||
+                deleteTargetNode?.nodeName ||
+                "正在分析影响"}
+            </span>
+          </ModalHeader>
+          <ModalBody>
+            {deletePreviewLoading ? (
+              <div className="rounded-2xl border border-default-200 bg-default-50/80 p-5 text-sm text-default-600">
+                正在分析该远程节点关联的隧道和规则...
+              </div>
+            ) : deletePreview ? (
+              <div className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-danger-200/70 bg-danger-50/80 p-4 dark:bg-danger-500/10">
+                    <div className="text-xs text-danger-600">删除隧道</div>
+                    <div className="mt-1 text-2xl font-semibold text-danger">
+                      {deletePreview.deleteTunnels.length}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-warning-200/70 bg-warning-50/80 p-4 dark:bg-warning-500/10">
+                    <div className="text-xs text-warning-700">删除规则</div>
+                    <div className="mt-1 text-2xl font-semibold text-warning-700">
+                      {deletePreview.deleteForwards.length +
+                        deletePreview.deleteTunnels.reduce(
+                          (total, item) => total + item.forwards.length,
+                          0,
+                        )}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-primary-200/70 bg-primary-50/70 p-4 dark:bg-primary-500/10">
+                    <div className="text-xs text-primary-700">保留中继隧道</div>
+                    <div className="mt-1 text-2xl font-semibold text-primary">
+                      {deletePreview.keepTunnels.length}
+                    </div>
+                  </div>
+                </div>
+
+                {deletePreview.deleteTunnels.length > 0 && (
+                  <div className="rounded-2xl border border-danger-200/70 bg-danger-50/70 p-4 dark:bg-danger-500/10">
+                    <div className="mb-3 text-sm font-semibold text-danger">
+                      将一并删除的隧道
+                    </div>
+                    <div className="space-y-3">
+                      {deletePreview.deleteTunnels.map((tunnel) => (
+                        <div
+                          key={tunnel.tunnelId}
+                          className="rounded-xl border border-danger-200/70 bg-background/70 p-3"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="font-medium">
+                                {tunnel.tunnelName || `#${tunnel.tunnelId}`}
+                              </div>
+                              <div className="text-xs text-default-500">
+                                {tunnel.reason}
+                              </div>
+                            </div>
+                            <div className="rounded-full bg-danger-100 px-2 py-1 text-xs text-danger-700">
+                              {tunnel.forwards.length} 条规则
+                            </div>
+                          </div>
+                          {tunnel.forwards.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {tunnel.forwards.map((forward) => (
+                                <span
+                                  key={`${tunnel.tunnelId}-${forward.id}`}
+                                  className="rounded-full bg-default-100 px-2 py-1 text-xs text-default-600"
+                                >
+                                  {forward.name || `规则 #${forward.id}`}:
+                                  {forward.inPort}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {deletePreview.deleteForwards.length > 0 && (
+                  <div className="rounded-2xl border border-warning-200/70 bg-warning-50/70 p-4 dark:bg-warning-500/10">
+                    <div className="mb-3 text-sm font-semibold text-warning-700">
+                      将一并删除的独立规则
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {deletePreview.deleteForwards.map((forward) => (
+                        <span
+                          key={forward.id}
+                          className="rounded-full bg-background/80 px-3 py-1 text-xs text-default-700"
+                        >
+                          {forward.name || `规则 #${forward.id}`}:{forward.inPort}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {deletePreview.keepTunnels.length > 0 && (
+                  <div className="rounded-2xl border border-primary-200/70 bg-primary-50/70 p-4 dark:bg-primary-500/10">
+                    <div className="mb-3 text-sm font-semibold text-primary">
+                      仅移除该远程节点中继引用，隧道与规则保留
+                    </div>
+                    <div className="space-y-2">
+                      {deletePreview.keepTunnels.map((tunnel) => (
+                        <div
+                          key={tunnel.tunnelId}
+                          className="rounded-xl border border-primary-200/60 bg-background/70 px-3 py-2"
+                        >
+                          <div className="font-medium">
+                            {tunnel.tunnelName || `#${tunnel.tunnelId}`}
+                          </div>
+                          <div className="text-xs text-default-500">
+                            {tunnel.reason}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {deletePreview.warnings?.length ? (
+                  <div className="rounded-2xl border border-default-200 bg-default-50/80 p-4 text-xs text-default-600">
+                    {deletePreview.warnings.map((warning) => (
+                      <div key={warning}>{warning}</div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-default-200 bg-default-50/80 p-5 text-sm text-default-600">
+                暂无可展示的删除影响。
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button onPress={resetDeletePreview}>关闭</Button>
+            <Button
+              color="danger"
+              isDisabled={deletePreviewLoading || !deletePreview}
+              isLoading={deleteExecuting}
+              onPress={confirmDeleteRemoteNode}
+            >
+              确认删除
             </Button>
           </ModalFooter>
         </ModalContent>
