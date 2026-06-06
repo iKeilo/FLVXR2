@@ -1,6 +1,7 @@
 # FLVX
 
 > **项目仓库**: https://github.com/iKeilo/FLVXR2
+> 励志要做一个激进的FLVX分支以及融合怪
 
 ## 特性
 
