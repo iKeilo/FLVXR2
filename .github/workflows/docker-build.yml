@@ -181,8 +181,8 @@ jobs:
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --push \
-            -t ${{ env.REGISTRY }}/${OWNER}/flvx-svc-frontend:latest \
-            -t ${{ env.REGISTRY }}/${OWNER}/flvx-svc-frontend:${VERSION} \
+            -t ${{ env.REGISTRY }}/${OWNER}/flvxr2-svc-frontend:latest \
+            -t ${{ env.REGISTRY }}/${OWNER}/flvxr2-svc-frontend:${VERSION} \
             ./vite-frontend
 
   build-go-backend:
@@ -232,8 +232,8 @@ jobs:
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --push \
-            -t ${{ env.REGISTRY }}/${OWNER}/flvx-svc-backend:latest \
-            -t ${{ env.REGISTRY }}/${OWNER}/flvx-svc-backend:${VERSION} \
+            -t ${{ env.REGISTRY }}/${OWNER}/flvxr2-svc-backend:latest \
+            -t ${{ env.REGISTRY }}/${OWNER}/flvxr2-svc-backend:${VERSION} \
             ./go-backend
 
   create-release:
@@ -286,10 +286,10 @@ jobs:
           cp docker-compose-v6.yml ./artifacts/docker-compose-v6.yml
 
           # 替换镜像地址为 GHCR
-          sed -i "s|image: .*flvx-svc-backend:[^[:space:]]*|image: ${{ env.REGISTRY }}/${OWNER}/flvx-svc-backend:${VERSION}|g" ./artifacts/docker-compose-v4.yml
-          sed -i "s|image: .*flvx-svc-frontend:[^[:space:]]*|image: ${{ env.REGISTRY }}/${OWNER}/flvx-svc-frontend:${VERSION}|g" ./artifacts/docker-compose-v4.yml
-          sed -i "s|image: .*flvx-svc-backend:[^[:space:]]*|image: ${{ env.REGISTRY }}/${OWNER}/flvx-svc-backend:${VERSION}|g" ./artifacts/docker-compose-v6.yml
-          sed -i "s|image: .*flvx-svc-frontend:[^[:space:]]*|image: ${{ env.REGISTRY }}/${OWNER}/flvx-svc-frontend:${VERSION}|g" ./artifacts/docker-compose-v6.yml
+          sed -i "s|image: .*flvxr2-svc-backend:[^[:space:]]*|image: ${{ env.REGISTRY }}/${OWNER}/flvxr2-svc-backend:${VERSION}|g" ./artifacts/docker-compose-v4.yml
+          sed -i "s|image: .*flvxr2-svc-frontend:[^[:space:]]*|image: ${{ env.REGISTRY }}/${OWNER}/flvxr2-svc-frontend:${VERSION}|g" ./artifacts/docker-compose-v4.yml
+          sed -i "s|image: .*flvxr2-svc-backend:[^[:space:]]*|image: ${{ env.REGISTRY }}/${OWNER}/flvxr2-svc-backend:${VERSION}|g" ./artifacts/docker-compose-v6.yml
+          sed -i "s|image: .*flvxr2-svc-frontend:[^[:space:]]*|image: ${{ env.REGISTRY }}/${OWNER}/flvxr2-svc-frontend:${VERSION}|g" ./artifacts/docker-compose-v6.yml
 
           cp panel_install.sh ./artifacts/panel_install.sh
           cp install.sh ./artifacts/install.sh
@@ -349,10 +349,10 @@ jobs:
 
           \`\`\`bash
           # Backend
-          docker pull ${{ env.REGISTRY }}/${OWNER}/flvx-svc-backend:${VERSION}
+          docker pull ${{ env.REGISTRY }}/${OWNER}/flvxr2-svc-backend:${VERSION}
 
           # Frontend
-          docker pull ${{ env.REGISTRY }}/${OWNER}/flvx-svc-frontend:${VERSION}
+          docker pull ${{ env.REGISTRY }}/${OWNER}/flvxr2-svc-frontend:${VERSION}
           \`\`\`
 
           ## 🚀 Quick Install

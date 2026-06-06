@@ -127,8 +127,8 @@
 | --- | --- | --- |
 | Git 远端 | `https://github.com/iKeilo/FLVXR2.git` | 源码推送 |
 | Release 仓库 | `iKeilo/FLVXR2` | 安装脚本、compose、节点二进制下载 |
-| GHCR 镜像 | `ghcr.io/ikeilo/flvx-svc-backend` | 后端面板镜像 |
-| GHCR 镜像 | `ghcr.io/ikeilo/flvx-svc-frontend` | 前端面板镜像 |
+| GHCR 镜像 | `ghcr.io/ikeilo/flvxr2-svc-backend` | 后端面板镜像 |
+| GHCR 镜像 | `ghcr.io/ikeilo/flvxr2-svc-frontend` | 前端面板镜像 |
 | 面板安装脚本 | `panel_install.sh` | 下载 compose 并拉起面板 |
 | 节点安装脚本 | `install.sh` | 下载 `gost-{ARCH}` 并部署 Agent |
 | GitHub Action | `.github/workflows/docker-build.yml` | tag 推送时构建镜像、Release 资产和离线包 |
