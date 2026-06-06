@@ -2,7 +2,7 @@
 
 Source repository: `D:\Data\RSSQ\flvx` (`Sagit-chu/flvx`, commit `6e249a5`)
 
-Target repository: `D:\Data\RSSQ\flvxt2` (`iKeilo/flvxt2`, commit `e6633a49`)
+Target repository: `D:\Data\RSSQ\flvxt2` (`iKeilo/FLVXR2`, commit `e6633a49`)
 
 Comparison summary:
 
@@ -418,7 +418,7 @@ These files should not be copied from upstream into `flvxt2`, because they would
 Reason:
 
 - Upstream points to `Sagit-chu/flvx`, `Sagit-chu/flux-panel`, and `ghcr.io/sagit-chu/...`.
-- `flvxt2` must remain on `iKeilo/flvxt2` and `ghcr.io/ikeilo/...`.
+- `flvxt2` must remain on `iKeilo/FLVXR2` and `ghcr.io/ikeilo/...`.
 - Replacing these would recreate the earlier wrong-project installation problem.
 
 Allowed action:
@@ -522,6 +522,6 @@ Reason:
    - WG Path creation/edit/diagnosis
    - non-admin cannot create/use WG
    - login/logout still uses HttpOnly cookie
-   - install scripts still resolve `iKeilo/flvxt2`
+   - install scripts still resolve `iKeilo/FLVXR2`
    - imported Sagit-chu panel share can reserve/apply/release a GOST tunnel
    - imported Sagit-chu panel share does not expose WG/TLS deployment-only actions

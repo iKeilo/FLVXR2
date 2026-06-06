@@ -1,6 +1,6 @@
 # FLVX
 
-> **项目仓库**: https://github.com/iKeilo/flvxt2
+> **项目仓库**: https://github.com/iKeilo/FLVXR2
 
 ## 特性
 
@@ -22,22 +22,22 @@
 
 **交互式安装（最新版）：**
 ```bash
-bash <(curl -L https://raw.githubusercontent.com/iKeilo/flvxt2/main/panel_install.sh)
+bash <(curl -L https://raw.githubusercontent.com/iKeilo/FLVXR2/main/panel_install.sh)
 ```
 
 **指定版本安装：**
 ```bash
-bash <(curl -L https://raw.githubusercontent.com/iKeilo/flvxt2/main/panel_install.sh) 3.0.13
+bash <(curl -L https://raw.githubusercontent.com/iKeilo/FLVXR2/main/panel_install.sh) 3.0.13
 ```
 
 **一键升级（无交互）：**
 ```bash
-bash <(curl -L https://raw.githubusercontent.com/iKeilo/flvxt2/main/panel_install.sh) update
+bash <(curl -L https://raw.githubusercontent.com/iKeilo/FLVXR2/main/panel_install.sh) update
 ```
 
 **一键卸载（无交互）：**
 ```bash
-bash <(curl -L https://raw.githubusercontent.com/iKeilo/flvxt2/main/panel_install.sh) uninstall
+bash <(curl -L https://raw.githubusercontent.com/iKeilo/FLVXR2/main/panel_install.sh) uninstall
 ```
 
 > ⚠️ 升级时会自动检测并兼容带 `v` 或不带 `v` 的版本号格式。

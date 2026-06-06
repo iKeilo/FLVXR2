@@ -2,7 +2,7 @@
 
 状态：方案确认稿  
 日期：2026-06-05  
-适用项目：FLVX / `iKeilo/flvxt2`
+适用项目：FLVX / `iKeilo/FLVXR2`
 
 ## 1. 功能定位
 

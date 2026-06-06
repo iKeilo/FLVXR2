@@ -1,7 +1,7 @@
 # FLVX 项目目录清单
 
-更新时间：2026-06-05  
-仓库：`iKeilo/flvxt2`  
+更新时间：2026-06-05
+仓库：`iKeilo/FLVXR2`
 当前基线：`main`，Release `3.0.16`
 
 ## 扫描范围
@@ -27,7 +27,7 @@
 
 | 文件 | 作用 | 后续更新注意 |
 | --- | --- | --- |
-| `panel_install.sh` | 面板一键安装/更新脚本 | 仓库地址应保持 `iKeilo/flvxt2`，Release 版会写入 `PINNED_VERSION` |
+| `panel_install.sh` | 面板一键安装/更新脚本 | 仓库地址应保持 `iKeilo/FLVXR2`，Release 版会写入 `PINNED_VERSION` |
 | `install.sh` | 节点 Agent 安装脚本 | 节点安装文件从 GitHub Release 下载 `gost-{ARCH}` |
 | `install-auto.sh` | 自动安装辅助脚本 | 改安装入口时同步检查 |
 | `docker-compose-v4.yml` | IPv4 面板部署编排 | Release 会替换镜像为指定版本 |
@@ -125,8 +125,8 @@
 
 | 链路 | 当前指向 | 用途 |
 | --- | --- | --- |
-| Git 远端 | `https://github.com/iKeilo/flvxt2.git` | 源码推送 |
-| Release 仓库 | `iKeilo/flvxt2` | 安装脚本、compose、节点二进制下载 |
+| Git 远端 | `https://github.com/iKeilo/FLVXR2.git` | 源码推送 |
+| Release 仓库 | `iKeilo/FLVXR2` | 安装脚本、compose、节点二进制下载 |
 | GHCR 镜像 | `ghcr.io/ikeilo/flvx-svc-backend` | 后端面板镜像 |
 | GHCR 镜像 | `ghcr.io/ikeilo/flvx-svc-frontend` | 前端面板镜像 |
 | 面板安装脚本 | `panel_install.sh` | 下载 compose 并拉起面板 |

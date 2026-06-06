@@ -92,7 +92,7 @@ ARG_VERSION="${ARG_VERSION//<}"
 ARG_VERSION="${ARG_VERSION//>}"
 
 # GitHub repo used for release downloads
-REPO="iKeilo/flvxt2"
+REPO="iKeilo/FLVXR2"
 
 # 固定版本号（Release 构建时自动填充，留空则获取最新版）
 PINNED_VERSION=""

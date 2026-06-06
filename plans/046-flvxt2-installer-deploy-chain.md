@@ -1,6 +1,6 @@
 # FLVX flvxt2 Installer Deploy Chain
 
-- [x] Point panel and node installers at `iKeilo/flvxt2`.
+- [x] Point panel and node installers at `iKeilo/FLVXR2`.
 - [x] Point Docker Compose defaults and cleanup logic at `ghcr.io/ikeilo`.
 - [x] Replace legacy license stats domain with `sq.sbplay.eu.org`.
 - [x] Add a raw-main compose fallback for first deployments before a release exists.

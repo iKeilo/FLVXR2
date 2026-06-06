@@ -1323,7 +1323,7 @@ export default function NodePage() {
     const version = selectedVersion || latestVersion;
     const releaseType = version || "latest";
 
-    return `https://github.com/iKeilo/flvxt2/releases/download/${releaseType}/gost-{ARCH}`;
+    return `https://github.com/iKeilo/FLVXR2/releases/download/${releaseType}/gost-{ARCH}`;
   };
   // 获取地址前缀文本（升级地址/回退地址）
   const getAddressPrefix = (): string => {

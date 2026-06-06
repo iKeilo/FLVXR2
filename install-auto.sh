@@ -139,77 +139,32 @@ if [ "$CN" != "1" ]; then
 fi
 
 # 接收环境变量
-DOMESTIC_DOWNLOAD_URL="${DOMESTIC_DOWNLOAD_URL:-}"
+# Download source: FLVXR2 uses GitHub directly.
 GLOBAL_DOWNLOAD_URL="${GLOBAL_DOWNLOAD_URL:-}"
-
-# 根据检测结果设置下载源
-if [ "$CN" == "1" ]; then
-  # 国内网络：使用国内加速地址
-  if [ -n "$DOMESTIC_DOWNLOAD_URL" ]; then
-    DOWNLOAD_HOSTS=(
-      "$DOMESTIC_DOWNLOAD_URL"
-      "https://chfs.646321.xyz:8/chfs/shared/flvx"
-      "$GLOBAL_DOWNLOAD_URL"
-      "https://ghfast.top/https://github.com/iKeilo/flvxt2/releases/latest/download"
-    )
-  else
-    DOWNLOAD_HOSTS=(
-      "https://chfs.646321.xyz:8/chfs/shared/flvx"
-      "$GLOBAL_DOWNLOAD_URL"
-      "https://ghfast.top/https://github.com/iKeilo/flvxt2/releases/latest/download"
-    )
-  fi
-  echo "🌏 使用国内加速地址"
-elif [ "$OS" == "1" ]; then
-  # 海外网络：使用 GitHub 加速
-  if [ -n "$GLOBAL_DOWNLOAD_URL" ]; then
-    DOWNLOAD_HOSTS=(
-      "https://chfs.646321.xyz:8/chfs/shared/flvx" 
-      "https://gh-proxy.com/https://github.com/iKeilo/flvxt2/releases/latest/download"
-      "$GLOBAL_DOWNLOAD_URL"
-      "https://ghfast.top/https://github.com/iKeilo/flvxt2/releases/latest/download"
-    )
-  else
-    DOWNLOAD_HOSTS=(
-      "https://chfs.646321.xyz:8/chfs/shared/flvx" 
-      "https://gh-proxy.com/https://github.com/iKeilo/flvxt2/releases/latest/download"
-      "https://ghfast.top/https://github.com/iKeilo/flvxt2/releases/latest/download"
-    )
-  fi
-  echo "🌍 使用 GitHub 加速"
-else
-  # 检测失败：默认使用 GitHub
-  DOWNLOAD_HOSTS=(
-    "https://chfs.646321.xyz:8/chfs/shared/flvx" 
-    "https://github.com/iKeilo/flvxt2/releases/latest/download"
-    "$GLOBAL_DOWNLOAD_URL"
-    "https://ghfast.top/https://github.com/iKeilo/flvxt2/releases/latest/download"
-  )
-  echo "⚠️  网络检测失败，使用 GitHub 加速"
+DEFAULT_GITHUB_DOWNLOAD_URL="https://github.com/iKeilo/FLVXR2/releases/latest/download"
+DOWNLOAD_HOSTS=()
+if [ -n "$GLOBAL_DOWNLOAD_URL" ]; then
+  DOWNLOAD_HOSTS+=("$GLOBAL_DOWNLOAD_URL")
 fi
-
-# 循环尝试每个下载源
+DOWNLOAD_HOSTS+=("$DEFAULT_GITHUB_DOWNLOAD_URL")
+echo "Using GitHub release downloads: $DEFAULT_GITHUB_DOWNLOAD_URL"
+# Try every configured download source.
 for host in "${DOWNLOAD_HOSTS[@]}"; do
   [ -z "$host" ] && continue
-  echo "⬇️  尝试从 $host 下载..."
+  echo "Trying $host ..."
   if wget -q --timeout=30 "$host/install.sh" -O "./install_temp.sh" 2>/dev/null; then
-    if [ -s "./install_temp.sh" ]; then
-      if head -1 "./install_temp.sh" | grep -q "^#!"; then
-        echo "✅ 下载成功，使用源：$host"
-        chmod +x ./install_temp.sh
-        # 传递 SCRIPT_URL 给 install.sh，让它知道下载源
-        SCRIPT_URL="$host/install.sh" ./install_temp.sh $AUTO_ARGS
-        exit 0
-      else
-        echo "⚠️  下载的文件无效，不是有效的脚本"
-        rm -f ./install_temp.sh
-      fi
+    if [ -s "./install_temp.sh" ] && head -1 "./install_temp.sh" | grep -q "^#!"; then
+      echo "Download succeeded from: $host"
+      chmod +x ./install_temp.sh
+      SCRIPT_URL="$host/install.sh" ./install_temp.sh $AUTO_ARGS
+      exit 0
     fi
+    echo "Downloaded file is not a valid shell script."
+    rm -f ./install_temp.sh
   fi
 done
 
-echo "❌ 所有下载源都失败，请检查网络连接"
-echo "💡 提示：可以尝试手动指定下载源"
-echo "   国内用户：curl -L https://chfs.646321.xyz:8/chfs/shared/flvx/install.sh -o ./install.sh"
-echo "   海外用户：curl -L https://github.com/iKeilo/flvxt2/releases/latest/download/install.sh -o ./install.sh"
+echo "All download sources failed. Please check network connectivity."
+echo "Manual install command:"
+echo "  curl -L https://github.com/iKeilo/FLVXR2/releases/latest/download/install.sh -o ./install.sh"
 exit 1

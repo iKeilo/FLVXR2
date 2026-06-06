@@ -8,7 +8,7 @@ const VERSION = import.meta.env.VITE_APP_VERSION || "dev";
 const APP_VERSION = "1.0.3";
 const DEFAULT_FAVICON = "/favicon.ico";
 const FAVICON_LINK_ID = "app-favicon";
-export const PROJECT_REPOSITORY_URL = "https://github.com/iKeilo/flvxt2";
+export const PROJECT_REPOSITORY_URL = "https://github.com/iKeilo/FLVXR2";
 const GITHUB_REPO = PROJECT_REPOSITORY_URL;
 
 const getInitialConfig = () => {

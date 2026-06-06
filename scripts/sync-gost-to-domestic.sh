@@ -5,10 +5,15 @@
 set -e
 
 # 配置参数（可通过环境变量覆盖）
-DOMESTIC_WEBDAV_URL="${DOMESTIC_WEBDAV_URL:-https://chfs.646321.xyz:8/webdav/flvx}"
+DOMESTIC_WEBDAV_URL="${DOMESTIC_WEBDAV_URL:-}"
 DOMESTIC_USER="${DOMESTIC_USER:-admin}"
 DOMESTIC_PASS="${DOMESTIC_PASS:-admin123}"
-GITHUB_REPO="abai569/flvx"
+GITHUB_REPO="iKeilo/FLVXR2"
+
+if [ -z "$DOMESTIC_WEBDAV_URL" ]; then
+    echo "DOMESTIC_WEBDAV_URL is required when using this optional sync script."
+    exit 1
+fi
 
 echo "🔍 获取最新版本号..."
 VERSION=$(curl -s "https://api.github.com/repos/${GITHUB_REPO}/releases/latest" | grep '"tag_name"' | cut -d'"' -f4)

@@ -1,7 +1,7 @@
 name: Build and Push Images
 
 env:
-  VERSION: "flvxt2-main"
+  VERSION: "flvxr2-main"
   REGISTRY: ghcr.io
 
 on:

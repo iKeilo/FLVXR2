@@ -20,13 +20,13 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/iKeilo/flvxt2.git",
+    "url": "git+https://github.com/iKeilo/FLVXR2.git",
     "directory": "skills/flvx-api"
   },
   "bugs": {
-    "url": "https://github.com/iKeilo/flvxt2/issues"
+    "url": "https://github.com/iKeilo/FLVXR2/issues"
   },
-  "homepage": "https://github.com/iKeilo/flvxt2/tree/main/skills/flvx-api#readme",
+  "homepage": "https://github.com/iKeilo/FLVXR2/tree/main/skills/flvx-api#readme",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org"

@@ -34,7 +34,7 @@ function Get-RepoPath {
 
 function Invoke-GitHubApi {
   param([string]$Uri)
-  $headers = @{ "User-Agent" = "flvxt2-release-script" }
+  $headers = @{ "User-Agent" = "flvxr2-release-script" }
   $token = $env:GITHUB_TOKEN
   if ([string]::IsNullOrWhiteSpace($token)) {
     $token = $env:GH_TOKEN
