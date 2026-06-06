@@ -231,6 +231,7 @@ func autoMigrateAll(db *gorm.DB) error {
 		&model.GroupPermissionGrant{},
 		&model.MonitorPermission{},
 		&model.ViteConfig{},
+		&model.UserSetting{},
 		&model.PeerShare{},
 		&model.PeerShareRuntime{},
 		&model.FederationTunnelBinding{},
@@ -666,6 +667,41 @@ func (r *Repository) UpsertConfig(name, value string, now int64) error {
 }
 
 // ─── Announcement Queries ────────────────────────────────────────────
+
+func (r *Repository) GetUserSetting(userID int64, name string) (*model.UserSetting, error) {
+	if r == nil || r.db == nil {
+		return nil, errors.New("repository not initialized")
+	}
+	if userID <= 0 || strings.TrimSpace(name) == "" {
+		return nil, nil
+	}
+	var setting model.UserSetting
+	err := r.db.Where("user_id = ? AND name = ?", userID, name).First(&setting).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &setting, nil
+}
+
+func (r *Repository) UpsertUserSetting(userID int64, name, value string, now int64) error {
+	if r == nil || r.db == nil {
+		return errors.New("repository not initialized")
+	}
+	if userID <= 0 {
+		return errors.New("invalid user id")
+	}
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return errors.New("setting name is empty")
+	}
+	return r.db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "user_id"}, {Name: "name"}},
+		DoUpdates: clause.AssignmentColumns([]string{"value", "updated_time"}),
+	}).Create(&model.UserSetting{UserID: userID, Name: name, Value: value, UpdatedTime: now}).Error
+}
 
 func (r *Repository) GetAnnouncement() (*model.Announcement, error) {
 	if r == nil || r.db == nil {

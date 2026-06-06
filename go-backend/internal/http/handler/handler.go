@@ -105,6 +105,11 @@ const (
 	maxBackgroundDataURLBytes = 2 * 1024 * 1024
 )
 
+const (
+	configKeyAppBackground       = "app_bg_image"
+	configKeyGlobalAppBackground = "global_app_bg_image"
+)
+
 func New(repo *repo.Repository, jwtSecret string, fluxVersion string) *Handler {
 	h := &Handler{
 		repo:                repo,
@@ -566,7 +571,32 @@ func (h *Handler) getConfigByName(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cfg, err := h.repo.GetConfigByName(req.Name)
+	name := strings.TrimSpace(req.Name)
+	if name == configKeyAppBackground {
+		value := ""
+		if cfg, err := h.repo.GetConfigByName(configKeyGlobalAppBackground); err == nil && cfg != nil {
+			value = cfg.Value
+		}
+		if userID, err := userIDFromRequest(r); err == nil && userID > 0 {
+			setting, settingErr := h.repo.GetUserSetting(userID, configKeyAppBackground)
+			if settingErr != nil {
+				response.WriteJSON(w, response.Err(-2, settingErr.Error()))
+				return
+			}
+			if setting != nil {
+				value = setting.Value
+			}
+		}
+		response.WriteJSON(w, response.OK(map[string]interface{}{
+			"id":    0,
+			"name":  configKeyAppBackground,
+			"value": value,
+			"time":  0,
+		}))
+		return
+	}
+
+	cfg, err := h.repo.GetConfigByName(name)
 	if err != nil {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return
@@ -589,6 +619,21 @@ func (h *Handler) getConfigs(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return
+	}
+	if globalValue, ok := cfgMap[configKeyGlobalAppBackground]; ok {
+		if _, hasLegacy := cfgMap[configKeyAppBackground]; !hasLegacy {
+			cfgMap[configKeyAppBackground] = globalValue
+		}
+	}
+	if userID, err := userIDFromRequest(r); err == nil && userID > 0 {
+		setting, settingErr := h.repo.GetUserSetting(userID, configKeyAppBackground)
+		if settingErr != nil {
+			response.WriteJSON(w, response.Err(-2, settingErr.Error()))
+			return
+		}
+		if setting != nil {
+			cfgMap[configKeyAppBackground] = setting.Value
+		}
 	}
 	response.WriteJSON(w, response.OK(cfgMap))
 }
@@ -1133,6 +1178,19 @@ func (h *Handler) updateConfigs(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if key == configKeyAppBackground {
+			userID, err := userIDFromRequest(r)
+			if err != nil || userID <= 0 {
+				response.WriteJSON(w, response.ErrDefault("请先登录后再修改个人背景"))
+				return
+			}
+			if err := h.repo.UpsertUserSetting(userID, key, value, now); err != nil {
+				response.WriteJSON(w, response.Err(-2, err.Error()))
+				return
+			}
+			continue
+		}
+
 		if err := h.repo.UpsertConfig(key, value, now); err != nil {
 			response.WriteJSON(w, response.Err(-2, err.Error()))
 			return
@@ -1169,8 +1227,22 @@ func (h *Handler) updateSingleConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if value == "" && name != "app_logo" && name != "app_favicon" && name != "app_bg_image" {
+	if value == "" && name != "app_logo" && name != "app_favicon" && name != "app_bg_image" && name != configKeyGlobalAppBackground {
 		response.WriteJSON(w, response.ErrDefault("配置值不能为空"))
+		return
+	}
+
+	if name == configKeyAppBackground {
+		userID, err := userIDFromRequest(r)
+		if err != nil || userID <= 0 {
+			response.WriteJSON(w, response.ErrDefault("请先登录后再修改个人背景"))
+			return
+		}
+		if err := h.repo.UpsertUserSetting(userID, name, value, time.Now().UnixMilli()); err != nil {
+			response.WriteJSON(w, response.Err(-2, err.Error()))
+			return
+		}
+		response.WriteJSON(w, response.OKEmpty())
 		return
 	}
 
@@ -1208,7 +1280,7 @@ func normalizeAndValidateConfigValue(key, value string) (string, error) {
 		}
 
 		return pngDataURLPrefix + payload, nil
-	case "app_bg_image":
+	case configKeyAppBackground, configKeyGlobalAppBackground:
 		normalized := strings.TrimSpace(value)
 		if normalized == "" {
 			return "", nil

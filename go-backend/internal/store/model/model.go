@@ -526,6 +526,16 @@ type ViteConfig struct {
 
 func (ViteConfig) TableName() string { return "vite_config" }
 
+type UserSetting struct {
+	ID          int64  `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID      int64  `gorm:"column:user_id;not null;uniqueIndex:idx_user_setting_key" json:"userId"`
+	Name        string `gorm:"type:varchar(200);not null;uniqueIndex:idx_user_setting_key" json:"name"`
+	Value       string `gorm:"type:text;not null" json:"value"`
+	UpdatedTime int64  `gorm:"column:updated_time;not null" json:"updatedTime"`
+}
+
+func (UserSetting) TableName() string { return "user_setting" }
+
 type Announcement struct {
 	ID          int64         `gorm:"primaryKey;autoIncrement" json:"id"`
 	Content     string        `gorm:"type:text;not null" json:"content"`

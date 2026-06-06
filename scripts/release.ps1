@@ -151,10 +151,10 @@ if ($CommitAll) {
   if ([string]::IsNullOrWhiteSpace($CommitMessage)) {
     throw "-CommitMessage is required when using -CommitAll."
   }
-  Run-Git add -A
+    Run-Git -Args @("add", "-A")
   $pending = (& git status --short)
   if (-not [string]::IsNullOrWhiteSpace($pending)) {
-    Run-Git commit -m $CommitMessage
+    Run-Git -Args @("commit", "-m", $CommitMessage)
   }
 }
 
@@ -163,8 +163,8 @@ if (-not [string]::IsNullOrWhiteSpace($dirty)) {
   throw "Working tree is not clean. Commit or stash changes before release."
 }
 
-Run-Git fetch $Remote --tags
-Run-Git pull --rebase $Remote $Branch
+Run-Git -Args @("fetch", $Remote, "--tags")
+Run-Git -Args @("pull", "--rebase", $Remote, $Branch)
 
 if ([string]::IsNullOrWhiteSpace($Version)) {
   $Version = Get-NextPatchVersion $repoPath
@@ -174,20 +174,20 @@ if ($Version -notmatch "^\d+\.\d+\.\d+([-.][0-9A-Za-z.-]+)?$") {
   throw "Version '$Version' is not a valid release tag. Expected something like 3.0.18."
 }
 
-$existingLocal = (& git tag --list $Version).Trim()
+$existingLocal = (@(& git tag --list $Version) -join "").Trim()
 if (-not [string]::IsNullOrWhiteSpace($existingLocal)) {
   throw "Local tag '$Version' already exists."
 }
 
-$existingRemote = (& git ls-remote --tags $Remote "refs/tags/$Version").Trim()
+$existingRemote = (@(& git ls-remote --tags $Remote "refs/tags/$Version") -join "").Trim()
 if (-not [string]::IsNullOrWhiteSpace($existingRemote)) {
   throw "Remote tag '$Version' already exists."
 }
 
 $headSha = (& git rev-parse HEAD).Trim()
-Run-Git push $Remote $Branch
-Run-Git tag -a $Version -m "Release $Version"
-Run-Git push $Remote $Version
+Run-Git -Args @("push", $Remote, $Branch)
+Run-Git -Args @("tag", "-a", $Version, "-m", "Release $Version")
+Run-Git -Args @("push", $Remote, $Version)
 
 Write-Host "Release tag pushed: $Version ($headSha)"
 

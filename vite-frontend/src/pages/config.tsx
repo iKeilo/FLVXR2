@@ -52,7 +52,12 @@ interface ConfigItem {
   dependsOn?: string | string[]; // 依赖的配置项key，数组时为 OR 逻辑
   dependsValue?: string; // 依赖的配置项值
 }
-const BRAND_PREVIEW_KEYS = ["app_logo", "app_favicon", "app_bg_image"] as const;
+const BRAND_PREVIEW_KEYS = [
+  "app_logo",
+  "app_favicon",
+  "app_bg_image",
+  "global_app_bg_image",
+] as const;
 
 type BrandPreviewKey = (typeof BRAND_PREVIEW_KEYS)[number];
 const isBrandPreviewKey = (key: string): key is BrandPreviewKey =>
@@ -105,6 +110,13 @@ const CONFIG_ITEMS: ConfigItem[] = [
     key: "app_bg_image",
     label: "页面背景",
     description: "用于全站毛玻璃背景，上传后会压缩为适合网页显示的图片并持久化保存",
+    type: "input",
+  },
+  {
+    key: "global_app_bg_image",
+    label: "全局页面背景",
+    description:
+      "全局默认背景，需要商业授权才能修改；未设置个人背景的账号会使用它。",
     type: "input",
   },
   /* 暂时隐藏精简模式开关
@@ -182,6 +194,7 @@ const getInitialConfigs = (): Record<string, string> => {
     "app_logo",
     "app_favicon",
     "app_bg_image",
+    "global_app_bg_image",
   ];
   const initialConfigs: Record<string, string> = {};
 
@@ -229,6 +242,7 @@ export default function ConfigPage() {
   const logoFileInputRef = useRef<HTMLInputElement>(null);
   const faviconFileInputRef = useRef<HTMLInputElement>(null);
   const backgroundFileInputRef = useRef<HTMLInputElement>(null);
+  const globalBackgroundFileInputRef = useRef<HTMLInputElement>(null);
   const [announcement, setAnnouncement] = useState<AnnouncementData>({
     content: "",
     enabled: 0,
@@ -261,7 +275,7 @@ export default function ConfigPage() {
       "app_name",
       "app_logo",
       "app_favicon",
-      "app_bg_image",
+      "global_app_bg_image",
       "payment_enabled",
       "registration_enabled",
       "login_monitor_link",
@@ -601,12 +615,19 @@ export default function ConfigPage() {
         setHasChanges(false);
         if (
           changedKeys.some((key) =>
-            ["app_name", "app_logo", "app_favicon", "app_bg_image"].includes(
-              key,
-            ),
+            [
+              "app_name",
+              "app_logo",
+              "app_favicon",
+              "app_bg_image",
+              "global_app_bg_image",
+            ].includes(key),
           )
         ) {
-          await updateSiteConfig(configs);
+          await updateSiteConfig({
+            ...configs,
+            app_bg_image: configs.app_bg_image || configs.global_app_bg_image || "",
+          });
           window.dispatchEvent(
             new CustomEvent("configUpdated", {
               detail: { changedKeys },
@@ -671,11 +692,16 @@ export default function ConfigPage() {
   const getBrandInputRef = (key: BrandPreviewKey) => {
     if (key === "app_logo") return logoFileInputRef;
     if (key === "app_favicon") return faviconFileInputRef;
+    if (key === "global_app_bg_image") return globalBackgroundFileInputRef;
 
     return backgroundFileInputRef;
   };
+  const isGlobalBrandAssetKey = (key: BrandPreviewKey) =>
+    key === "app_logo" ||
+    key === "app_favicon" ||
+    key === "global_app_bg_image";
   const triggerBrandFilePicker = (key: BrandPreviewKey) => {
-    if (!commercialAuthorized) {
+    if (isGlobalBrandAssetKey(key) && !commercialAuthorized) {
       toast.error("该品牌设置需要商业授权");
 
       return;
@@ -686,7 +712,7 @@ export default function ConfigPage() {
     getBrandInputRef(key).current?.click();
   };
   const clearBrandAsset = (key: BrandPreviewKey) => {
-    if (!commercialAuthorized) {
+    if (isGlobalBrandAssetKey(key) && !commercialAuthorized) {
       toast.error("该品牌设置需要商业授权");
 
       return;
@@ -698,7 +724,7 @@ export default function ConfigPage() {
     key: BrandPreviewKey,
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    if (!commercialAuthorized) {
+    if (isGlobalBrandAssetKey(key) && !commercialAuthorized) {
       toast.error("该品牌设置需要商业授权");
       event.target.value = "";
 
@@ -739,7 +765,8 @@ export default function ConfigPage() {
     const appNamePreview = (configs.app_name || "").trim() || "应用名称";
     const failed = previewLoadFailed[key] === true;
     const showImage = previewUrl.length > 0 && !failed;
-    const isBackground = key === "app_bg_image";
+    const isBackground =
+      key === "app_bg_image" || key === "global_app_bg_image";
 
     return (
       <div className="mt-3 rounded-lg border border-default-200 dark:border-default-100/30 bg-default-50/60 dark:bg-default-100/10 p-3">
@@ -843,8 +870,9 @@ export default function ConfigPage() {
     const value = (configs[key] || "").trim();
     const uploading = brandUploading[key] === true;
     const isLogo = key === "app_logo";
-    const isBackground = key === "app_bg_image";
-    const disabled = !commercialAuthorized;
+    const isBackground =
+      key === "app_bg_image" || key === "global_app_bg_image";
+    const disabled = isGlobalBrandAssetKey(key) && !commercialAuthorized;
 
     return (
       <div
