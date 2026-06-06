@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,9 +12,18 @@ import (
 	"testing"
 	"time"
 
+	"go-backend/internal/auth"
+	"go-backend/internal/http/middleware"
 	"go-backend/internal/http/response"
 	"go-backend/internal/store/repo"
 )
+
+func setFederationShareAdminAuth(t *testing.T, req *http.Request) {
+	t.Helper()
+	claims := auth.Claims{Sub: "1", User: "admin_user", Name: "admin_user", RoleID: 0}
+	withClaims := req.WithContext(context.WithValue(req.Context(), middleware.ClaimsContextKey, claims))
+	*req = *withClaims
+}
 
 func TestFederationShareCreateRejectsRemoteNode(t *testing.T) {
 	r, err := repo.Open(filepath.Join(t.TempDir(), "panel.db"))
@@ -47,6 +57,7 @@ func TestFederationShareCreateRejectsRemoteNode(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/federation/share/create", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+	setFederationShareAdminAuth(t, req)
 	res := httptest.NewRecorder()
 
 	h.federationShareCreate(res, req)
@@ -105,6 +116,7 @@ func TestFederationShareCreateRejectsInvalidAllowedIPs(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/federation/share/create", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+	setFederationShareAdminAuth(t, req)
 	res := httptest.NewRecorder()
 
 	h.federationShareCreate(res, req)
@@ -174,6 +186,7 @@ func TestFederationShareListIncludesRemoteUsedPorts(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/federation/share/list", nil)
+	setFederationShareAdminAuth(t, req)
 	res := httptest.NewRecorder()
 	h.federationShareList(res, req)
 
@@ -274,6 +287,7 @@ func TestFederationShareDeleteCleansUpRuntimes(t *testing.T) {
 	}
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/federation/share/delete", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+	setFederationShareAdminAuth(t, req)
 	res := httptest.NewRecorder()
 
 	h.federationShareDelete(res, req)
@@ -318,6 +332,7 @@ func TestFederationRemoteUsageListSyncErrorFallback(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/federation/share/remote-usage/list", nil)
+	setFederationShareAdminAuth(t, req)
 	res := httptest.NewRecorder()
 	h.federationRemoteUsageList(res, req)
 
@@ -390,6 +405,7 @@ func TestFederationShareResetFlow(t *testing.T) {
 	}
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/federation/share/reset-flow", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+	setFederationShareAdminAuth(t, req)
 	res := httptest.NewRecorder()
 
 	h.federationShareResetFlow(res, req)
@@ -893,6 +909,7 @@ func TestFederationRemoteUsageList(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/federation/share/remote-usage/list", nil)
+	setFederationShareAdminAuth(t, req)
 	res := httptest.NewRecorder()
 	h.federationRemoteUsageList(res, req)
 
@@ -992,6 +1009,7 @@ func TestFederationRemoteUsageListIncludesForwardPorts(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/federation/share/remote-usage/list", nil)
+	setFederationShareAdminAuth(t, req)
 	res := httptest.NewRecorder()
 	h.federationRemoteUsageList(res, req)
 

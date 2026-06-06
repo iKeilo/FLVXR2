@@ -159,6 +159,7 @@ interface Node {
   serverIpV6?: string;
   extraIPs?: string;
   remark?: string;
+  isRemote?: number;
 }
 interface TunnelForm {
   id?: number;

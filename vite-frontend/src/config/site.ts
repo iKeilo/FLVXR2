@@ -20,6 +20,7 @@ const getInitialConfig = () => {
       github_repo: GITHUB_REPO,
       app_logo: "",
       app_favicon: "",
+      app_bg_image: "",
     };
   }
 
@@ -27,6 +28,8 @@ const getInitialConfig = () => {
   const cachedAppLogo = localStorage.getItem(CACHE_PREFIX + "app_logo") || "";
   const cachedAppFavicon =
     localStorage.getItem(CACHE_PREFIX + "app_favicon") || "";
+  const cachedAppBgImage =
+    localStorage.getItem(CACHE_PREFIX + "app_bg_image") || "";
 
   if (cachedAppName) {
     return {
@@ -36,6 +39,7 @@ const getInitialConfig = () => {
       github_repo: GITHUB_REPO,
       app_logo: cachedAppLogo,
       app_favicon: cachedAppFavicon,
+      app_bg_image: cachedAppBgImage,
     };
   }
 
@@ -46,6 +50,7 @@ const getInitialConfig = () => {
     github_repo: GITHUB_REPO,
     app_logo: cachedAppLogo,
     app_favicon: cachedAppFavicon,
+    app_bg_image: cachedAppBgImage,
   };
 };
 
@@ -115,7 +120,7 @@ export const getCachedConfig = async (key: string): Promise<string | null> => {
 // 获取所有配置（优先从缓存）
 export const getCachedConfigs = async (): Promise<Record<string, string>> => {
   // 尝试从缓存获取所有配置
-  const configKeys = ["app_name", "app_logo", "app_favicon"];
+  const configKeys = ["app_name", "app_logo", "app_favicon", "app_bg_image"];
   const cachedConfigs: Record<string, string> = {};
   let hasCachedData = false;
 
@@ -235,6 +240,23 @@ const updateDocumentFavicon = (faviconUrl: string) => {
   duplicatedIcons.forEach((link) => link.remove());
 };
 
+const updateDocumentBackground = (backgroundUrl: string) => {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const normalized = backgroundUrl.trim();
+  const root = document.documentElement;
+
+  if (normalized) {
+    root.style.setProperty("--flvx-custom-bg-image", `url("${normalized}")`);
+    root.classList.add("flvx-has-custom-bg");
+  } else {
+    root.style.removeProperty("--flvx-custom-bg-image");
+    root.classList.remove("flvx-has-custom-bg");
+  }
+};
+
 // 动态更新网站配置
 export const updateSiteConfig = async (configMap?: Record<string, string>) => {
   const resolvedConfigMap = configMap ?? (await getCachedConfigs());
@@ -255,6 +277,10 @@ export const updateSiteConfig = async (configMap?: Record<string, string>) => {
     resolvedConfigMap,
     "app_favicon",
   );
+  const hasAppBgImage = Object.prototype.hasOwnProperty.call(
+    resolvedConfigMap,
+    "app_bg_image",
+  );
 
   const appName = hasAppName
     ? String(resolvedConfigMap.app_name || "").trim()
@@ -265,6 +291,9 @@ export const updateSiteConfig = async (configMap?: Record<string, string>) => {
   const appFavicon = hasAppFavicon
     ? String(resolvedConfigMap.app_favicon || "").trim()
     : (siteConfig.app_favicon || "").trim();
+  const appBgImage = hasAppBgImage
+    ? String(resolvedConfigMap.app_bg_image || "").trim()
+    : (siteConfig.app_bg_image || "").trim();
 
   if (appName && appName !== siteConfig.name) {
     siteConfig.name = appName;
@@ -272,10 +301,12 @@ export const updateSiteConfig = async (configMap?: Record<string, string>) => {
 
   siteConfig.app_logo = appLogo;
   siteConfig.app_favicon = appFavicon;
+  siteConfig.app_bg_image = appBgImage;
   if (typeof document !== "undefined") {
     document.title = siteConfig.name;
   }
   updateDocumentFavicon(siteConfig.app_favicon);
+  updateDocumentBackground(siteConfig.app_bg_image);
 };
 
 // 清除配置缓存的工具函数（用于需要强制重拉配置的场景）
@@ -295,6 +326,7 @@ if (typeof window !== "undefined") {
     document.title = siteConfig.name;
   }
   updateDocumentFavicon(siteConfig.app_favicon);
+  updateDocumentBackground(siteConfig.app_bg_image);
 
   // 延迟执行，避免阻塞初始渲染
   setTimeout(() => {

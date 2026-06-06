@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -55,6 +56,10 @@ type updatePeerShareRequest struct {
 type nodeImportRequest struct {
 	RemoteURL string `json:"remoteUrl"`
 	Token     string `json:"token"`
+}
+
+type remoteNodeDeleteRequest struct {
+	NodeID int64 `json:"nodeId"`
 }
 
 type federationRuntimeReservePortRequest struct {
@@ -126,19 +131,26 @@ type remoteUsageBindingItem struct {
 }
 
 type remoteUsageNodeItem struct {
-	NodeID           int64                    `json:"nodeId"`
-	NodeName         string                   `json:"nodeName"`
-	RemoteURL        string                   `json:"remoteUrl"`
-	ShareID          int64                    `json:"shareId"`
-	PortRangeStart   int                      `json:"portRangeStart"`
-	PortRangeEnd     int                      `json:"portRangeEnd"`
-	MaxBandwidth     int64                    `json:"maxBandwidth"`
-	CurrentFlow      int64                    `json:"currentFlow"`
-	ExpiryTime       int64                    `json:"expiryTime"`
-	UsedPorts        []int                    `json:"usedPorts"`
-	Bindings         []remoteUsageBindingItem `json:"bindings"`
-	ActiveBindingNum int                      `json:"activeBindingNum"`
-	SyncError        string                   `json:"syncError,omitempty"`
+	NodeID             int64                    `json:"nodeId"`
+	NodeName           string                   `json:"nodeName"`
+	RemoteURL          string                   `json:"remoteUrl"`
+	ShareID            int64                    `json:"shareId"`
+	ProviderType       string                   `json:"providerType,omitempty"`
+	ProtocolVersion    string                   `json:"protocolVersion,omitempty"`
+	Features           []string                 `json:"features,omitempty"`
+	RuntimeModes       []string                 `json:"runtimeModes,omitempty"`
+	SupportsNftables   bool                     `json:"supportsNftables,omitempty"`
+	SupportsWGPath     bool                     `json:"supportsWGPath,omitempty"`
+	SupportsTLSInbound bool                     `json:"supportsTLSInbound,omitempty"`
+	PortRangeStart     int                      `json:"portRangeStart"`
+	PortRangeEnd       int                      `json:"portRangeEnd"`
+	MaxBandwidth       int64                    `json:"maxBandwidth"`
+	CurrentFlow        int64                    `json:"currentFlow"`
+	ExpiryTime         int64                    `json:"expiryTime"`
+	UsedPorts          []int                    `json:"usedPorts"`
+	Bindings           []remoteUsageBindingItem `json:"bindings"`
+	ActiveBindingNum   int                      `json:"activeBindingNum"`
+	SyncError          string                   `json:"syncError,omitempty"`
 }
 
 func buildFederationServiceConfig(serviceName, addr, protocol, role, chainName string, targetCount int, interfaceName string) map[string]interface{} {
@@ -171,6 +183,9 @@ func buildFederationServiceConfig(serviceName, addr, protocol, role, chainName s
 func (h *Handler) federationShareList(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		response.WriteJSON(w, response.ErrDefault("Invalid method"))
+		return
+	}
+	if !h.ensureAdminAccess(w, r) {
 		return
 	}
 
@@ -233,6 +248,9 @@ func (h *Handler) federationShareList(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) federationShareCreate(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		response.WriteJSON(w, response.ErrDefault("Invalid method"))
+		return
+	}
+	if !h.ensureAdminAccess(w, r) {
 		return
 	}
 
@@ -318,6 +336,9 @@ func (h *Handler) federationShareDelete(w http.ResponseWriter, r *http.Request) 
 		response.WriteJSON(w, response.ErrDefault("Invalid method"))
 		return
 	}
+	if !h.ensureAdminAccess(w, r) {
+		return
+	}
 
 	var req deletePeerShareRequest
 	if err := decodeJSON(r.Body, &req); err != nil {
@@ -345,6 +366,9 @@ func (h *Handler) federationShareDelete(w http.ResponseWriter, r *http.Request) 
 func (h *Handler) federationShareResetFlow(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		response.WriteJSON(w, response.ErrDefault("Invalid method"))
+		return
+	}
+	if !h.ensureAdminAccess(w, r) {
 		return
 	}
 
@@ -379,6 +403,9 @@ func (h *Handler) federationShareResetFlow(w http.ResponseWriter, r *http.Reques
 func (h *Handler) federationShareUpdate(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		response.WriteJSON(w, response.ErrDefault("Invalid method"))
+		return
+	}
+	if !h.ensureAdminAccess(w, r) {
 		return
 	}
 
@@ -455,6 +482,9 @@ func (h *Handler) federationRemoteUsageList(w http.ResponseWriter, r *http.Reque
 		response.WriteJSON(w, response.ErrDefault("Invalid method"))
 		return
 	}
+	if !h.ensureAdminAccess(w, r) {
+		return
+	}
 
 	remoteNodes, err := h.repo.ListRemoteNodes()
 	if err != nil {
@@ -471,6 +501,7 @@ func (h *Handler) federationRemoteUsageList(w http.ResponseWriter, r *http.Reque
 		nodeName := node.Name
 
 		shareID, maxBandwidth, currentFlow, expiryTime, portRangeStart, portRangeEnd := parseRemoteShareUsageConfig(node.RemoteConfig.String)
+		providerInfo := parseRemoteProviderConfig(node.RemoteConfig.String)
 
 		var syncError string
 		url := strings.TrimSpace(node.RemoteURL.String)
@@ -486,14 +517,22 @@ func (h *Handler) federationRemoteUsageList(w http.ResponseWriter, r *http.Reque
 				expiryTime = info.ExpiryTime
 				portRangeStart = info.PortRangeStart
 				portRangeEnd = info.PortRangeEnd
+				providerInfo = remoteProviderInfoFromClient(info)
 
 				configData, _ := json.Marshal(map[string]interface{}{
-					"shareId":        info.ShareID,
-					"maxBandwidth":   info.MaxBandwidth,
-					"currentFlow":    info.CurrentFlow,
-					"expiryTime":     info.ExpiryTime,
-					"portRangeStart": info.PortRangeStart,
-					"portRangeEnd":   info.PortRangeEnd,
+					"shareId":            info.ShareID,
+					"maxBandwidth":       info.MaxBandwidth,
+					"currentFlow":        info.CurrentFlow,
+					"expiryTime":         info.ExpiryTime,
+					"portRangeStart":     info.PortRangeStart,
+					"portRangeEnd":       info.PortRangeEnd,
+					"providerType":       info.ProviderType,
+					"protocolVersion":    info.ProtocolVersion,
+					"features":           info.Features,
+					"runtimeModes":       info.RuntimeModes,
+					"supportsNftables":   info.SupportsNftables,
+					"supportsWGPath":     info.SupportsWGPath,
+					"supportsTLSInbound": info.SupportsTLSInbound,
 				})
 				_ = h.repo.UpdateNodeRemoteConfig(nodeID, string(configData))
 			}
@@ -559,23 +598,86 @@ func (h *Handler) federationRemoteUsageList(w http.ResponseWriter, r *http.Reque
 		sort.Ints(usedPorts)
 
 		items = append(items, remoteUsageNodeItem{
-			NodeID:           nodeID,
-			NodeName:         nodeName,
-			RemoteURL:        url,
-			ShareID:          shareID,
-			PortRangeStart:   portRangeStart,
-			PortRangeEnd:     portRangeEnd,
-			MaxBandwidth:     maxBandwidth,
-			CurrentFlow:      currentFlow,
-			ExpiryTime:       expiryTime,
-			UsedPorts:        usedPorts,
-			Bindings:         bindings,
-			ActiveBindingNum: len(bindings),
-			SyncError:        syncError,
+			NodeID:             nodeID,
+			NodeName:           nodeName,
+			RemoteURL:          url,
+			ShareID:            shareID,
+			ProviderType:       providerInfo.ProviderType,
+			ProtocolVersion:    providerInfo.ProtocolVersion,
+			Features:           providerInfo.Features,
+			RuntimeModes:       providerInfo.RuntimeModes,
+			SupportsNftables:   providerInfo.SupportsNftables,
+			SupportsWGPath:     providerInfo.SupportsWGPath,
+			SupportsTLSInbound: providerInfo.SupportsTLSInbound,
+			PortRangeStart:     portRangeStart,
+			PortRangeEnd:       portRangeEnd,
+			MaxBandwidth:       maxBandwidth,
+			CurrentFlow:        currentFlow,
+			ExpiryTime:         expiryTime,
+			UsedPorts:          usedPorts,
+			Bindings:           bindings,
+			ActiveBindingNum:   len(bindings),
+			SyncError:          syncError,
 		})
 	}
 
 	response.WriteJSON(w, response.OK(items))
+}
+
+func (h *Handler) federationRemoteNodeDelete(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		response.WriteJSON(w, response.ErrDefault("Invalid method"))
+		return
+	}
+	if !h.ensureAdminAccess(w, r) {
+		return
+	}
+
+	var req remoteNodeDeleteRequest
+	if err := decodeJSON(r.Body, &req); err != nil {
+		response.WriteJSON(w, response.ErrDefault("Invalid JSON"))
+		return
+	}
+	if req.NodeID <= 0 {
+		response.WriteJSON(w, response.ErrDefault("Remote node ID is required"))
+		return
+	}
+
+	node, err := h.repo.GetNodeByID(req.NodeID)
+	if err != nil {
+		response.WriteJSON(w, response.Err(-2, err.Error()))
+		return
+	}
+	if node == nil {
+		response.WriteJSON(w, response.ErrDefault("Remote node not found"))
+		return
+	}
+	if node.IsRemote != 1 {
+		response.WriteJSON(w, response.ErrDefault("Only imported remote nodes can be deleted here"))
+		return
+	}
+
+	counts, err := h.repo.CountRemoteNodeReferences(req.NodeID)
+	if err != nil {
+		response.WriteJSON(w, response.Err(-2, err.Error()))
+		return
+	}
+	if counts.ChainTunnel > 0 || counts.ForwardPort > 0 || counts.ActiveFederationBindings > 0 {
+		response.WriteJSON(w, response.ErrDefault(fmt.Sprintf(
+			"Remote node is still in use: tunnels=%d, forwards=%d, activeBindings=%d",
+			counts.ChainTunnel,
+			counts.ForwardPort,
+			counts.ActiveFederationBindings,
+		)))
+		return
+	}
+
+	if err := h.deleteNodeByID(req.NodeID); err != nil {
+		response.WriteJSON(w, response.Err(-2, err.Error()))
+		return
+	}
+
+	response.WriteJSON(w, response.OKEmpty())
 }
 
 func remoteNodePortRange(node *nodeRecord) (int, int) {
@@ -620,9 +722,94 @@ func parseRemoteShareUsageConfig(raw string) (int64, int64, int64, int64, int, i
 	return shareID, maxBandwidth, currentFlow, expiryTime, portRangeStart, portRangeEnd
 }
 
+type remoteProviderInfo struct {
+	ProviderType       string
+	ProtocolVersion    string
+	Features           []string
+	RuntimeModes       []string
+	SupportsNftables   bool
+	SupportsWGPath     bool
+	SupportsTLSInbound bool
+}
+
+func parseRemoteProviderConfig(raw string) remoteProviderInfo {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return remoteProviderInfo{}
+	}
+
+	var cfg map[string]interface{}
+	if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
+		return remoteProviderInfo{}
+	}
+
+	return remoteProviderInfo{
+		ProviderType:       strings.TrimSpace(asString(cfg["providerType"])),
+		ProtocolVersion:    strings.TrimSpace(asString(cfg["protocolVersion"])),
+		Features:           stringSliceFromInterface(cfg["features"]),
+		RuntimeModes:       stringSliceFromInterface(cfg["runtimeModes"]),
+		SupportsNftables:   asFederationBool(cfg["supportsNftables"]),
+		SupportsWGPath:     asFederationBool(cfg["supportsWGPath"]),
+		SupportsTLSInbound: asFederationBool(cfg["supportsTLSInbound"]),
+	}
+}
+
+func remoteProviderInfoFromClient(info *client.RemoteNodeInfo) remoteProviderInfo {
+	if info == nil {
+		return remoteProviderInfo{}
+	}
+	return remoteProviderInfo{
+		ProviderType:       strings.TrimSpace(info.ProviderType),
+		ProtocolVersion:    strings.TrimSpace(info.ProtocolVersion),
+		Features:           append([]string(nil), info.Features...),
+		RuntimeModes:       append([]string(nil), info.RuntimeModes...),
+		SupportsNftables:   info.SupportsNftables,
+		SupportsWGPath:     info.SupportsWGPath,
+		SupportsTLSInbound: info.SupportsTLSInbound,
+	}
+}
+
+func stringSliceFromInterface(v interface{}) []string {
+	items, ok := v.([]interface{})
+	if !ok {
+		if direct, ok := v.([]string); ok {
+			return append([]string(nil), direct...)
+		}
+		return nil
+	}
+	out := make([]string, 0, len(items))
+	for _, item := range items {
+		value := strings.TrimSpace(asString(item))
+		if value != "" {
+			out = append(out, value)
+		}
+	}
+	return out
+}
+
+func asFederationBool(v interface{}) bool {
+	switch t := v.(type) {
+	case bool:
+		return t
+	case string:
+		return strings.EqualFold(strings.TrimSpace(t), "true") || strings.TrimSpace(t) == "1"
+	case float64:
+		return t != 0
+	case int:
+		return t != 0
+	case int64:
+		return t != 0
+	default:
+		return false
+	}
+}
+
 func (h *Handler) nodeImport(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		response.WriteJSON(w, response.ErrDefault("Invalid method"))
+		return
+	}
+	if !h.ensureAdminAccess(w, r) {
 		return
 	}
 
@@ -634,6 +821,21 @@ func (h *Handler) nodeImport(w http.ResponseWriter, r *http.Request) {
 
 	if req.RemoteURL == "" || req.Token == "" {
 		response.WriteJSON(w, response.ErrDefault("Remote URL and Token are required"))
+		return
+	}
+	req.RemoteURL = strings.TrimSpace(req.RemoteURL)
+	req.Token = strings.TrimSpace(req.Token)
+	remoteURL, err := url.Parse(req.RemoteURL)
+	if err != nil || remoteURL.Scheme == "" || remoteURL.Host == "" {
+		response.WriteJSON(w, response.ErrDefault("Remote URL is invalid"))
+		return
+	}
+	if remoteURL.Scheme != "http" && remoteURL.Scheme != "https" {
+		response.WriteJSON(w, response.ErrDefault("Remote URL must use http or https"))
+		return
+	}
+	if err := IsSafeRemoteAddr(remoteURL.Host); err != nil {
+		response.WriteJSON(w, response.ErrDefault("Remote URL is not allowed: "+err.Error()))
 		return
 	}
 
@@ -652,12 +854,19 @@ func (h *Handler) nodeImport(w http.ResponseWriter, r *http.Request) {
 
 	// Prepare config json for local storage (metadata about limits)
 	configData := map[string]interface{}{
-		"shareId":        info.ShareID,
-		"maxBandwidth":   info.MaxBandwidth,
-		"currentFlow":    info.CurrentFlow,
-		"expiryTime":     info.ExpiryTime,
-		"portRangeStart": info.PortRangeStart,
-		"portRangeEnd":   info.PortRangeEnd,
+		"shareId":            info.ShareID,
+		"maxBandwidth":       info.MaxBandwidth,
+		"currentFlow":        info.CurrentFlow,
+		"expiryTime":         info.ExpiryTime,
+		"portRangeStart":     info.PortRangeStart,
+		"portRangeEnd":       info.PortRangeEnd,
+		"providerType":       info.ProviderType,
+		"protocolVersion":    info.ProtocolVersion,
+		"features":           info.Features,
+		"runtimeModes":       info.RuntimeModes,
+		"supportsNftables":   info.SupportsNftables,
+		"supportsWGPath":     info.SupportsWGPath,
+		"supportsTLSInbound": info.SupportsTLSInbound,
 	}
 	configBytes, _ := json.Marshal(configData)
 
@@ -685,7 +894,12 @@ func (h *Handler) nodeImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.WriteJSON(w, response.OKEmpty())
+	response.WriteJSON(w, response.OK(map[string]interface{}{
+		"providerType":    info.ProviderType,
+		"protocolVersion": info.ProtocolVersion,
+		"features":        info.Features,
+		"runtimeModes":    info.RuntimeModes,
+	}))
 }
 
 func (h *Handler) authPeer(next http.HandlerFunc) http.HandlerFunc {
@@ -779,17 +993,32 @@ func (h *Handler) federationConnect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.WriteJSON(w, response.OK(map[string]interface{}{
-		"shareId":        share.ID,
-		"shareName":      share.Name,
-		"nodeId":         share.NodeID,
-		"nodeName":       nodeInfo.Name,
-		"serverIp":       nodeInfo.ServerIP,
-		"status":         nodeInfo.Status,
-		"maxBandwidth":   share.MaxBandwidth,
-		"currentFlow":    share.CurrentFlow,
-		"expiryTime":     share.ExpiryTime,
-		"portRangeStart": share.PortRangeStart,
-		"portRangeEnd":   share.PortRangeEnd,
+		"shareId":         share.ID,
+		"shareName":       share.Name,
+		"nodeId":          share.NodeID,
+		"nodeName":        nodeInfo.Name,
+		"serverIp":        nodeInfo.ServerIP,
+		"status":          nodeInfo.Status,
+		"maxBandwidth":    share.MaxBandwidth,
+		"currentFlow":     share.CurrentFlow,
+		"expiryTime":      share.ExpiryTime,
+		"portRangeStart":  share.PortRangeStart,
+		"portRangeEnd":    share.PortRangeEnd,
+		"providerType":    "flvxt2",
+		"protocolVersion": "flvxt2-v1",
+		"features": []string{
+			"gost_tunnel",
+			"port_forward",
+			"runtime_reserve",
+			"runtime_apply",
+			"runtime_release",
+			"runtime_diagnose",
+			"runtime_command",
+		},
+		"runtimeModes":       []string{"gost"},
+		"supportsNftables":   false,
+		"supportsWGPath":     false,
+		"supportsTLSInbound": false,
 	}))
 }
 

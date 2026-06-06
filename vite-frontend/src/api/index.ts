@@ -622,7 +622,14 @@ export const getPeerRemoteUsageList = () =>
     "/federation/share/remote-usage/list",
   );
 export const importRemoteNode = (data: { remoteUrl: string; token: string }) =>
-  Network.post("/federation/node/import", data);
+  Network.post<{
+    providerType?: string;
+    protocolVersion?: string;
+    features?: string[];
+    runtimeModes?: string[];
+  }>("/federation/node/import", data);
+export const deleteRemoteNode = (nodeId: number) =>
+  Network.post("/federation/node/delete", { nodeId });
 
 export interface BackupTypes {
   users?: boolean;

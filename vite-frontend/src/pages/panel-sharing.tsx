@@ -22,11 +22,13 @@ import {
   createPeerShare,
   getPeerShareList,
   deletePeerShare,
+  deleteRemoteNode,
   resetPeerShareFlow,
   getPeerRemoteUsageList,
   importRemoteNode,
   updatePeerShare,
 } from "@/api";
+import { getAdminFlag } from "@/utils/session";
 interface Node {
   id: number;
   name: string;
@@ -72,6 +74,13 @@ interface RemoteUsageNode {
   nodeName: string;
   remoteUrl: string;
   shareId: number;
+  providerType?: string;
+  protocolVersion?: string;
+  features?: string[];
+  runtimeModes?: string[];
+  supportsNftables?: boolean;
+  supportsWGPath?: boolean;
+  supportsTLSInbound?: boolean;
   portRangeStart: number;
   portRangeEnd: number;
   maxBandwidth: number;
@@ -82,6 +91,7 @@ interface RemoteUsageNode {
   syncError?: string;
 }
 export default function PanelSharingPage() {
+  const isAdmin = getAdminFlag();
   const [selectedTab, setSelectedTab] = useState("my-shares");
   const [shares, setShares] = useState<PeerShare[]>([]);
   const [remoteUsageNodes, setRemoteUsageNodes] = useState<RemoteUsageNode[]>(
@@ -119,6 +129,16 @@ export default function PanelSharingPage() {
     allowedDomains: "",
     allowedIps: "",
   });
+  const providerLabel = (providerType?: string) => {
+    switch ((providerType || "").trim()) {
+      case "flvxt2":
+        return "FLVX compatible";
+      case "sagit-chu-compatible":
+        return "Sagit-chu compatible";
+      default:
+        return "Unknown legacy";
+    }
+  };
   const loadShares = useCallback(async () => {
     setLoading(true);
     try {
@@ -180,6 +200,9 @@ export default function PanelSharingPage() {
   }, []);
 
   useEffect(() => {
+    if (!isAdmin) {
+      return;
+    }
     if (selectedTab === "my-shares") {
       loadShares();
       loadNodes();
@@ -189,15 +212,18 @@ export default function PanelSharingPage() {
     if (selectedTab === "remote-nodes") {
       loadRemoteUsage();
     }
-  }, [selectedTab, loadShares, loadNodes, loadRemoteUsage]);
+  }, [isAdmin, selectedTab, loadShares, loadNodes, loadRemoteUsage]);
   const refresh = useCallback(() => {
+    if (!isAdmin) {
+      return;
+    }
     if (selectedTab === "my-shares") {
       loadShares();
       loadNodes();
     } else if (selectedTab === "remote-nodes") {
       loadRemoteUsage();
     }
-  }, [selectedTab, loadShares, loadNodes, loadRemoteUsage]);
+  }, [isAdmin, selectedTab, loadShares, loadNodes, loadRemoteUsage]);
 
   usePullToRefresh(refresh);
   const handleCreateShare = async () => {
@@ -340,12 +366,38 @@ export default function PanelSharingPage() {
       });
 
       if (res.code === 0) {
-        toast.success("导入成功，请前往节点列表查看");
+        const data = (res.data || {}) as {
+          providerType?: string;
+          protocolVersion?: string;
+        };
+
+        toast.success(`导入成功 (${providerLabel(data.providerType)})`);
         setImportNodeOpen(false);
         setImportForm({ remoteUrl: "", token: "" });
         loadRemoteUsage();
       } else {
         toast.error(res.msg || "导入失败");
+      }
+    } catch {
+      toast.error("网络错误");
+    }
+  };
+  const handleDeleteRemoteNode = async (node: RemoteUsageNode) => {
+    if (
+      !window.confirm(
+        `确定删除远程节点「${node.nodeName}」吗？正在被隧道或转发使用的节点不会被删除。`,
+      )
+    ) {
+      return;
+    }
+    try {
+      const res = await deleteRemoteNode(node.nodeId);
+
+      if (res.code === 0) {
+        toast.success("远程节点已删除");
+        loadRemoteUsage();
+      } else {
+        toast.error(res.msg || "删除远程节点失败");
       }
     } catch {
       toast.error("网络错误");
@@ -382,6 +434,17 @@ export default function PanelSharingPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
+      {!isAdmin ? (
+        <Card className="border border-divider bg-default-50/70">
+          <CardBody className="space-y-2">
+            <h1 className="text-xl font-semibold">面板共享不可用</h1>
+            <p className="text-sm text-default-500">
+              面板共享用于导入或发布远端节点资源，仅管理员账号可以使用。
+            </p>
+          </CardBody>
+        </Card>
+      ) : (
+        <>
       {/* <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">面板共享 (Panel Peering)</h1>
       </div> */}
@@ -598,7 +661,17 @@ export default function PanelSharingPage() {
                       className="border border-divider shadow-sm"
                     >
                       <CardHeader className="flex justify-between pb-2 md:pb-2">
-                        <h3 className="font-bold">{node.nodeName}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold">{node.nodeName}</h3>
+                          <Button
+                            color="danger"
+                            size="sm"
+                            variant="flat"
+                            onPress={() => handleDeleteRemoteNode(node)}
+                          >
+                            删除
+                          </Button>
+                        </div>
                         <span className="text-xs text-default-500">
                           绑定 {node.activeBindingNum || 0}
                         </span>
@@ -616,6 +689,21 @@ export default function PanelSharingPage() {
                           </div>
                         )}
                         {node.remoteUrl && <p>远程地址: {node.remoteUrl}</p>}
+                        <p>Provider: {providerLabel(node.providerType)}</p>
+                        <p>Protocol: {node.protocolVersion || "baseline"}</p>
+                        <p>
+                          Runtime:{" "}
+                          {node.runtimeModes && node.runtimeModes.length > 0
+                            ? node.runtimeModes.join(", ")
+                            : "gost"}
+                        </p>
+                        {node.providerType === "sagit-chu-compatible" && (
+                          <div className="px-2 py-1.5 rounded-md bg-default-100/70 text-default-600 text-xs">
+                            Baseline provider: WG Path, TLS inbound deployment,
+                            and sing-box node deploy actions are disabled for
+                            this imported panel.
+                          </div>
+                        )}
                         <p>共享ID: {node.shareId || "-"}</p>
                         <p>
                           端口范围:{" "}
@@ -896,6 +984,12 @@ export default function PanelSharingPage() {
         <ModalContent>
           <ModalHeader>导入远程节点</ModalHeader>
           <ModalBody>
+            <div className="rounded-lg border border-divider bg-default-50/70 px-3 py-2 text-xs text-default-600">
+              Compatible with Sagit-chu panel share links. Legacy providers are
+              imported as baseline GOST/port-forward resources; FLVX-only WG
+              Path and TLS inbound deployment stay disabled unless the provider
+              advertises support.
+            </div>
             <Input
               label="远程面板地址"
               placeholder="http://panel.example.com:8088"
@@ -921,6 +1015,8 @@ export default function PanelSharingPage() {
           </ModalFooter>
         </ModalContent>
       </Modal>
+        </>
+      )}
     </div>
   );
 }

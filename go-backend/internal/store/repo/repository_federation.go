@@ -46,6 +46,12 @@ type ActiveForwardPortRow struct {
 	UpdatedTime int64
 }
 
+type RemoteNodeReferenceCounts struct {
+	ChainTunnel              int64
+	ForwardPort              int64
+	ActiveFederationBindings int64
+}
+
 // ListRemoteNodes returns all nodes with is_remote=1, ordered by id desc.
 func (r *Repository) ListRemoteNodes() ([]RemoteNodeRow, error) {
 	if r == nil || r.db == nil {
@@ -72,6 +78,26 @@ func (r *Repository) UpdateNodeRemoteConfig(nodeID int64, configJSON string) err
 		return errors.New("repository not initialized")
 	}
 	return r.db.Model(&model.Node{}).Where("id = ?", nodeID).Update("remote_config", configJSON).Error
+}
+
+func (r *Repository) CountRemoteNodeReferences(nodeID int64) (RemoteNodeReferenceCounts, error) {
+	if r == nil || r.db == nil {
+		return RemoteNodeReferenceCounts{}, errors.New("repository not initialized")
+	}
+
+	var counts RemoteNodeReferenceCounts
+	if err := r.db.Model(&model.ChainTunnel{}).Where("node_id = ?", nodeID).Count(&counts.ChainTunnel).Error; err != nil {
+		return counts, err
+	}
+	if err := r.db.Model(&model.ForwardPort{}).Where("node_id = ?", nodeID).Count(&counts.ForwardPort).Error; err != nil {
+		return counts, err
+	}
+	if err := r.db.Model(&model.FederationTunnelBinding{}).
+		Where("node_id = ? AND status = 1", nodeID).
+		Count(&counts.ActiveFederationBindings).Error; err != nil {
+		return counts, err
+	}
+	return counts, nil
 }
 
 // ListActiveBindingsForNode returns active federation tunnel bindings for a node.

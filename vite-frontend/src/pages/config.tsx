@@ -37,6 +37,7 @@ import { isAdmin } from "@/utils/auth";
 import { getCachedConfigs, configCache, updateSiteConfig } from "@/config/site";
 import {
   convertBrandAssetToPngDataURL,
+  isBrandImageDataURL,
   isPngDataURL,
   type BrandAssetKind,
 } from "@/utils/brand-asset";
@@ -51,14 +52,17 @@ interface ConfigItem {
   dependsOn?: string | string[]; // 依赖的配置项key，数组时为 OR 逻辑
   dependsValue?: string; // 依赖的配置项值
 }
-const BRAND_PREVIEW_KEYS = ["app_logo", "app_favicon"] as const;
+const BRAND_PREVIEW_KEYS = ["app_logo", "app_favicon", "app_bg_image"] as const;
 
 type BrandPreviewKey = (typeof BRAND_PREVIEW_KEYS)[number];
 const isBrandPreviewKey = (key: string): key is BrandPreviewKey =>
   BRAND_PREVIEW_KEYS.includes(key as BrandPreviewKey);
 const BRAND_FILE_ACCEPT = "image/png,image/jpeg,image/webp,image/svg+xml";
 const toBrandAssetKind = (key: BrandPreviewKey): BrandAssetKind => {
-  return key === "app_logo" ? "logo" : "favicon";
+  if (key === "app_logo") return "logo";
+  if (key === "app_favicon") return "favicon";
+
+  return "background";
 };
 // 快捷开关（直接生效，不受保存按钮控制）
 const STANDALONE_SWITCH_KEYS = [
@@ -95,6 +99,12 @@ const CONFIG_ITEMS: ConfigItem[] = [
     key: "app_favicon",
     label: "浏览器缩略图标",
     description: "用于浏览器标签页图标，上传后会自动转换为 PNG 并持久化保存",
+    type: "input",
+  },
+  {
+    key: "app_bg_image",
+    label: "页面背景",
+    description: "用于全站毛玻璃背景，上传后会压缩为适合网页显示的图片并持久化保存",
     type: "input",
   },
   /* 暂时隐藏精简模式开关
@@ -171,6 +181,7 @@ const getInitialConfigs = (): Record<string, string> => {
     "panel_domain",
     "app_logo",
     "app_favicon",
+    "app_bg_image",
   ];
   const initialConfigs: Record<string, string> = {};
 
@@ -217,6 +228,7 @@ export default function ConfigPage() {
   const backupFileInputRef = useRef<HTMLInputElement>(null);
   const logoFileInputRef = useRef<HTMLInputElement>(null);
   const faviconFileInputRef = useRef<HTMLInputElement>(null);
+  const backgroundFileInputRef = useRef<HTMLInputElement>(null);
   const [announcement, setAnnouncement] = useState<AnnouncementData>({
     content: "",
     enabled: 0,
@@ -249,6 +261,7 @@ export default function ConfigPage() {
       "app_name",
       "app_logo",
       "app_favicon",
+      "app_bg_image",
       "payment_enabled",
       "registration_enabled",
       "login_monitor_link",
@@ -588,13 +601,26 @@ export default function ConfigPage() {
         setHasChanges(false);
         if (
           changedKeys.some((key) =>
-            ["app_name", "app_logo", "app_favicon"].includes(key),
+            ["app_name", "app_logo", "app_favicon", "app_bg_image"].includes(
+              key,
+            ),
           )
         ) {
           await updateSiteConfig(configs);
-          setTimeout(() => {
-            window.location.reload();
-          }, 800);
+          window.dispatchEvent(
+            new CustomEvent("configUpdated", {
+              detail: { changedKeys },
+            }),
+          );
+          if (
+            changedKeys.some((key) =>
+              ["app_name", "app_logo", "app_favicon"].includes(key),
+            )
+          ) {
+            setTimeout(() => {
+              window.location.reload();
+            }, 800);
+          }
 
           return;
         }
@@ -643,7 +669,10 @@ export default function ConfigPage() {
     return keys.some((k) => configs[k] === item.dependsValue);
   };
   const getBrandInputRef = (key: BrandPreviewKey) => {
-    return key === "app_logo" ? logoFileInputRef : faviconFileInputRef;
+    if (key === "app_logo") return logoFileInputRef;
+    if (key === "app_favicon") return faviconFileInputRef;
+
+    return backgroundFileInputRef;
   };
   const triggerBrandFilePicker = (key: BrandPreviewKey) => {
     if (!commercialAuthorized) {
@@ -688,7 +717,13 @@ export default function ConfigPage() {
       );
 
       handleConfigChange(key, pngDataURL);
-      toast.success(key === "app_logo" ? "Logo 上传成功" : "Favicon 上传成功");
+      toast.success(
+        key === "app_logo"
+          ? "Logo 上传成功"
+          : key === "app_favicon"
+            ? "Favicon 上传成功"
+            : "背景上传成功",
+      );
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "图片处理失败，请重试";
@@ -704,12 +739,35 @@ export default function ConfigPage() {
     const appNamePreview = (configs.app_name || "").trim() || "应用名称";
     const failed = previewLoadFailed[key] === true;
     const showImage = previewUrl.length > 0 && !failed;
+    const isBackground = key === "app_bg_image";
 
     return (
       <div className="mt-3 rounded-lg border border-default-200 dark:border-default-100/30 bg-default-50/60 dark:bg-default-100/10 p-3">
         <p className="text-xs text-default-500">实时预览</p>
         <div className="mt-2 rounded-md border border-default-200 dark:border-default-100/30 bg-white dark:bg-black px-3 py-2">
-          {key === "app_logo" ? (
+          {isBackground ? (
+            <div className="relative h-32 overflow-hidden rounded-lg border border-default-200 bg-default-100 dark:border-default-100/30 dark:bg-default-900">
+              {showImage ? (
+                <img
+                  alt="background preview"
+                  className="h-full w-full object-cover"
+                  src={previewUrl}
+                  onError={() =>
+                    setPreviewLoadFailed((prev) => ({ ...prev, [key]: true }))
+                  }
+                  onLoad={() =>
+                    setPreviewLoadFailed((prev) => ({ ...prev, [key]: false }))
+                  }
+                />
+              ) : (
+                <div className="h-full w-full bg-gradient-to-br from-slate-100 via-blue-50 to-slate-200 dark:from-slate-900 dark:via-slate-800 dark:to-slate-950" />
+              )}
+              <div className="absolute inset-0 bg-white/35 backdrop-blur-[1px] dark:bg-black/35" />
+              <div className="absolute bottom-3 left-3 rounded-md border border-white/50 bg-white/55 px-3 py-2 text-xs font-semibold text-slate-800 shadow-sm backdrop-blur-md dark:border-white/15 dark:bg-black/35 dark:text-slate-100">
+                页面背景预览
+              </div>
+            </div>
+          ) : key === "app_logo" ? (
             <div className="flex h-10 items-center gap-2">
               {showImage ? (
                 <img
@@ -765,7 +823,14 @@ export default function ConfigPage() {
         ) : null}
         {previewUrl.length > 0 && !isPngDataURL(previewUrl) ? (
           <p className="mt-2 text-xs text-warning-600 dark:text-warning-400">
-            当前是旧版 URL 配置，建议重新上传图片以启用无闪烁加载
+            {isBackground
+              ? "当前是旧版 URL 配置，建议重新上传图片以启用稳定加载"
+              : "当前是旧版 URL 配置，建议重新上传图片以启用无闪烁加载"}
+          </p>
+        ) : null}
+        {isBackground && previewUrl.length > 0 && !isBrandImageDataURL(previewUrl) ? (
+          <p className="mt-2 text-xs text-warning-600 dark:text-warning-400">
+            背景建议通过上传生成内置图片数据
           </p>
         ) : null}
       </div>
@@ -778,6 +843,7 @@ export default function ConfigPage() {
     const value = (configs[key] || "").trim();
     const uploading = brandUploading[key] === true;
     const isLogo = key === "app_logo";
+    const isBackground = key === "app_bg_image";
     const disabled = !commercialAuthorized;
 
     return (
@@ -810,10 +876,14 @@ export default function ConfigPage() {
             {value.length > 0
               ? isLogo
                 ? "替换 Logo"
-                : "替换 Favicon"
+                : isBackground
+                  ? "替换背景"
+                  : "替换 Favicon"
               : isLogo
                 ? "上传 Logo"
-                : "上传 Favicon"}
+                : isBackground
+                  ? "上传背景"
+                  : "上传 Favicon"}
           </Button>
           <Button
             isDisabled={disabled || value.length === 0 || uploading}
@@ -831,7 +901,9 @@ export default function ConfigPage() {
         <p className="mt-2 text-xs text-default-500">
           {isLogo
             ? "建议上传方形图片，系统会统一转换为 96x96 PNG"
-            : "建议上传方形图片，系统会统一转换为 64x64 PNG"}
+            : isBackground
+              ? "建议上传横向图片，系统会压缩到最长边 1920px 并作为全站背景"
+              : "建议上传方形图片，系统会统一转换为 64x64 PNG"}
         </p>
         {renderBrandPreview(key)}
       </div>

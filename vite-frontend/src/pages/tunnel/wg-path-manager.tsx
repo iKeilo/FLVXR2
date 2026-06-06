@@ -9,7 +9,13 @@ import { Select, SelectItem } from "@/shadcn-bridge/heroui/select";
 import { Divider } from "@/shadcn-bridge/heroui/divider";
 
 interface WGPathManagerProps {
-  nodes: Array<{ id: number; name: string; status?: number; remark?: string }>;
+  nodes: Array<{
+    id: number;
+    name: string;
+    status?: number;
+    remark?: string;
+    isRemote?: number;
+  }>;
   groups?: TunnelGroupNewApiItem[];
   pathId?: number | null;
   onCreated?: () => void;
@@ -33,7 +39,8 @@ export function WGPathManager({
   const [listenStart, setListenStart] = useState("51820");
 
   const nodeOptions = useMemo(
-    () => nodes.filter((node) => Number(node.id) > 0),
+    () =>
+      nodes.filter((node) => Number(node.id) > 0 && node.isRemote !== 1),
     [nodes],
   );
   const selectedNodeIds = useMemo(

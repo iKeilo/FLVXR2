@@ -100,7 +100,9 @@ type flowItem struct {
 
 const (
 	pngDataURLPrefix          = "data:image/png;base64,"
+	jpegDataURLPrefix         = "data:image/jpeg;base64,"
 	maxBrandAssetDataURLBytes = 1024 * 1024
+	maxBackgroundDataURLBytes = 2 * 1024 * 1024
 )
 
 func New(repo *repo.Repository, jwtSecret string, fluxVersion string) *Handler {
@@ -330,6 +332,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/federation/runtime/diagnose", h.authPeer(h.federationRuntimeDiagnose))
 	mux.HandleFunc("/api/v1/federation/runtime/command", h.authPeer(h.federationRuntimeCommand))
 	mux.HandleFunc("/api/v1/federation/node/import", h.nodeImport)
+	mux.HandleFunc("/api/v1/federation/node/delete", h.federationRemoteNodeDelete)
 	mux.HandleFunc("/api/v1/announcement/get", h.getAnnouncement)
 	mux.HandleFunc("/api/v1/announcement/update", h.updateAnnouncement)
 	mux.HandleFunc("/api/v1/license/info", h.licenseInfo)
@@ -1166,7 +1169,7 @@ func (h *Handler) updateSingleConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if value == "" && name != "app_logo" && name != "app_favicon" {
+	if value == "" && name != "app_logo" && name != "app_favicon" && name != "app_bg_image" {
 		response.WriteJSON(w, response.ErrDefault("配置值不能为空"))
 		return
 	}
@@ -1205,6 +1208,36 @@ func normalizeAndValidateConfigValue(key, value string) (string, error) {
 		}
 
 		return pngDataURLPrefix + payload, nil
+	case "app_bg_image":
+		normalized := strings.TrimSpace(value)
+		if normalized == "" {
+			return "", nil
+		}
+
+		prefix := ""
+		switch {
+		case strings.HasPrefix(normalized, pngDataURLPrefix):
+			prefix = pngDataURLPrefix
+		case strings.HasPrefix(normalized, jpegDataURLPrefix):
+			prefix = jpegDataURLPrefix
+		default:
+			return "", fmt.Errorf("背景图片必须通过上传生成图片数据")
+		}
+
+		if len(normalized) > maxBackgroundDataURLBytes {
+			return "", fmt.Errorf("背景图片过大，请上传更小图片")
+		}
+
+		payload := strings.TrimSpace(strings.TrimPrefix(normalized, prefix))
+		if payload == "" {
+			return "", fmt.Errorf("背景图片数据不能为空")
+		}
+
+		if _, err := base64.StdEncoding.DecodeString(payload); err != nil {
+			return "", fmt.Errorf("背景图片数据格式无效")
+		}
+
+		return prefix + payload, nil
 	default:
 		return value, nil
 	}

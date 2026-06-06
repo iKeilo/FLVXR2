@@ -172,8 +172,13 @@ func (h *Handler) pathCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	actorID, _, _ := userRoleFromRequest(r)
 	for _, nodeID := range req.NodeIDs {
-		if _, err := h.getNodeRecord(nodeID); err != nil {
+		node, err := h.getNodeRecord(nodeID)
+		if err != nil {
 			response.WriteJSON(w, response.ErrDefault(err.Error()))
+			return
+		}
+		if node.IsRemote == 1 {
+			response.WriteJSON(w, response.ErrDefault("WG 隧道不支持远程共享节点"))
 			return
 		}
 		if _, err := h.ensureWGIdentity(nodeID, false); err != nil {
@@ -247,8 +252,13 @@ func (h *Handler) pathUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, nodeID := range req.NodeIDs {
-		if _, err := h.getNodeRecord(nodeID); err != nil {
+		node, err := h.getNodeRecord(nodeID)
+		if err != nil {
 			response.WriteJSON(w, response.ErrDefault(err.Error()))
+			return
+		}
+		if node.IsRemote == 1 {
+			response.WriteJSON(w, response.ErrDefault("WG 隧道不支持远程共享节点"))
 			return
 		}
 		if _, err := h.ensureWGIdentity(nodeID, false); err != nil {

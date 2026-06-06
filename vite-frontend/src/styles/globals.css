@@ -149,6 +149,16 @@ body {
   color: var(--foreground);
 }
 
+.flvx-has-custom-bg .flvx-luminous-shell {
+  background:
+    linear-gradient(120deg, rgba(248, 250, 252, 0.86), rgba(226, 232, 240, 0.62)),
+    var(--flvx-custom-bg-image),
+    var(--background);
+  background-attachment: fixed;
+  background-position: center;
+  background-size: cover;
+}
+
 .flvx-luminous-shell::before {
   content: "";
   position: fixed;
@@ -551,6 +561,16 @@ textarea:focus-visible {
   background:
     linear-gradient(125deg, rgba(42, 70, 88, 0.48), rgba(9, 14, 22, 0.92) 40%, rgba(31, 47, 51, 0.78) 72%, rgba(9, 14, 22, 0.96)),
     var(--background) !important;
+}
+
+.dark.flvx-has-custom-bg .flvx-luminous-shell {
+  background:
+    linear-gradient(120deg, rgba(5, 8, 13, 0.72), rgba(15, 23, 42, 0.56)),
+    var(--flvx-custom-bg-image),
+    var(--background);
+  background-attachment: fixed;
+  background-position: center;
+  background-size: cover;
 }
 
 .dark .flvx-luminous-shell::before {

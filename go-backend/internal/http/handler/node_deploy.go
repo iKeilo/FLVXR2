@@ -142,6 +142,9 @@ func (h *Handler) ensureNodeDeployAccess(r *http.Request, nodeID int64) (*model.
 	if err != nil || node == nil {
 		return nil, errors.New("节点不存在")
 	}
+	if node.IsRemote == 1 {
+		return nil, errors.New("远程共享节点不支持节点部署功能")
+	}
 	if node.OwnerUserID <= 0 {
 		if actorUserID == 1 {
 			return node, nil

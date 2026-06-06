@@ -134,6 +134,7 @@ interface Node {
   tls?: number;
   socks?: number;
   status: number;
+  isRemote?: number;
   ownerUserId?: number;
   canDeploy?: boolean;
   connectionStatus: "online" | "offline";
@@ -463,6 +464,10 @@ export default function NodePage() {
     null,
   );
   const openDeployModal = useCallback((node: Node) => {
+    if (node.isRemote === 1) {
+      toast.error("远程共享节点不支持部署功能");
+      return;
+    }
     if (!node.canDeploy) {
       toast.error("只有该节点所属账号可以使用部署功能");
       return;
@@ -2339,7 +2344,9 @@ export default function NodePage() {
             </div>
             <div className="grid gap-2 grid-cols-4">
               <Button
-                className={`min-h-8 w-full ${node.canDeploy ? "" : "hidden"}`}
+                className={`min-h-8 w-full ${
+                  node.canDeploy && node.isRemote !== 1 ? "" : "hidden"
+                }`}
                 color="secondary"
                 isDisabled={node.connectionStatus !== "online"}
                 size="sm"

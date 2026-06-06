@@ -14,17 +14,51 @@ type FederationClient struct {
 }
 
 type RemoteNodeInfo struct {
-	ShareID        int64  `json:"shareId"`
-	ShareName      string `json:"shareName"`
-	NodeID         int64  `json:"nodeId"`
-	NodeName       string `json:"nodeName"`
-	ServerIP       string `json:"serverIp"`
-	Status         int    `json:"status"`
-	MaxBandwidth   int64  `json:"maxBandwidth"`
-	CurrentFlow    int64  `json:"currentFlow"`
-	ExpiryTime     int64  `json:"expiryTime"`
-	PortRangeStart int    `json:"portRangeStart"`
-	PortRangeEnd   int    `json:"portRangeEnd"`
+	ShareID            int64    `json:"shareId"`
+	ShareName          string   `json:"shareName"`
+	NodeID             int64    `json:"nodeId"`
+	NodeName           string   `json:"nodeName"`
+	ServerIP           string   `json:"serverIp"`
+	Status             int      `json:"status"`
+	MaxBandwidth       int64    `json:"maxBandwidth"`
+	CurrentFlow        int64    `json:"currentFlow"`
+	ExpiryTime         int64    `json:"expiryTime"`
+	PortRangeStart     int      `json:"portRangeStart"`
+	PortRangeEnd       int      `json:"portRangeEnd"`
+	ProtocolVersion    string   `json:"protocolVersion,omitempty"`
+	ProviderType       string   `json:"providerType,omitempty"`
+	Features           []string `json:"features,omitempty"`
+	RuntimeModes       []string `json:"runtimeModes,omitempty"`
+	SupportsNftables   bool     `json:"supportsNftables,omitempty"`
+	SupportsWGPath     bool     `json:"supportsWGPath,omitempty"`
+	SupportsTLSInbound bool     `json:"supportsTLSInbound,omitempty"`
+}
+
+var baselineFederationFeatures = []string{
+	"gost_tunnel",
+	"port_forward",
+	"runtime_reserve",
+	"runtime_apply",
+	"runtime_release",
+	"runtime_diagnose",
+}
+
+func normalizeRemoteNodeInfo(info *RemoteNodeInfo) {
+	if info == nil {
+		return
+	}
+	if strings.TrimSpace(info.ProviderType) == "" {
+		info.ProviderType = "sagit-chu-compatible"
+	}
+	if strings.TrimSpace(info.ProtocolVersion) == "" {
+		info.ProtocolVersion = "baseline"
+	}
+	if len(info.Features) == 0 {
+		info.Features = append([]string(nil), baselineFederationFeatures...)
+	}
+	if len(info.RuntimeModes) == 0 {
+		info.RuntimeModes = []string{"gost"}
+	}
 }
 
 type RemoteTunnelResponse struct {
@@ -140,6 +174,7 @@ func (c *FederationClient) Connect(url, token, localDomain string) (*RemoteNodeI
 		return nil, fmt.Errorf("remote api error: %s", res.Msg)
 	}
 
+	normalizeRemoteNodeInfo(&res.Data)
 	return &res.Data, nil
 }
 
