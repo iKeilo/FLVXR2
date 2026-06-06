@@ -578,7 +578,7 @@ func (h *Handler) getConfigByName(w http.ResponseWriter, r *http.Request) {
 		if cfg, err := h.repo.GetConfigByName(configKeyGlobalAppBackground); err == nil && cfg != nil {
 			value = cfg.Value
 		}
-		if userID, err := userIDFromRequest(r); err == nil && userID > 0 {
+		if userID, ok := h.optionalUserIDFromRequest(r); ok && userID > 0 {
 			setting, settingErr := h.repo.GetUserSetting(userID, configKeyAppBackground)
 			if settingErr != nil {
 				response.WriteJSON(w, response.Err(-2, settingErr.Error()))
@@ -626,7 +626,7 @@ func (h *Handler) getConfigs(w http.ResponseWriter, r *http.Request) {
 			cfgMap[configKeyAppBackground] = globalValue
 		}
 	}
-	if userID, err := userIDFromRequest(r); err == nil && userID > 0 {
+	if userID, ok := h.optionalUserIDFromRequest(r); ok && userID > 0 {
 		setting, settingErr := h.repo.GetUserSetting(userID, configKeyAppBackground)
 		if settingErr != nil {
 			response.WriteJSON(w, response.Err(-2, settingErr.Error()))
@@ -1679,6 +1679,42 @@ func userIDFromRequest(r *http.Request) (int64, error) {
 		return 0, strconv.ErrSyntax
 	}
 	return parseUserID(claims.Sub)
+}
+
+func (h *Handler) optionalUserIDFromRequest(r *http.Request) (int64, bool) {
+	if r == nil {
+		return 0, false
+	}
+	if userID, err := userIDFromRequest(r); err == nil && userID > 0 {
+		return userID, true
+	}
+
+	token := handlerBearerToken(strings.TrimSpace(r.Header.Get("Authorization")))
+	if token == "" {
+		if cookie, err := r.Cookie(middleware.SessionCookieName); err == nil {
+			token = strings.TrimSpace(cookie.Value)
+		}
+	}
+	if token == "" || strings.TrimSpace(h.jwtSecret) == "" {
+		return 0, false
+	}
+
+	claims, ok := auth.ValidateToken(token, h.jwtSecret)
+	if !ok {
+		return 0, false
+	}
+	userID, err := parseUserID(claims.Sub)
+	if err != nil || userID <= 0 {
+		return 0, false
+	}
+	return userID, true
+}
+
+func handlerBearerToken(value string) string {
+	if strings.HasPrefix(strings.ToLower(value), "bearer ") {
+		return strings.TrimSpace(value[7:])
+	}
+	return strings.TrimSpace(value)
 }
 
 func userRoleFromRequest(r *http.Request) (int64, int, error) {
