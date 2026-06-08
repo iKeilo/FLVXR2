@@ -3,6 +3,10 @@
 > **项目仓库**: https://github.com/iKeilo/FLVXR2
 > 励志要做一个激进的FLVX分支以及融合怪
 
+Fork仓库参考以及部分代码来源
+[abai569](https://github.com/abai569/flvx)
+[bqlpfyl](https://github.com/bqlpfy/flux-panel)
+[Sagit-chux](https://github.com/Sagit-chu/flvx)
 ## 特性
 
 - 支持按 隧道账号级别 管理流量转发数量，可用于用户/隧道配额控制
