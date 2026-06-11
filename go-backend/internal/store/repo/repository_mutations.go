@@ -37,27 +37,28 @@ func (r *Repository) UserExistsExcluding(username string, excludeID int64) (bool
 	return cnt > 0, err
 }
 
-func (r *Repository) CreateUser(username, pwdHash string, roleID int, expTime, flow, flowResetTime int64, num, status int, now int64, renewalAmount, balance, autoRenew int64) (int64, error) {
+func (r *Repository) CreateUser(username, pwdHash string, roleID int, expTime, flow, flowResetTime int64, num, maxConnections, status int, now int64, renewalAmount, balance, autoRenew int64) (int64, error) {
 	if r == nil || r.db == nil {
 		return 0, errors.New("repository not initialized")
 	}
 	user := model.User{
-		User:          username,
-		Pwd:           pwdHash,
-		RoleID:        roleID,
-		ExpTime:       expTime,
-		Flow:          flow,
-		InFlow:        0,
-		OutFlow:       0,
-		FlowResetTime: flowResetTime,
-		Num:           num,
-		CreatedTime:   now,
-		UpdatedTime:   sql.NullInt64{Int64: now, Valid: true},
-		Status:        status,
-		RenewalAmount: renewalAmount,
-		Balance:       balance,
-		AutoRenew:     int(autoRenew),
-		BaseFlow:      flow,
+		User:           username,
+		Pwd:            pwdHash,
+		RoleID:         roleID,
+		ExpTime:        expTime,
+		Flow:           flow,
+		InFlow:         0,
+		OutFlow:        0,
+		FlowResetTime:  flowResetTime,
+		Num:            num,
+		MaxConnections: maxConnections,
+		CreatedTime:    now,
+		UpdatedTime:    sql.NullInt64{Int64: now, Valid: true},
+		Status:         status,
+		RenewalAmount:  renewalAmount,
+		Balance:        balance,
+		AutoRenew:      int(autoRenew),
+		BaseFlow:       flow,
 	}
 	if err := r.db.Create(&user).Error; err != nil {
 		return 0, err
@@ -77,20 +78,21 @@ func (r *Repository) GetUserRoleID(userID int64) (int, error) {
 	return user.RoleID, nil
 }
 
-func (r *Repository) UpdateUserWithPassword(id int64, username, pwdHash, name string, flow int64, num int, expTime, flowResetTime int64, status int, now int64, renewalAmount, balance, autoRenew int64) error {
+func (r *Repository) UpdateUserWithPassword(id int64, username, pwdHash, name string, flow int64, num, maxConnections int, expTime, flowResetTime int64, status int, now int64, renewalAmount, balance, autoRenew int64) error {
 	if r == nil || r.db == nil {
 		return errors.New("repository not initialized")
 	}
 	// 使用 Select 强制更新所有字段，包括零值
 	return r.db.Model(&model.User{}).
 		Where("id = ?", id).
-		Select("user", "name", "pwd", "flow", "num", "exp_time", "flow_reset_time", "status", "updated_time", "renewal_amount", "balance", "auto_renew").
+		Select("user", "name", "pwd", "flow", "num", "max_connections", "exp_time", "flow_reset_time", "status", "updated_time", "renewal_amount", "balance", "auto_renew").
 		Updates(map[string]interface{}{
 			"user":            username,
 			"name":            name,
 			"pwd":             pwdHash,
 			"flow":            flow,
 			"num":             num,
+			"max_connections": maxConnections,
 			"exp_time":        expTime,
 			"flow_reset_time": flowResetTime,
 			"status":          status,
@@ -101,19 +103,20 @@ func (r *Repository) UpdateUserWithPassword(id int64, username, pwdHash, name st
 		}).Error
 }
 
-func (r *Repository) UpdateUserWithoutPassword(id int64, username, name string, flow int64, num int, expTime, flowResetTime int64, status int, now int64, renewalAmount, balance, autoRenew int64) error {
+func (r *Repository) UpdateUserWithoutPassword(id int64, username, name string, flow int64, num, maxConnections int, expTime, flowResetTime int64, status int, now int64, renewalAmount, balance, autoRenew int64) error {
 	if r == nil || r.db == nil {
 		return errors.New("repository not initialized")
 	}
 	// 使用 Select 强制更新所有字段，包括零值
 	return r.db.Model(&model.User{}).
 		Where("id = ?", id).
-		Select("user", "name", "flow", "num", "exp_time", "flow_reset_time", "status", "updated_time", "renewal_amount", "balance", "auto_renew").
+		Select("user", "name", "flow", "num", "max_connections", "exp_time", "flow_reset_time", "status", "updated_time", "renewal_amount", "balance", "auto_renew").
 		Updates(map[string]interface{}{
 			"user":            username,
 			"name":            name,
 			"flow":            flow,
 			"num":             num,
+			"max_connections": maxConnections,
 			"exp_time":        expTime,
 			"flow_reset_time": flowResetTime,
 			"status":          status,

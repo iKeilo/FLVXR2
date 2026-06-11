@@ -163,6 +163,40 @@ const calculateTunnelUsedFlow = (tunnel: UserTunnel): number => {
 };
 const USER_SEARCH_DEBOUNCE_MS = 250;
 const USER_VIEW_MODE_KEY = "user_view_mode";
+const USER_LIMIT_MAX_VALUE = 99999;
+const sanitizeIntegerDraft = (value: string, max = USER_LIMIT_MAX_VALUE) => {
+  const digits = value.replace(/[^\d]/g, "");
+
+  if (digits === "") return "";
+
+  const parsed = Number(digits);
+
+  if (!Number.isFinite(parsed)) return "";
+
+  return Math.min(parsed, max).toString();
+};
+const parseRequiredUserLimit = (value: string, label: string) => {
+  if (value.trim() === "") {
+    throw new Error(`请填写${label}`);
+  }
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    throw new Error(`${label}不能小于 1`);
+  }
+
+  return Math.min(Math.trunc(parsed), USER_LIMIT_MAX_VALUE);
+};
+const parseOptionalUserLimit = (value: string, label: string) => {
+  if (value.trim() === "") return 0;
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error(`${label}不能小于 0`);
+  }
+
+  return Math.min(Math.trunc(parsed), USER_LIMIT_MAX_VALUE);
+};
 const normalizeUserItem = (item: Partial<User>): UserWithHistory => {
   return {
     id: Number(item.id ?? 0),
@@ -171,6 +205,7 @@ const normalizeUserItem = (item: Partial<User>): UserWithHistory => {
     status: Number(item.status ?? 0),
     flow: Number(item.flow ?? 0),
     num: Number(item.num ?? 0),
+    maxConnections: Number(item.maxConnections ?? 0),
     expTime: item.expTime,
     flowResetTime: item.flowResetTime ?? 0,
     createdTime: item.createdTime,
@@ -254,6 +289,7 @@ export default function UserPage() {
     dailyQuotaGB: number;
     monthlyQuotaGB: number;
     num: number;
+    maxConnections: number;
     expTime: Date | null;
     flowResetTime: number;
     groupIds: number[];
@@ -274,6 +310,7 @@ export default function UserPage() {
     dailyQuotaGB: 0,
     monthlyQuotaGB: 0,
     num: 10,
+    maxConnections: 0,
     expTime: null,
     flowResetTime: 0,
     groupIds: [],
@@ -285,6 +322,11 @@ export default function UserPage() {
     buyTrafficPrice: 0,
     autoBuyTrafficPackageId: 0,
     autoBuyTrafficPackageType: "custom",
+  });
+  const [userLimitDraft, setUserLimitDraft] = useState({
+    flow: "1000",
+    num: "10",
+    maxConnections: "",
   });
   const [userFormLoading, setUserFormLoading] = useState(false);
   const [autoBuyPackages, setAutoBuyPackages] = useState<
@@ -913,6 +955,7 @@ export default function UserPage() {
       dailyQuotaGB: 0,
       monthlyQuotaGB: 0,
       num: 10,
+      maxConnections: 0,
       expTime: null,
       flowResetTime: 0,
       groupIds: [],
@@ -924,6 +967,11 @@ export default function UserPage() {
       buyTrafficPrice: 0,
       autoBuyTrafficPackageId: 0,
       autoBuyTrafficPackageType: "custom",
+    });
+    setUserLimitDraft({
+      flow: "1000",
+      num: "10",
+      maxConnections: "",
     });
     onUserModalOpen();
   };
@@ -1028,6 +1076,7 @@ export default function UserPage() {
       dailyQuotaGB: user.dailyQuotaGB ?? 0,
       monthlyQuotaGB: user.monthlyQuotaGB ?? 0,
       num: user.num,
+      maxConnections: user.maxConnections ?? 0,
       expTime: user.expTime ? new Date(user.expTime) : null,
       flowResetTime: user.flowResetTime ?? 0,
       groupIds: currentGroupIds,
@@ -1040,6 +1089,12 @@ export default function UserPage() {
       autoBuyTrafficPackageId: user.autoBuyTrafficPackageId ?? 0,
       autoBuyTrafficPackageType:
         (user.autoBuyTrafficPackageId ?? 0) > 0 ? "package" : "custom",
+    });
+    setUserLimitDraft({
+      flow: user.flow.toString(),
+      num: user.num.toString(),
+      maxConnections:
+        (user.maxConnections ?? 0) > 0 ? String(user.maxConnections) : "",
     });
     onUserModalOpen();
   };
@@ -1078,10 +1133,30 @@ export default function UserPage() {
 
       return;
     }
+    if (
+      userLimitDraft.flow.trim() === "" ||
+      Number(userLimitDraft.flow) < 1 ||
+      userLimitDraft.num.trim() === "" ||
+      Number(userLimitDraft.num) < 1
+    ) {
+      toast.error("请填写有效的流量限制和规则数量");
+
+      return;
+    }
+
     setUserFormLoading(true);
     try {
+      const flow = parseRequiredUserLimit(userLimitDraft.flow, "流量限制");
+      const num = parseRequiredUserLimit(userLimitDraft.num, "规则数量");
+      const maxConnections = parseOptionalUserLimit(
+        userLimitDraft.maxConnections,
+        "总连接数限制",
+      );
       const submitData: any = {
         ...userForm,
+        flow,
+        num,
+        maxConnections,
         balance: Math.round(userForm.balance * 100),
         renewalAmount: Math.round(userForm.renewalAmount * 100),
         expTime: userForm.expTime?.getTime() ?? 0,
@@ -2713,15 +2788,13 @@ export default function UserPage() {
                 max="99999"
                 min="1"
                 type="number"
-                value={userForm.flow.toString()}
-                onChange={(e) => {
-                  const value = Math.min(
-                    Math.max(Number(e.target.value) || 0, 1),
-                    99999,
-                  );
-
-                  setUserForm((prev) => ({ ...prev, flow: value }));
-                }}
+                value={userLimitDraft.flow}
+                onChange={(e) =>
+                  setUserLimitDraft((prev) => ({
+                    ...prev,
+                    flow: sanitizeIntegerDraft(e.target.value),
+                  }))
+                }
               />
               <Input
                 isRequired
@@ -2729,15 +2802,28 @@ export default function UserPage() {
                 max="99999"
                 min="1"
                 type="number"
-                value={userForm.num.toString()}
-                onChange={(e) => {
-                  const value = Math.min(
-                    Math.max(Number(e.target.value) || 0, 1),
-                    99999,
-                  );
-
-                  setUserForm((prev) => ({ ...prev, num: value }));
-                }}
+                value={userLimitDraft.num}
+                onChange={(e) =>
+                  setUserLimitDraft((prev) => ({
+                    ...prev,
+                    num: sanitizeIntegerDraft(e.target.value),
+                  }))
+                }
+              />
+              <Input
+                description="留空或 0 表示不限制"
+                label="总连接数限制"
+                max="99999"
+                min="0"
+                placeholder="不限制"
+                type="number"
+                value={userLimitDraft.maxConnections}
+                onChange={(e) =>
+                  setUserLimitDraft((prev) => ({
+                    ...prev,
+                    maxConnections: sanitizeIntegerDraft(e.target.value),
+                  }))
+                }
               />
               <Select
                 label="归零日期"

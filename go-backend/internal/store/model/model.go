@@ -810,30 +810,31 @@ type ImportResult struct {
 
 // ForwardRecord is a minimal forward view used by control plane and flow policy.
 type ForwardRecord struct {
-	ID                int64
-	UserID            int64
-	UserName          string
-	Name              string
-	TunnelID          int64
-	RemoteAddr        string
-	Strategy          string
-	Status            int
-	SpeedID           sql.NullInt64
-	MaxConnections    int
-	TrafficLimit      int64
-	ExpiryTime        sql.NullInt64
-	SpeedLimitEnabled bool
-	SpeedLimit        int
-	UploadSpeed       int
-	DownloadSpeed     int
-	Mode              string
-	InFlow            int64
-	OutFlow           int64
-	WGPathID          int64
-	WGRuleType        string
-	SourceCIDR        string
-	TargetCIDR        string
-	SNATEnabled       bool
+	ID                 int64
+	UserID             int64
+	UserName           string
+	Name               string
+	TunnelID           int64
+	RemoteAddr         string
+	Strategy           string
+	Status             int
+	SpeedID            sql.NullInt64
+	MaxConnections     int
+	UserMaxConnections int
+	TrafficLimit       int64
+	ExpiryTime         sql.NullInt64
+	SpeedLimitEnabled  bool
+	SpeedLimit         int
+	UploadSpeed        int
+	DownloadSpeed      int
+	Mode               string
+	InFlow             int64
+	OutFlow            int64
+	WGPathID           int64
+	WGRuleType         string
+	SourceCIDR         string
+	TargetCIDR         string
+	SNATEnabled        bool
 }
 
 // TunnelRecord is a minimal tunnel view used by control plane.

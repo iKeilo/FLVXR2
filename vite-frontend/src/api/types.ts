@@ -174,6 +174,7 @@ export interface UserApiItem {
   status: number;
   flow: number;
   num: number;
+  maxConnections?: number;
   expTime?: number;
   flowResetTime?: number;
   inFlow?: number;
@@ -493,6 +494,7 @@ export interface UserMutationPayload {
   status?: number;
   flow?: number;
   num?: number;
+  maxConnections?: number;
   expTime?: number | string;
   flowResetTime?: number;
   dailyQuotaGB?: number;
@@ -938,7 +940,12 @@ export interface SubscriptionPackageApiItem {
   type: string;
   name: string;
   description: string;
-  licenseProfile?: "evaluation" | "personal" | "business" | "enterprise" | "channel";
+  licenseProfile?:
+    | "evaluation"
+    | "personal"
+    | "business"
+    | "enterprise"
+    | "channel";
   price: number;
   validityDays: number;
   trafficLimit: number;

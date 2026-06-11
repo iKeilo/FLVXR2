@@ -1854,8 +1854,12 @@ func buildForwardServiceConfigs(baseName string, forward *forwardRecord, tunnel 
 		if tunnel != nil && tunnel.Type == 1 && strings.TrimSpace(node.InterfaceName) != "" {
 			meta["interface"] = node.InterfaceName
 		}
-		if forward.MaxConnections > 0 {
-			meta["maxConnections"] = forward.MaxConnections
+		maxConnections := forward.MaxConnections
+		if maxConnections <= 0 {
+			maxConnections = forward.UserMaxConnections
+		}
+		if maxConnections > 0 {
+			meta["maxConnections"] = maxConnections
 		}
 		if len(meta) > 0 {
 			service["metadata"] = meta

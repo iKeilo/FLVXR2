@@ -71,6 +71,7 @@ func (r *Repository) ListActiveForwardsByUser(userID int64) ([]model.ForwardReco
 			rows[i].Strategy = "fifo"
 		}
 	}
+	attachForwardUserMaxConnections(r.db, rows)
 	return rows, nil
 }
 
@@ -104,6 +105,7 @@ func (r *Repository) ListActiveForwardsByUserTunnel(userID, tunnelID int64) ([]m
 			rows[i].Strategy = "fifo"
 		}
 	}
+	attachForwardUserMaxConnections(r.db, rows)
 	return rows, nil
 }
 
@@ -137,6 +139,7 @@ func (r *Repository) ListForwardsByUserAndTunnel(userID, tunnelID int64) ([]mode
 			rows[i].Strategy = "fifo"
 		}
 	}
+	attachForwardUserMaxConnections(r.db, rows)
 	return rows, nil
 }
 
@@ -179,7 +182,41 @@ func (r *Repository) GetForwardRecord(forwardID int64) (*model.ForwardRecord, er
 	if strings.TrimSpace(fr.Strategy) == "" {
 		fr.Strategy = "fifo"
 	}
-	return &fr, nil
+	rows := []model.ForwardRecord{fr}
+	attachForwardUserMaxConnections(r.db, rows)
+	return &rows[0], nil
+}
+
+func attachForwardUserMaxConnections(tx *gorm.DB, rows []model.ForwardRecord) {
+	if tx == nil || len(rows) == 0 {
+		return
+	}
+	userIDs := make([]int64, 0, len(rows))
+	seen := make(map[int64]struct{}, len(rows))
+	for _, row := range rows {
+		if row.UserID <= 0 {
+			continue
+		}
+		if _, ok := seen[row.UserID]; ok {
+			continue
+		}
+		seen[row.UserID] = struct{}{}
+		userIDs = append(userIDs, row.UserID)
+	}
+	if len(userIDs) == 0 {
+		return
+	}
+	var users []model.User
+	if err := tx.Select("id", "max_connections").Where("id IN ?", userIDs).Find(&users).Error; err != nil {
+		return
+	}
+	limits := make(map[int64]int, len(users))
+	for _, user := range users {
+		limits[user.ID] = user.MaxConnections
+	}
+	for i := range rows {
+		rows[i].UserMaxConnections = limits[rows[i].UserID]
+	}
 }
 
 func (r *Repository) GetTunnelRecord(tunnelID int64) (*model.TunnelRecord, error) {

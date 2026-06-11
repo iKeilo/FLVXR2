@@ -104,6 +104,7 @@ func (h *Handler) userCreate(w http.ResponseWriter, r *http.Request) {
 	status := asInt(req["status"], 1)
 	flow := asInt64(req["flow"], 100)
 	num := asInt(req["num"], 10)
+	maxConnections := normalizeUserMaxConnections(asInt(req["maxConnections"], 0))
 	expTime := asInt64(req["expTime"], time.Now().Add(365*24*time.Hour).UnixMilli())
 	flowResetTime := asInt64(req["flowResetTime"], 1)
 	dailyQuotaGB := asInt64(req["dailyQuotaGB"], 0)
@@ -122,7 +123,7 @@ func (h *Handler) userCreate(w http.ResponseWriter, r *http.Request) {
 	roleID := 1
 	now := time.Now().UnixMilli()
 
-	userID, err := h.repo.CreateUser(username, security.MD5(pwd), roleID, expTime, flow, flowResetTime, num, status, now, renewalAmount, balance, int64(autoRenew))
+	userID, err := h.repo.CreateUser(username, security.MD5(pwd), roleID, expTime, flow, flowResetTime, num, maxConnections, status, now, renewalAmount, balance, int64(autoRenew))
 	if err != nil {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return
@@ -222,6 +223,7 @@ func (h *Handler) userUpdate(w http.ResponseWriter, r *http.Request) {
 
 	flow := asInt64(req["flow"], 100)
 	num := asInt(req["num"], 10)
+	maxConnections := normalizeUserMaxConnections(asInt(req["maxConnections"], 0))
 	expTime := asInt64(req["expTime"], time.Now().Add(365*24*time.Hour).UnixMilli())
 	flowResetTime := asInt64(req["flowResetTime"], 1)
 	status := asInt(req["status"], 1)
@@ -243,13 +245,13 @@ func (h *Handler) userUpdate(w http.ResponseWriter, r *http.Request) {
 
 	if strings.TrimSpace(pwd) == "" {
 		// 在参数里增加了 name
-		if err := h.repo.UpdateUserWithoutPassword(id, username, name, flow, num, expTime, flowResetTime, status, now, renewalAmount, balance, int64(autoRenew)); err != nil {
+		if err := h.repo.UpdateUserWithoutPassword(id, username, name, flow, num, maxConnections, expTime, flowResetTime, status, now, renewalAmount, balance, int64(autoRenew)); err != nil {
 			response.WriteJSON(w, response.Err(-2, err.Error()))
 			return
 		}
 	} else {
 		// 在参数里增加了 name
-		if err := h.repo.UpdateUserWithPassword(id, username, security.MD5(pwd), name, flow, num, expTime, flowResetTime, status, now, renewalAmount, balance, int64(autoRenew)); err != nil {
+		if err := h.repo.UpdateUserWithPassword(id, username, security.MD5(pwd), name, flow, num, maxConnections, expTime, flowResetTime, status, now, renewalAmount, balance, int64(autoRenew)); err != nil {
 			response.WriteJSON(w, response.Err(-2, err.Error()))
 			return
 		}
@@ -2868,7 +2870,15 @@ func (h *Handler) forwardCreate(w http.ResponseWriter, r *http.Request) {
 	expiryTime := asAnyToInt64Ptr(req["expiryTime"])
 	speedLimitEnabled := asBool(req["speedLimitEnabled"], false)
 	speedLimit := asInt(req["speedLimit"], 0)
-	forwardID, err := h.repo.CreateForwardTx(userID, userName, name, tunnelID, remoteAddr, defaultString(asString(req["strategy"]), "fifo"), now, inx, entryNodes, port, inIp, nullableInt(speedID), asInt(req["maxConnections"], 0), trafficLimit, expiryTime, speedLimitEnabled, speedLimit, mode, wgPathID, wgRuleType, sourceCIDR, targetCIDR, snatEnabled)
+	maxConnections := asInt(req["maxConnections"], 0)
+	if maxConnections <= 0 {
+		if user, userErr := h.repo.GetUserByID(userID); userErr == nil && user != nil {
+			maxConnections = user.MaxConnections
+		}
+	}
+	maxConnections = normalizeUserMaxConnections(maxConnections)
+
+	forwardID, err := h.repo.CreateForwardTx(userID, userName, name, tunnelID, remoteAddr, defaultString(asString(req["strategy"]), "fifo"), now, inx, entryNodes, port, inIp, nullableInt(speedID), maxConnections, trafficLimit, expiryTime, speedLimitEnabled, speedLimit, mode, wgPathID, wgRuleType, sourceCIDR, targetCIDR, snatEnabled)
 	if err != nil {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return
@@ -5798,6 +5808,16 @@ func asFloat(v interface{}, def float64) float64 {
 	return f
 }
 
+func normalizeUserMaxConnections(value int) int {
+	if value < 0 {
+		return 0
+	}
+	if value > 99999 {
+		return 99999
+	}
+	return value
+}
+
 func asAnyToInt64Ptr(v interface{}) *int64 {
 	s := asString(v)
 	if s == "" || strings.EqualFold(s, "null") {
@@ -6306,7 +6326,7 @@ func (h *Handler) userRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	now := time.Now().UnixMilli()
 	expTime := time.Now().Add(72 * time.Hour).UnixMilli()
-	userID, err := h.repo.CreateUser(req.User, security.MD5(req.Password), 1, expTime, 0, 1, 0, 1, now, 0, 0, 0)
+	userID, err := h.repo.CreateUser(req.User, security.MD5(req.Password), 1, expTime, 0, 1, 0, 0, 1, now, 0, 0, 0)
 	if err != nil {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return

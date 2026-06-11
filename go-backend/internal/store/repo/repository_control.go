@@ -68,6 +68,7 @@ func (r *Repository) ListForwardsByTunnelTx(tx *gorm.DB, tunnelID int64) ([]mode
 			rows[i].Strategy = "fifo"
 		}
 	}
+	attachForwardUserMaxConnections(tx, rows)
 	return rows, nil
 }
 

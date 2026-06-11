@@ -1024,6 +1024,7 @@ func (r *Repository) ListUsers() ([]map[string]interface{}, error) {
 			"buyTrafficPrice":         u.BuyTrafficPrice,
 			"autoBuyTrafficPackageId": u.AutoBuyTrafficPackageID,
 			"baseFlow":                u.BaseFlow,
+			"maxConnections":          u.MaxConnections,
 		}
 		if quota := quotaMap[u.ID]; quota != nil {
 			item["dailyQuotaGB"] = quota.DailyLimitGB
