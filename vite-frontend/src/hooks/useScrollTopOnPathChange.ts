@@ -17,5 +17,11 @@ export const useScrollTopOnPathChange = (): void => {
 
     document.body.scrollTop = 0;
     document.documentElement.scrollTop = 0;
+
+    const h5Main = document.getElementById("h5-main");
+
+    if (h5Main) {
+      h5Main.scrollTop = 0;
+    }
   }, [pathname]);
 };

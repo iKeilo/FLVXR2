@@ -1,6 +1,9 @@
 import { motion } from "framer-motion";
 import React from "react";
 
+const cx = (...classes: Array<string | undefined>) =>
+  classes.filter(Boolean).join(" ");
+
 /**
  * Wraps page content with a smooth fade-in + slide-up entrance animation.
  * Use this as the outermost wrapper inside each page component.
@@ -14,7 +17,7 @@ export const AnimatedPage = ({
 }) => (
   <motion.div
     animate={{ opacity: 1, y: 0 }}
-    className={className}
+    className={cx("animated-page", className)}
     exit={{ opacity: 0, y: -8 }}
     initial={{ opacity: 0, y: 16 }}
     transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}

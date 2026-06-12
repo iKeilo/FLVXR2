@@ -530,14 +530,59 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
         ].includes(item.path)
       ),
   );
+  const activeItem =
+    filteredMenuItems.find((item) => item.path === location.pathname) ||
+    filteredMenuItems.find((item) => location.pathname.startsWith(item.path));
+  const primaryMobilePaths = isAdmin
+    ? ["/dashboard", "/forward", "/tunnel", "/node"]
+    : ["/dashboard", "/forward", "/shop", "/myhome"];
+  const bottomNavItems = primaryMobilePaths
+    .map((path) => filteredMenuItems.find((item) => item.path === path))
+    .filter(Boolean) as MenuItem[];
+  const showLicenseBanner = Boolean(isAdmin && licenseInfo);
+  const licenseBannerTone =
+    licenseInfo?.tier === "blocked" ||
+    (licenseInfo?.configured && !licenseInfo?.valid)
+      ? "danger"
+      : licenseInfo?.valid && licenseInfo?.tier !== "free"
+        ? "success"
+        : "warning";
+  const licenseBannerText = (() => {
+    if (!licenseInfo) return "";
+    if (
+      licenseInfo.tier === "free" ||
+      (!licenseInfo.has_license_key && !licenseInfo.tier)
+    ) {
+      return "基础授权：节点、隧道、端口与转发数量不受限制，商业结算与分发能力需单独授权";
+    }
+    if (licenseInfo.tier === "blocked") {
+      return licenseInfo.reason || "授权无效";
+    }
+    if (licenseInfo.configured && licenseInfo.valid) {
+      const daysLeft = licenseInfo.expire_time
+        ? Math.max(
+            0,
+            Math.floor(
+              (licenseInfo.expire_time - Date.now()) / (1000 * 60 * 60 * 24),
+            ),
+          )
+        : 0;
+
+      return `授权剩余 ${daysLeft} 天${daysLeft < 5 ? "，即将过期" : ""}`;
+    }
+
+    return licenseInfo.reason || "授权无效";
+  })();
 
   return (
-    <div className="flvx-luminous-shell flex flex-col min-h-screen overflow-x-hidden">
+    <div
+      className={`flvx-mobile-shell ${showLicenseBanner ? "flvx-mobile-has-license" : ""}`}
+    >
       {/* 顶部导航栏 */}
-      <header className="flvx-luminous-topbar fixed top-0 left-0 w-full bg-white/80 dark:bg-black/70 shadow-sm border-b border-gray-200/80 dark:border-gray-600/60 h-14 safe-top flex-shrink-0 flex items-center justify-between px-3 sm:px-4 z-40 backdrop-blur-xl">
+      <header className="flvx-mobile-topbar">
         <div className="flex items-center gap-2 sm:gap-3">
           <button
-            className="p-1.5 -ml-1.5 text-gray-600 dark:text-gray-300 hover:text-foreground rounded-md active:bg-gray-200 dark:active:bg-gray-800 transition-colors"
+            className="flvx-h5-icon-button p-1.5 -ml-1.5 text-gray-600 dark:text-gray-300 hover:text-foreground rounded-md active:bg-gray-200 dark:active:bg-gray-800 transition-colors"
             onClick={toggleMobileMenu}
           >
             <svg
@@ -557,7 +602,7 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-1.5 sm:gap-2">
             {/* 注释掉左上角 logo <BrandLogo size={20} /> */}
             <a
-              className={`text-sm font-bold truncate max-w-[90px] sm:max-w-none transition-colors cursor-pointer no-underline ${
+              className={`flvx-h5-brand-name text-sm font-bold truncate max-w-[90px] sm:max-w-none transition-colors cursor-pointer no-underline ${
                 licenseInfo?.has_license_key
                   ? "text-foreground hover:text-primary-600 dark:hover:text-primary-300"
                   : "text-foreground hover:text-primary-600 dark:hover:text-primary-300"
@@ -582,7 +627,7 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
 
         {/* 授权信息 (仅管理员可见) */}
         {isAdmin && (
-          <div className="flex-1 flex justify-start items-center h-full mx-2 overflow-hidden">
+          <div className="flvx-h5-license-inline flex-1 flex justify-start items-center h-full mx-2 overflow-hidden">
             {licenseInfo &&
             (licenseInfo.tier === "free" ||
               (!licenseInfo.has_license_key && !licenseInfo.tier)) ? (
@@ -666,7 +711,7 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
           <Dropdown placement="bottom-end">
             <DropdownTrigger>
               <Button
-                className="text-sm font-medium text-foreground px-1 sm:px-2 min-w-0 bg-transparent"
+                className="flvx-h5-user-button text-sm font-medium text-foreground px-1 sm:px-2 min-w-0 bg-transparent"
                 variant="light"
               >
                 <span className="truncate max-w-[70px] sm:max-w-[120px]">
@@ -731,7 +776,7 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
           {/* 主题切换按钮 */}
           <Button
             isIconOnly
-            className="text-foreground"
+            className="flvx-h5-theme-button text-foreground"
             size="sm"
             variant="light"
             onPress={() => setMode(effectiveMode === "dark" ? "light" : "dark")}
@@ -757,7 +802,7 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
 
       {/* 侧边滑动 Drawer */}
       <aside
-        className={`flvx-luminous-sidebar fixed ${!mobileMenuVisible ? "-translate-x-full" : "translate-x-0"} w-[68%] max-w-[236px] min-w-[180px] bg-white/90 dark:bg-black/80 shadow-2xl border-r border-gray-200/80 dark:border-gray-600/60 z-50 transition-transform duration-300 ease-in-out flex flex-col h-[100dvh] top-0 left-0 backdrop-blur-xl`}
+        className={`flvx-mobile-drawer ${!mobileMenuVisible ? "-translate-x-full" : "translate-x-0"}`}
       >
         <div className="px-4 h-20 flex items-center justify-center overflow-hidden whitespace-nowrap box-border border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
           {/* 注释掉侧边栏顶部 logo  */}
@@ -821,12 +866,70 @@ export default function H5Layout({ children }: { children: React.ReactNode }) {
 
       {/* 主内容区域 */}
       <main
-          className="flvx-luminous-main flex-1 relative pb-8 pt-14 overflow-y-auto"
+        className="flvx-mobile-main"
         id="h5-main"
       >
         <GlobalPullToRefresh />
+        {showLicenseBanner && (
+          <button
+            className={`flvx-h5-license-banner flvx-mobile-license-banner flvx-h5-license-banner-${licenseBannerTone}`}
+            title={licenseBannerText}
+            type="button"
+          >
+            <svg
+              aria-hidden="true"
+              className="h-4 w-4 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+              />
+            </svg>
+            <span>{licenseBannerText}</span>
+          </button>
+        )}
         {children}
       </main>
+
+      <nav className="flvx-mobile-bottom-nav" aria-label="移动端主导航">
+        {bottomNavItems.map((item) => {
+          const isActive = location.pathname === item.path;
+
+          return (
+            <button
+              key={item.path}
+              className={`flvx-h5-bottom-nav-item ${isActive ? "is-active" : ""}`}
+              type="button"
+              onClick={() => handleMenuClick(item)}
+            >
+              <span className="flvx-h5-bottom-nav-icon">{item.icon}</span>
+              <span className="flvx-h5-bottom-nav-label">{item.label}</span>
+            </button>
+          );
+        })}
+        <button
+          className={`flvx-h5-bottom-nav-item ${
+            activeItem &&
+            !bottomNavItems.some((item) => item.path === activeItem.path)
+              ? "is-active"
+              : ""
+          }`}
+          type="button"
+          onClick={toggleMobileMenu}
+        >
+          <span className="flvx-h5-bottom-nav-icon">
+            <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M3 5a2 2 0 114 0 2 2 0 01-4 0zm5 0a2 2 0 114 0 2 2 0 01-4 0zm5 0a2 2 0 114 0 2 2 0 01-4 0zM3 15a2 2 0 114 0 2 2 0 01-4 0zm5 0a2 2 0 114 0 2 2 0 01-4 0zm5 0a2 2 0 114 0 2 2 0 01-4 0z" />
+            </svg>
+          </span>
+          <span className="flvx-h5-bottom-nav-label">更多</span>
+        </button>
+      </nav>
 
       {(!licenseInfo?.has_license_key || poweredBadgeVisible) && (
         <div className="flvx-powered-badge" aria-label="Powered by FLVX">
