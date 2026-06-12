@@ -26,6 +26,7 @@ import {
 } from "@/shadcn-bridge/heroui/modal";
 import { Input } from "@/shadcn-bridge/heroui/input";
 import { BrandLogo } from "@/components/brand-logo";
+import { SidebarUpdateButton } from "@/components/sidebar-update-button";
 import { SunFilledIcon, MoonFilledIcon } from "@/components/icons";
 import {
   getLicenseInfo,
@@ -870,28 +871,33 @@ export default function AdminLayout({
         </nav>
 
         {/* 底部版权信息和授权状态 */}
-        <div className="px-5 py-2 pb-4 mt-auto flex-shrink-0 flex flex-col gap-1 overflow-hidden whitespace-nowrap box-border">
-          <div
-            className={`transition-all duration-300 overflow-hidden flex items-center ${isCollapsed ? "max-w-0 opacity-0" : "max-w-[200px] opacity-100"}`}
-          >
-          </div>
+        <div className="px-5 py-2 pb-4 mt-auto flex-shrink-0 overflow-hidden whitespace-nowrap box-border">
+          <div className="flex items-center gap-2">
+            {!isMobile && (
+              <SidebarUpdateButton
+                collapsed={isCollapsed}
+                fallbackVersion={siteConfig.version}
+                isAdmin={isAdmin}
+              />
+            )}
 
-          {/* 桌面端折叠按钮 */}
-          {!isMobile && (
-            <Button
-              isIconOnly
-              className="flex-shrink-0 text-gray-800 dark:text-gray-800 hover:text-gray-600 min-w-0 w-6 h-6 rounded-full ml-auto bg-gray-200 dark:bg-white dark:hover:text-gray-600"
-              size="sm"
-              variant="flat"
-              onPress={toggleCollapse}
-            >
-              {isCollapsed ? (
-                <span className="text-xl">⮞</span>
-              ) : (
-                <span className="text-xl">⮜</span>
-              )}
-            </Button>
-          )}
+            {/* 桌面端折叠按钮 */}
+            {!isMobile && (
+              <Button
+                isIconOnly
+                className="flex-shrink-0 text-gray-800 dark:text-gray-800 hover:text-gray-600 min-w-0 w-6 h-6 rounded-full ml-auto bg-gray-200 dark:bg-white dark:hover:text-gray-600"
+                size="sm"
+                variant="flat"
+                onPress={toggleCollapse}
+              >
+                {isCollapsed ? (
+                  <span className="text-xl">⮞</span>
+                ) : (
+                  <span className="text-xl">⮜</span>
+                )}
+              </Button>
+            )}
+          </div>
         </div>
       </aside>
 
@@ -1311,7 +1317,11 @@ export default function AdminLayout({
       {(!licenseInfo?.has_license_key || poweredBadgeVisible) && (
         <div className="flvx-powered-badge" aria-label="Powered by FLVX">
           Powered by{" "}
-          <a href={PROJECT_REPOSITORY_URL} rel="noopener noreferrer" target="_blank">
+          <a
+            href={PROJECT_REPOSITORY_URL}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
             FLVX
           </a>
         </div>
