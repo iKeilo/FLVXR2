@@ -237,6 +237,7 @@ func (r *Repository) GetTunnelRecord(tunnelID int64) (*model.TunnelRecord, error
 		Status:       t.Status,
 		Flow:         t.Flow,
 		TrafficRatio: t.TrafficRatio,
+		SpeedID:      t.SpeedID,
 	}
 	if tr.Flow <= 0 {
 		tr.Flow = 1
@@ -351,6 +352,17 @@ func (r *Repository) GetSpeedLimitSpeed(id int64) (int, error) {
 		return 0, err
 	}
 	return sl.Speed, nil
+}
+
+func (r *Repository) GetSpeedLimit(id int64) (*model.SpeedLimit, error) {
+	if r == nil || r.db == nil {
+		return nil, errors.New("repository not initialized")
+	}
+	var sl model.SpeedLimit
+	if err := r.db.Where("id = ?", id).First(&sl).Error; err != nil {
+		return nil, err
+	}
+	return &sl, nil
 }
 
 type ForwardTrafficResetLogItem struct {

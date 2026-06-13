@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"path/filepath"
 	"sort"
@@ -984,6 +985,7 @@ func (r *Repository) ListNodes(opts *ListNodesOptions) ([]map[string]interface{}
 			"remoteConfig":            nullableString(n.RemoteConfig),
 			"expiryReminderDismissed": n.ExpiryReminderDismissed,
 			"groupId":                 nullableInt64(n.GroupID),
+			"speedId":                 nullableInt64(n.SpeedID),
 			"ownerUserId":             n.OwnerUserID,
 			"canDeploy":               opts != nil && opts.ActorUserID > 0 && n.OwnerUserID == opts.ActorUserID,
 		})
@@ -1026,6 +1028,11 @@ func (r *Repository) ListUsers() ([]map[string]interface{}, error) {
 			"baseFlow":                u.BaseFlow,
 			"maxConnections":          u.MaxConnections,
 		}
+		if u.SpeedLimitID.Valid {
+			item["speedLimitId"] = u.SpeedLimitID.Int64
+		} else {
+			item["speedLimitId"] = nil
+		}
 		if quota := quotaMap[u.ID]; quota != nil {
 			item["dailyQuotaGB"] = quota.DailyLimitGB
 			item["monthlyQuotaGB"] = quota.MonthlyLimitGB
@@ -1051,12 +1058,111 @@ func (r *Repository) ListSpeedLimits() ([]map[string]interface{}, error) {
 	for _, sl := range limits {
 		item := map[string]interface{}{
 			"id": sl.ID, "name": sl.Name, "speed": sl.Speed,
-			"status": sl.Status, "createdTime": sl.CreatedTime,
+			"status": sl.Status, "arenaMode": sl.ArenaMode, "createdTime": sl.CreatedTime,
 			"updatedTime": nullableInt64(sl.UpdatedTime),
 		}
 		items = append(items, item)
 	}
 	return items, nil
+}
+
+type SpeedLimitBindings struct {
+	UserIDs    []int64 `json:"userIds"`
+	TunnelIDs  []int64 `json:"tunnelIds"`
+	ForwardIDs []int64 `json:"forwardIds"`
+	NodeIDs    []int64 `json:"nodeIds"`
+}
+
+func (r *Repository) SpeedLimitBindingSnapshot(speedID int64) (SpeedLimitBindings, error) {
+	var out SpeedLimitBindings
+	if r == nil || r.db == nil {
+		return out, errors.New("repository not initialized")
+	}
+	if err := r.db.Model(&model.User{}).Where("speed_limit_id = ?", speedID).Pluck("id", &out.UserIDs).Error; err != nil {
+		return out, err
+	}
+	if err := r.db.Model(&model.Tunnel{}).Where("speed_id = ?", speedID).Pluck("id", &out.TunnelIDs).Error; err != nil {
+		return out, err
+	}
+	if err := r.db.Model(&model.Forward{}).Where("speed_id = ?", speedID).Pluck("id", &out.ForwardIDs).Error; err != nil {
+		return out, err
+	}
+	if err := r.db.Model(&model.Node{}).Where("speed_id = ?", speedID).Pluck("id", &out.NodeIDs).Error; err != nil {
+		return out, err
+	}
+	return out, nil
+}
+
+func (r *Repository) SpeedLimitBindingOptions() (map[string]interface{}, error) {
+	if r == nil || r.db == nil {
+		return nil, errors.New("repository not initialized")
+	}
+	users, err := r.ListUsers()
+	if err != nil {
+		return nil, err
+	}
+	tunnels, err := r.ListTunnels()
+	if err != nil {
+		return nil, err
+	}
+	forwards, err := r.ListForwards()
+	if err != nil {
+		return nil, err
+	}
+	nodes, err := r.ListNodes(nil)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]interface{}{
+		"users": users, "tunnels": tunnels, "forwards": forwards, "nodes": nodes,
+	}, nil
+}
+
+func (r *Repository) ReplaceSpeedLimitBindings(speedID int64, bindings SpeedLimitBindings, allowForward bool) error {
+	if r == nil || r.db == nil {
+		return errors.New("repository not initialized")
+	}
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := replaceSpeedBinding(tx, &model.User{}, "speed_limit_id", speedID, bindings.UserIDs); err != nil {
+			return err
+		}
+		if err := replaceSpeedBinding(tx, &model.Tunnel{}, "speed_id", speedID, bindings.TunnelIDs); err != nil {
+			return err
+		}
+		if allowForward {
+			if err := replaceSpeedBinding(tx, &model.Forward{}, "speed_id", speedID, bindings.ForwardIDs); err != nil {
+				return err
+			}
+		}
+		if err := replaceSpeedBinding(tx, &model.Node{}, "speed_id", speedID, bindings.NodeIDs); err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+func replaceSpeedBinding(tx *gorm.DB, modelValue interface{}, column string, speedID int64, ids []int64) error {
+	cleanIDs := uniquePositiveInt64s(ids)
+	if err := tx.Model(modelValue).Where(column+" = ?", speedID).Update(column, nil).Error; err != nil {
+		return err
+	}
+	if len(cleanIDs) == 0 {
+		return nil
+	}
+	return tx.Model(modelValue).Where("id IN ?", cleanIDs).Update(column, speedID).Error
+}
+
+func uniquePositiveInt64s(ids []int64) []int64 {
+	seen := make(map[int64]bool, len(ids))
+	out := make([]int64, 0, len(ids))
+	for _, id := range ids {
+		if id <= 0 || seen[id] {
+			continue
+		}
+		seen[id] = true
+		out = append(out, id)
+	}
+	return out
 }
 
 func (r *Repository) ListForwards() ([]map[string]interface{}, error) {
@@ -1462,15 +1568,24 @@ func (r *Repository) ListTunnels() ([]map[string]interface{}, error) {
 		return nil, errors.New("repository not initialized")
 	}
 
-	var tunnels []model.Tunnel
-	if err := r.db.Order("inx ASC, id ASC").Find(&tunnels).Error; err != nil {
+	type tunnelRow struct {
+		model.Tunnel
+		SpeedLimitName sql.NullString `gorm:"column:speed_limit_name"`
+	}
+	var tunnels []tunnelRow
+	if err := r.db.Model(&model.Tunnel{}).
+		Select("tunnel.*, speed_limit.name AS speed_limit_name").
+		Joins("LEFT JOIN speed_limit ON speed_limit.id = tunnel.speed_id").
+		Order("tunnel.inx ASC, tunnel.id ASC").
+		Find(&tunnels).Error; err != nil {
 		return nil, err
 	}
 
 	tunnelMap := make(map[int64]map[string]interface{})
 	orderedIDs := make([]int64, 0, len(tunnels))
 
-	for _, t := range tunnels {
+	for _, row := range tunnels {
+		t := row.Tunnel
 		// Convert sql.NullInt64 to interface{} (int64 or nil)
 		var tunnelGroupID interface{}
 		if t.TunnelGroupID.Valid {
@@ -1483,17 +1598,25 @@ func (r *Repository) ListTunnels() ([]map[string]interface{}, error) {
 			"id": t.ID, "inx": t.Inx, "name": t.Name,
 			"type": t.Type, "flow": t.Flow, "trafficRatio": t.TrafficRatio,
 			"status": t.Status, "createdTime": t.CreatedTime,
-			"inIp":          nullableString(t.InIP),
-			"ipPreference":  t.IPPreference,
-			"inNodeId":      make([]map[string]interface{}, 0),
-			"outNodeId":     make([]map[string]interface{}, 0),
-			"chainNodes":    make([][]map[string]interface{}, 0),
-			"tunnelGroupId": tunnelGroupID,
-			"remark":        nullableString(t.Remark),
-			"http":          t.HTTP,
-			"tls":           t.TLS,
-			"socks":         t.Socks,
-			"blockOther":    t.BlockOther,
+			"inIp":           nullableString(t.InIP),
+			"ipPreference":   t.IPPreference,
+			"inNodeId":       make([]map[string]interface{}, 0),
+			"outNodeId":      make([]map[string]interface{}, 0),
+			"chainNodes":     make([][]map[string]interface{}, 0),
+			"tunnelGroupId":  tunnelGroupID,
+			"remark":         nullableString(t.Remark),
+			"http":           t.HTTP,
+			"tls":            t.TLS,
+			"socks":          t.Socks,
+			"blockOther":     t.BlockOther,
+			"speedId":        nil,
+			"speedLimitName": nil,
+		}
+		if t.SpeedID.Valid {
+			tunnelMap[t.ID]["speedId"] = t.SpeedID.Int64
+		}
+		if row.SpeedLimitName.Valid {
+			tunnelMap[t.ID]["speedLimitName"] = row.SpeedLimitName.String
 		}
 		orderedIDs = append(orderedIDs, t.ID)
 	}
@@ -2616,7 +2739,7 @@ func (r *Repository) exportSpeedLimits() ([]model.SpeedLimitBackup, error) {
 	for _, sl := range sls {
 		b := model.SpeedLimitBackup{
 			ID: sl.ID, Name: sl.Name, Speed: int64(sl.Speed),
-			CreatedTime: sl.CreatedTime, Status: sl.Status,
+			ArenaMode: sl.ArenaMode, CreatedTime: sl.CreatedTime, Status: sl.Status,
 		}
 		if sl.UpdatedTime.Valid {
 			b.UpdatedTime = sl.UpdatedTime.Int64
@@ -3024,6 +3147,7 @@ func importSpeedLimits(tx *gorm.DB, speedLimits []model.SpeedLimitBackup, now in
 			ID:          sl.ID,
 			Name:        sl.Name,
 			Speed:       int(sl.Speed),
+			ArenaMode:   sl.ArenaMode,
 			TunnelID:    sql.NullInt64{Int64: 0, Valid: false},
 			TunnelName:  sql.NullString{String: "", Valid: false},
 			CreatedTime: sl.CreatedTime,
@@ -3033,7 +3157,7 @@ func importSpeedLimits(tx *gorm.DB, speedLimits []model.SpeedLimitBackup, now in
 		err := tx.Clauses(clause.OnConflict{
 			Columns: []clause.Column{{Name: "id"}},
 			DoUpdates: clause.AssignmentColumns([]string{
-				"name", "speed", "tunnel_id", "tunnel_name", "updated_time", "status",
+				"name", "speed", "arena_mode", "tunnel_id", "tunnel_name", "updated_time", "status",
 			}),
 		}).Create(&item).Error
 		if err != nil {
@@ -3857,7 +3981,7 @@ func resolveForwardIngress(db *gorm.DB, forwardID int64, tunnelID int64) (string
 		}
 
 		if ip != "" {
-			pair := fmt.Sprintf("%s:%d", ip, row.Port.Int64)
+			pair := net.JoinHostPort(strings.Trim(ip, "[]"), fmt.Sprintf("%d", row.Port.Int64))
 			if _, ok := seenPairs[pair]; !ok {
 				seenPairs[pair] = struct{}{}
 				entries = append(entries, pair)

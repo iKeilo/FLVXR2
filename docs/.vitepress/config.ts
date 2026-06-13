@@ -5,7 +5,7 @@ export default defineConfig({
   titleTemplate: ':title – FLVX 官方文档',
   description: '高性能流量转发管理系统',
   lang: 'zh-CN',
-  base: '/flvxt2/',
+  base: '/FLVXR2/',
   ignoreDeadLinks: true,
   themeConfig: {
     nav: [
@@ -26,7 +26,7 @@ export default defineConfig({
       ],
     },
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/iKeilo/flvxt2' },
+      { icon: 'github', link: 'https://github.com/iKeilo/FLVXR2' },
     ],
     search: {
       provider: 'local',

@@ -2270,7 +2270,14 @@ export default function ForwardPage() {
 
     return !speedLimitIds.has(speedId);
   };
-  // const selectedSpeedId = normalizeSpeedId(form.speedId); // 已弃用
+  const availableSpeedLimits = useMemo(
+    () =>
+      speedLimits.filter(
+        (speedLimit) => !noLimitSpeedLimitIds.has(speedLimit.id),
+      ),
+    [speedLimits, noLimitSpeedLimitIds],
+  );
+  const selectedSpeedId = normalizeSpeedId(form.speedId);
   const validateForm = (): boolean => {
     const newErrors: { [key: string]: string } = {};
 
@@ -2619,8 +2626,8 @@ export default function ForwardPage() {
           maxConnections: form.maxConnections,
           trafficLimit: form.trafficLimit,
           expiryTime: form.expiryTime,
-          speedLimitEnabled: form.speedLimitEnabled,
-          speedLimit: form.speedLimit,
+          speedLimitEnabled: false,
+          speedLimit: 0,
           mode: form.mode,
           wgPathId: form.wgPathId,
           wgRuleType: form.wgRuleType,
@@ -2642,8 +2649,8 @@ export default function ForwardPage() {
           maxConnections: form.maxConnections,
           trafficLimit: form.trafficLimit,
           expiryTime: form.expiryTime,
-          speedLimitEnabled: form.speedLimitEnabled,
-          speedLimit: form.speedLimit,
+          speedLimitEnabled: false,
+          speedLimit: 0,
           mode: form.mode,
           wgPathId: form.wgPathId,
           wgRuleType: form.wgRuleType,
@@ -5411,41 +5418,6 @@ export default function ForwardPage() {
                         }));
                       }}
                     />
-                    {/* 暂时保留旧限速选择 - 后续可删除
-                  {isAdmin && (
-                    <Select
-                      label="规则限速"
-                      placeholder="不限速"
-                      selectedKeys={
-                        selectedSpeedId !== null
-                          ? [selectedSpeedId.toString()]
-                          : []
-                      }
-                      variant="bordered"
-                      onSelectionChange={(keys) => {
-                        const selectedKey = Array.from(keys)[0] as
-                          | string
-                          | undefined;
-
-                        setForm((prev) => ({
-                          ...prev,
-                          speedId: selectedKey ? Number(selectedKey) : null,
-                        }));
-                      }}
-                    >
-                      {availableSpeedLimits.map((speedLimit) => (
-                        <SelectItem
-                          key={speedLimit.id.toString()}
-                          textValue={
-                            speedLimit.name || `限速${speedLimit.speed}`
-                          }
-                        >
-                          {speedLimit.name || `限速${speedLimit.speed}`}
-                        </SelectItem>
-                      ))}
-                    </Select>
-                  )}
-                  */}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
                     {/* 选择隧道 */}
@@ -5712,23 +5684,15 @@ export default function ForwardPage() {
                     </button>
                     {advancedOptionsOpen && (
                       <div className="p-4 space-y-4 bg-content1">
-                        {/* 限速配置 */}
-                        <SpeedLimitConfigField
-                          enabled={form.speedLimitEnabled}
-                          speedLimit={form.speedLimit}
-                          onEnabledChange={(val) =>
-                            setForm((prev) => ({
-                              ...prev,
-                              speedLimitEnabled: val,
-                            }))
-                          }
-                          onSpeedLimitChange={(val) =>
-                            setForm((prev) => ({
-                              ...prev,
-                              speedLimit: val,
-                            }))
-                          }
-                        />
+                        {isAdmin && (
+                          <SpeedLimitRuleField
+                            availableSpeedLimits={availableSpeedLimits}
+                            selectedSpeedId={selectedSpeedId}
+                            onChange={(speedId) =>
+                              setForm((prev) => ({ ...prev, speedId }))
+                            }
+                          />
+                        )}
                         {/* 连接数限制 & 流量控制 - 同一行 */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
                           <ConnectionLimitField
@@ -7284,50 +7248,38 @@ function ConnectionLimitField({
     </div>
   );
 }
-// ─── Speed Limit Config Field ──────────────────────────────────────────────
-function SpeedLimitConfigField({
-  enabled,
-  speedLimit,
-  onEnabledChange,
-  onSpeedLimitChange,
+// ─── Speed Limit Rule Field ──────────────────────────────────────────────
+function SpeedLimitRuleField({
+  availableSpeedLimits,
+  selectedSpeedId,
+  onChange,
 }: {
-  enabled: boolean;
-  speedLimit: number;
-  onEnabledChange: (val: boolean) => void;
-  onSpeedLimitChange: (val: number) => void;
+  availableSpeedLimits: SpeedLimitApiItem[];
+  selectedSpeedId: number | null;
+  onChange: (val: number | null) => void;
 }) {
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-foreground">限速配置</span>
-        <Switch
-          aria-label="启用限速"
-          isSelected={enabled}
-          size="sm"
-          onValueChange={onEnabledChange}
-        >
-          {enabled ? "启用" : "禁用"}
-        </Switch>
-      </div>
-      {enabled && (
-        <div>
-          <span className="text-xs text-default-600 block mb-1.5">
-            速率限制 (Mbps)
-          </span>
-          <Input
-            placeholder="0"
-            type="number"
-            value={speedLimit > 0 ? speedLimit.toString() : ""}
-            variant="bordered"
-            onChange={(e) => {
-              const val = parseInt(e.target.value, 10);
+    <Select
+      description="选择已创建的限速规则；留空表示不限速"
+      label="规则限速"
+      placeholder="不限速"
+      selectedKeys={selectedSpeedId !== null ? [selectedSpeedId.toString()] : []}
+      variant="bordered"
+      onSelectionChange={(keys) => {
+        const selectedKey = Array.from(keys)[0] as string | undefined;
 
-              onSpeedLimitChange(isNaN(val) || val < 0 ? 0 : val);
-            }}
-          />
-        </div>
-      )}
-    </div>
+        onChange(selectedKey ? Number(selectedKey) : null);
+      }}
+    >
+      {availableSpeedLimits.map((speedLimit) => (
+        <SelectItem
+          key={speedLimit.id.toString()}
+          textValue={speedLimit.name || `限速 ${speedLimit.speed} Mbps`}
+        >
+          {speedLimit.name || `限速 ${speedLimit.speed} Mbps`}
+        </SelectItem>
+      ))}
+    </Select>
   );
 }
 // ─── Traffic Limit Field (form input) ──────────────────────────────────────

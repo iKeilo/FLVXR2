@@ -15,6 +15,8 @@ import type {
   NodeTagMutationPayload,
   OfflineDeployPayload,
   SpeedLimitApiItem,
+  SpeedLimitBindingOptions,
+  SpeedLimitDetailApiData,
   TunnelBatchDeletePreviewApiData,
   TunnelBatchDeleteWithForwardsApiData,
   TunnelDeletePreviewApiData,
@@ -405,6 +407,10 @@ export const createSpeedLimit = (data: SpeedLimitMutationPayload) =>
   Network.post("/speed-limit/create", data);
 export const getSpeedLimitList = () =>
   Network.post<SpeedLimitApiItem[]>("/speed-limit/list");
+export const getSpeedLimitDetail = (id: number) =>
+  Network.post<SpeedLimitDetailApiData>("/speed-limit/detail", { id });
+export const getSpeedLimitOptions = () =>
+  Network.post<SpeedLimitBindingOptions>("/speed-limit/options");
 export const updateSpeedLimit = (data: SpeedLimitMutationPayload) =>
   Network.post("/speed-limit/update", data);
 export const deleteSpeedLimit = (id: number) =>

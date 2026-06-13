@@ -175,6 +175,7 @@ export interface UserApiItem {
   flow: number;
   num: number;
   maxConnections?: number;
+  speedLimitId?: number | null;
   expTime?: number;
   flowResetTime?: number;
   inFlow?: number;
@@ -213,6 +214,8 @@ export interface TunnelApiItem {
   listId?: number | null;
   tunnelGroupId?: number | null;
   remark?: string;
+  speedId?: number | null;
+  speedLimitName?: string | null;
   [key: string]: unknown;
 }
 
@@ -286,11 +289,31 @@ export interface SpeedLimitApiItem {
   name: string;
   speed: number;
   status: number;
+  arenaMode?: number;
   createdTime: string;
   updatedTime: string;
   uploadSpeed?: number;
   downloadSpeed?: number;
   [key: string]: unknown;
+}
+
+export interface SpeedLimitBindings {
+  userIds: number[];
+  tunnelIds: number[];
+  forwardIds: number[];
+  nodeIds: number[];
+}
+
+export interface SpeedLimitDetailApiData extends SpeedLimitApiItem {
+  bindings: SpeedLimitBindings;
+  options: SpeedLimitBindingOptions;
+}
+
+export interface SpeedLimitBindingOptions {
+  users: UserApiItem[];
+  tunnels: TunnelApiItem[];
+  forwards: ForwardApiItem[];
+  nodes: NodeApiItem[];
 }
 
 export interface TunnelGroupApiItem {
@@ -495,6 +518,7 @@ export interface UserMutationPayload {
   flow?: number;
   num?: number;
   maxConnections?: number;
+  speedLimitId?: number | null;
   expTime?: number | string;
   flowResetTime?: number;
   dailyQuotaGB?: number;
@@ -549,6 +573,7 @@ export interface TunnelMutationPayload {
   chainNodes?: TunnelChainNodePayload[][];
   tunnelGroupId?: number | null;
   remark?: string;
+  speedId?: number | null;
   http?: number;
   tls?: number;
   socks?: number;
@@ -597,6 +622,8 @@ export interface ForwardMutationPayload {
   strategy?: string;
   speedId?: number | null;
   maxConnections?: number;
+  speedLimitEnabled?: boolean;
+  speedLimit?: number;
   mode?: string;
   wgPathId?: number | null;
   wgRuleType?: string;
@@ -610,6 +637,8 @@ export interface SpeedLimitMutationPayload {
   name?: string;
   speed?: number;
   status?: number;
+  arenaMode?: number;
+  bindings?: SpeedLimitBindings;
 }
 
 export interface UpdatePasswordPayload {

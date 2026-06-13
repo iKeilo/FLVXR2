@@ -37,7 +37,7 @@ func (r *Repository) UserExistsExcluding(username string, excludeID int64) (bool
 	return cnt > 0, err
 }
 
-func (r *Repository) CreateUser(username, pwdHash string, roleID int, expTime, flow, flowResetTime int64, num, maxConnections, status int, now int64, renewalAmount, balance, autoRenew int64) (int64, error) {
+func (r *Repository) CreateUser(username, pwdHash string, roleID int, expTime, flow, flowResetTime int64, num, maxConnections, status int, now int64, renewalAmount, balance, autoRenew int64, speedLimitID interface{}) (int64, error) {
 	if r == nil || r.db == nil {
 		return 0, errors.New("repository not initialized")
 	}
@@ -59,6 +59,7 @@ func (r *Repository) CreateUser(username, pwdHash string, roleID int, expTime, f
 		Balance:        balance,
 		AutoRenew:      int(autoRenew),
 		BaseFlow:       flow,
+		SpeedLimitID:   nullInt64FromInterface(speedLimitID),
 	}
 	if err := r.db.Create(&user).Error; err != nil {
 		return 0, err
@@ -78,14 +79,14 @@ func (r *Repository) GetUserRoleID(userID int64) (int, error) {
 	return user.RoleID, nil
 }
 
-func (r *Repository) UpdateUserWithPassword(id int64, username, pwdHash, name string, flow int64, num, maxConnections int, expTime, flowResetTime int64, status int, now int64, renewalAmount, balance, autoRenew int64) error {
+func (r *Repository) UpdateUserWithPassword(id int64, username, pwdHash, name string, flow int64, num, maxConnections int, expTime, flowResetTime int64, status int, now int64, renewalAmount, balance, autoRenew int64, speedLimitID interface{}) error {
 	if r == nil || r.db == nil {
 		return errors.New("repository not initialized")
 	}
 	// 使用 Select 强制更新所有字段，包括零值
 	return r.db.Model(&model.User{}).
 		Where("id = ?", id).
-		Select("user", "name", "pwd", "flow", "num", "max_connections", "exp_time", "flow_reset_time", "status", "updated_time", "renewal_amount", "balance", "auto_renew").
+		Select("user", "name", "pwd", "flow", "num", "max_connections", "exp_time", "flow_reset_time", "status", "updated_time", "renewal_amount", "balance", "auto_renew", "speed_limit_id").
 		Updates(map[string]interface{}{
 			"user":            username,
 			"name":            name,
@@ -100,17 +101,18 @@ func (r *Repository) UpdateUserWithPassword(id int64, username, pwdHash, name st
 			"renewal_amount":  renewalAmount,
 			"balance":         balance,
 			"auto_renew":      autoRenew,
+			"speed_limit_id":  nullInt64FromInterface(speedLimitID),
 		}).Error
 }
 
-func (r *Repository) UpdateUserWithoutPassword(id int64, username, name string, flow int64, num, maxConnections int, expTime, flowResetTime int64, status int, now int64, renewalAmount, balance, autoRenew int64) error {
+func (r *Repository) UpdateUserWithoutPassword(id int64, username, name string, flow int64, num, maxConnections int, expTime, flowResetTime int64, status int, now int64, renewalAmount, balance, autoRenew int64, speedLimitID interface{}) error {
 	if r == nil || r.db == nil {
 		return errors.New("repository not initialized")
 	}
 	// 使用 Select 强制更新所有字段，包括零值
 	return r.db.Model(&model.User{}).
 		Where("id = ?", id).
-		Select("user", "name", "flow", "num", "max_connections", "exp_time", "flow_reset_time", "status", "updated_time", "renewal_amount", "balance", "auto_renew").
+		Select("user", "name", "flow", "num", "max_connections", "exp_time", "flow_reset_time", "status", "updated_time", "renewal_amount", "balance", "auto_renew", "speed_limit_id").
 		Updates(map[string]interface{}{
 			"user":            username,
 			"name":            name,
@@ -124,6 +126,7 @@ func (r *Repository) UpdateUserWithoutPassword(id int64, username, name string, 
 			"renewal_amount":  renewalAmount,
 			"balance":         balance,
 			"auto_renew":      autoRenew,
+			"speed_limit_id":  nullInt64FromInterface(speedLimitID),
 		}).Error
 }
 
@@ -885,7 +888,7 @@ func (r *Repository) UpdateTunnelOrder(tunnelID int64, inx int, now int64) {
 		Updates(map[string]interface{}{"inx": inx, "updated_time": now}).Error
 }
 
-func (r *Repository) UpdateTunnelTx(tx *gorm.DB, tunnelID int64, name string, typeVal int, flow int64, trafficRatio float64, status int, inIP, ipPreference string, listID int64, tunnelGroupID interface{}, remark string, now int64, httpVal, tlsVal, socksVal, blockOtherVal int) error {
+func (r *Repository) UpdateTunnelTx(tx *gorm.DB, tunnelID int64, name string, typeVal int, flow int64, trafficRatio float64, status int, inIP, ipPreference string, listID int64, tunnelGroupID interface{}, remark string, now int64, httpVal, tlsVal, socksVal, blockOtherVal int, speedID interface{}) error {
 	if tx == nil {
 		return errors.New("database unavailable")
 	}
@@ -903,6 +906,7 @@ func (r *Repository) UpdateTunnelTx(tx *gorm.DB, tunnelID int64, name string, ty
 		"tls":           tlsVal,
 		"socks":         socksVal,
 		"block_other":   blockOtherVal,
+		"speed_id":      nullInt64FromInterface(speedID),
 	}
 	if listID > 0 {
 		updates["list_id"] = sql.NullInt64{Int64: listID, Valid: true}
@@ -2087,13 +2091,17 @@ func (r *Repository) GetUsedPortsOnNodeAsMap(nodeID int64) (map[int]bool, error)
 	return used, nil
 }
 
-func (r *Repository) CreateSpeedLimit(name string, speed int, now int64, status int) (int64, error) {
+func (r *Repository) CreateSpeedLimit(name string, speed int, now int64, status int, arenaMode int) (int64, error) {
 	if r == nil || r.db == nil {
 		return 0, errors.New("repository not initialized")
+	}
+	if arenaMode != 1 {
+		arenaMode = 0
 	}
 	sl := model.SpeedLimit{
 		Name:        name,
 		Speed:       speed,
+		ArenaMode:   arenaMode,
 		TunnelID:    sql.NullInt64{Int64: 0, Valid: false},
 		TunnelName:  sql.NullString{String: "", Valid: false},
 		CreatedTime: now,
@@ -2106,14 +2114,18 @@ func (r *Repository) CreateSpeedLimit(name string, speed int, now int64, status 
 	return sl.ID, nil
 }
 
-func (r *Repository) UpdateSpeedLimit(id int64, name string, speed int, status int, now int64) error {
+func (r *Repository) UpdateSpeedLimit(id int64, name string, speed int, status int, arenaMode int, now int64) error {
 	if r == nil || r.db == nil {
 		return errors.New("repository not initialized")
+	}
+	if arenaMode != 1 {
+		arenaMode = 0
 	}
 	updates := map[string]interface{}{
 		"name":        name,
 		"speed":       speed,
 		"status":      status,
+		"arena_mode":  arenaMode,
 		"tunnel_id":   nil,
 		"tunnel_name": nil,
 		"updated_time": sql.NullInt64{

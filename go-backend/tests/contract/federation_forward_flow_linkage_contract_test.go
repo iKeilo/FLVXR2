@@ -81,7 +81,7 @@ func TestFederationForwardCardFlowLinkageContract(t *testing.T) {
 	if forwardOut.Code != 0 {
 		t.Fatalf("forward list failed: code=%d msg=%q", forwardOut.Code, forwardOut.Msg)
 	}
-	forwardRows := mustContractSlice(t, forwardOut.Data, "forward list data")
+	forwardRows := mustContractItems(t, forwardOut.Data, "forward list data")
 
 	var targetForward map[string]interface{}
 	for _, row := range forwardRows {
@@ -260,7 +260,7 @@ func TestFederationForwardCardFlowLinkageContractSplitShareFlowAcrossMultipleFor
 	if forwardOut.Code != 0 {
 		t.Fatalf("forward list failed: code=%d msg=%q", forwardOut.Code, forwardOut.Msg)
 	}
-	forwardRows := mustContractSlice(t, forwardOut.Data, "forward list data")
+	forwardRows := mustContractItems(t, forwardOut.Data, "forward list data")
 
 	shareOut := requestContractEnvelope(t, router, adminToken, "/api/v1/federation/share/list", nil)
 	if shareOut.Code != 0 {
@@ -433,7 +433,7 @@ func TestFederationForwardCardFlowLinkageContractResolvesShareByTunnelBindingWhe
 	if forwardOut.Code != 0 {
 		t.Fatalf("forward list failed: code=%d msg=%q", forwardOut.Code, forwardOut.Msg)
 	}
-	forwardRows := mustContractSlice(t, forwardOut.Data, "forward list data")
+	forwardRows := mustContractItems(t, forwardOut.Data, "forward list data")
 
 	shareOut := requestContractEnvelope(t, router, adminToken, "/api/v1/federation/share/list", nil)
 	if shareOut.Code != 0 {
@@ -637,6 +637,23 @@ func mustContractSlice(t *testing.T, data interface{}, label string) []interface
 	rows, ok := data.([]interface{})
 	if !ok {
 		t.Fatalf("expected %s to be []interface{}, got %T", label, data)
+	}
+	return rows
+}
+
+func mustContractItems(t *testing.T, data interface{}, label string) []interface{} {
+	t.Helper()
+
+	if rows, ok := data.([]interface{}); ok {
+		return rows
+	}
+	obj, ok := data.(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected %s to be []interface{} or object with items, got %T", label, data)
+	}
+	rows, ok := obj["items"].([]interface{})
+	if !ok {
+		t.Fatalf("expected %s.items to be []interface{}, got %T", label, obj["items"])
 	}
 	return rows
 }

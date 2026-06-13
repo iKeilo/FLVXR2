@@ -55,7 +55,7 @@ func TestIssue349_ForwardListFormatsIPv6EntryAddressesContract(t *testing.T) {
 		t.Fatalf("forward list failed: code=%d msg=%q", out.Code, out.Msg)
 	}
 
-	rows := mustContractSlice(t, out.Data, "forward list data")
+	rows := mustContractItems(t, out.Data, "forward list data")
 	var target map[string]interface{}
 	for _, row := range rows {
 		item, ok := row.(map[string]interface{})

@@ -284,6 +284,8 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/panel/upgrade/releases", h.panelReleases)
 	mux.HandleFunc("/api/v1/panel/upgrade", h.panelUpgrade)
 	mux.HandleFunc("/api/v1/speed-limit/list", h.speedLimitList)
+	mux.HandleFunc("/api/v1/speed-limit/detail", h.speedLimitDetail)
+	mux.HandleFunc("/api/v1/speed-limit/options", h.speedLimitOptions)
 	mux.HandleFunc("/api/v1/speed-limit/create", h.speedLimitCreate)
 	mux.HandleFunc("/api/v1/speed-limit/update", h.speedLimitUpdate)
 	mux.HandleFunc("/api/v1/speed-limit/delete", h.speedLimitDelete)
@@ -845,6 +847,57 @@ func (h *Handler) speedLimitList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.WriteJSON(w, response.OK(items))
+}
+
+func (h *Handler) speedLimitDetail(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		response.WriteJSON(w, response.ErrDefault("请求失败"))
+		return
+	}
+	id := idFromBody(r, w)
+	if id <= 0 {
+		return
+	}
+	limit, err := h.repo.GetSpeedLimit(id)
+	if err != nil {
+		response.WriteJSON(w, response.ErrDefault("限速规则不存在"))
+		return
+	}
+	bindings, err := h.repo.SpeedLimitBindingSnapshot(id)
+	if err != nil {
+		response.WriteJSON(w, response.Err(-2, err.Error()))
+		return
+	}
+	options, err := h.repo.SpeedLimitBindingOptions()
+	if err != nil {
+		response.WriteJSON(w, response.Err(-2, err.Error()))
+		return
+	}
+	var updatedTime interface{}
+	if limit.UpdatedTime.Valid {
+		updatedTime = limit.UpdatedTime.Int64
+	}
+	response.WriteJSON(w, response.OK(map[string]interface{}{
+		"id": limit.ID, "name": limit.Name, "speed": limit.Speed,
+		"status": limit.Status, "arenaMode": limit.ArenaMode,
+		"createdTime": limit.CreatedTime,
+		"updatedTime": updatedTime,
+		"bindings":    bindings,
+		"options":     options,
+	}))
+}
+
+func (h *Handler) speedLimitOptions(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		response.WriteJSON(w, response.ErrDefault("请求失败"))
+		return
+	}
+	options, err := h.repo.SpeedLimitBindingOptions()
+	if err != nil {
+		response.WriteJSON(w, response.Err(-2, err.Error()))
+		return
+	}
+	response.WriteJSON(w, response.OK(options))
 }
 
 func (h *Handler) openAPISubStore(w http.ResponseWriter, r *http.Request) {

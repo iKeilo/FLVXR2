@@ -225,6 +225,7 @@ const normalizeUserItem = (item: Partial<User>): UserWithHistory => {
     buyTrafficPrice: Number(item.buyTrafficPrice ?? 0),
     autoBuyTrafficPackageId: Number(item.autoBuyTrafficPackageId ?? 0),
     baseFlow: Number(item.baseFlow ?? 0),
+    speedLimitId: item.speedLimitId ?? null,
     quotaHistory: [],
     showHistory: false,
   };
@@ -290,6 +291,7 @@ export default function UserPage() {
     monthlyQuotaGB: number;
     num: number;
     maxConnections: number;
+    speedLimitId: number | null;
     expTime: Date | null;
     flowResetTime: number;
     groupIds: number[];
@@ -311,6 +313,7 @@ export default function UserPage() {
     monthlyQuotaGB: 0,
     num: 10,
     maxConnections: 0,
+    speedLimitId: null,
     expTime: null,
     flowResetTime: 0,
     groupIds: [],
@@ -956,6 +959,7 @@ export default function UserPage() {
       monthlyQuotaGB: 0,
       num: 10,
       maxConnections: 0,
+      speedLimitId: null,
       expTime: null,
       flowResetTime: 0,
       groupIds: [],
@@ -1077,6 +1081,7 @@ export default function UserPage() {
       monthlyQuotaGB: user.monthlyQuotaGB ?? 0,
       num: user.num,
       maxConnections: user.maxConnections ?? 0,
+      speedLimitId: normalizeSpeedId(user.speedLimitId),
       expTime: user.expTime ? new Date(user.expTime) : null,
       flowResetTime: user.flowResetTime ?? 0,
       groupIds: currentGroupIds,
@@ -2825,6 +2830,39 @@ export default function UserPage() {
                   }))
                 }
               />
+              <Select
+                description="新建规则默认继承该限速；留空表示不限速"
+                label="总限速规则"
+                placeholder="不限速"
+                selectedKeys={
+                  userForm.speedLimitId !== null
+                    ? [userForm.speedLimitId.toString()]
+                    : []
+                }
+                onSelectionChange={(keys) => {
+                  const selected = Array.from(keys)[0] as string | undefined;
+
+                  setUserForm((prev) => ({
+                    ...prev,
+                    speedLimitId: selected ? Number(selected) : null,
+                  }));
+                }}
+              >
+                {speedLimits
+                  .filter(
+                    (speedLimit) => !noLimitSpeedLimitIds.has(speedLimit.id),
+                  )
+                  .map((speedLimit) => (
+                    <SelectItem
+                      key={speedLimit.id.toString()}
+                      textValue={
+                        speedLimit.name || `限速 ${speedLimit.speed ?? 0} Mbps`
+                      }
+                    >
+                      {speedLimit.name || `限速 ${speedLimit.speed ?? 0} Mbps`}
+                    </SelectItem>
+                  ))}
+              </Select>
               <Select
                 label="归零日期"
                 selectedKeys={[userForm.flowResetTime.toString()]}

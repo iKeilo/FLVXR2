@@ -39,6 +39,7 @@ export const createTunnelFormDefaults = () => {
     tls: 0,
     socks: 0,
     blockOther: 0,
+    speedId: null as number | null,
   };
 };
 

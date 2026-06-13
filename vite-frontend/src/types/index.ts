@@ -33,6 +33,7 @@ export interface User {
   autoBuyTrafficPackageId?: number; // 关联的自动购流套餐ID (0=使用自定义配置)
   baseFlow?: number; // 初始流量配额 (GB)
   maxConnections?: number;
+  speedLimitId?: number | null;
 }
 
 export interface UserGroup {
@@ -52,6 +53,7 @@ export interface UserForm {
   monthlyQuotaGB: number;
   num: number;
   maxConnections?: number;
+  speedLimitId?: number | null;
   expTime: Date | null;
   flowResetTime: number;
   groupIds?: number[];
@@ -110,6 +112,7 @@ export interface SpeedLimit {
   id: number;
   name: string;
   speed?: number;
+  arenaMode?: number;
   uploadSpeed: number;
   downloadSpeed: number;
 }

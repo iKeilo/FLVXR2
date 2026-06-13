@@ -120,10 +120,15 @@ func (h *Handler) userCreate(w http.ResponseWriter, r *http.Request) {
 		response.WriteJSON(w, response.ErrDefault("续费金额和余额不能小于 0"))
 		return
 	}
+	speedLimitID, err := h.normalizeSpeedLimitReference(asAnyToInt64Ptr(req["speedLimitId"]))
+	if err != nil {
+		response.WriteJSON(w, response.Err(-2, err.Error()))
+		return
+	}
 	roleID := 1
 	now := time.Now().UnixMilli()
 
-	userID, err := h.repo.CreateUser(username, security.MD5(pwd), roleID, expTime, flow, flowResetTime, num, maxConnections, status, now, renewalAmount, balance, int64(autoRenew))
+	userID, err := h.repo.CreateUser(username, security.MD5(pwd), roleID, expTime, flow, flowResetTime, num, maxConnections, status, now, renewalAmount, balance, int64(autoRenew), nullableInt(speedLimitID))
 	if err != nil {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return
@@ -239,19 +244,28 @@ func (h *Handler) userUpdate(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UnixMilli()
 
 	oldUser, _ := h.repo.GetUserByID(id)
+	speedLimitID := asAnyToInt64Ptr(req["speedLimitId"])
+	if _, ok := req["speedLimitId"]; !ok && oldUser != nil && oldUser.SpeedLimitID.Valid {
+		speedLimitID = &oldUser.SpeedLimitID.Int64
+	}
+	speedLimitID, err = h.normalizeSpeedLimitReference(speedLimitID)
+	if err != nil {
+		response.WriteJSON(w, response.Err(-2, err.Error()))
+		return
+	}
 
 	name := asString(req["name"]) // 解析前端传来的备注名称
 	pwd := asString(req["pwd"])
 
 	if strings.TrimSpace(pwd) == "" {
 		// 在参数里增加了 name
-		if err := h.repo.UpdateUserWithoutPassword(id, username, name, flow, num, maxConnections, expTime, flowResetTime, status, now, renewalAmount, balance, int64(autoRenew)); err != nil {
+		if err := h.repo.UpdateUserWithoutPassword(id, username, name, flow, num, maxConnections, expTime, flowResetTime, status, now, renewalAmount, balance, int64(autoRenew), nullableInt(speedLimitID)); err != nil {
 			response.WriteJSON(w, response.Err(-2, err.Error()))
 			return
 		}
 	} else {
 		// 在参数里增加了 name
-		if err := h.repo.UpdateUserWithPassword(id, username, security.MD5(pwd), name, flow, num, maxConnections, expTime, flowResetTime, status, now, renewalAmount, balance, int64(autoRenew)); err != nil {
+		if err := h.repo.UpdateUserWithPassword(id, username, security.MD5(pwd), name, flow, num, maxConnections, expTime, flowResetTime, status, now, renewalAmount, balance, int64(autoRenew), nullableInt(speedLimitID)); err != nil {
 			response.WriteJSON(w, response.Err(-2, err.Error()))
 			return
 		}
@@ -1248,6 +1262,11 @@ func (h *Handler) tunnelCreate(w http.ResponseWriter, r *http.Request) {
 	trafficRatio := asFloat(req["trafficRatio"], 1.0)
 	inIP := asString(req["inIp"])
 	ipPreference := asString(req["ipPreference"])
+	speedID, err := h.normalizeSpeedLimitReference(asAnyToInt64Ptr(req["speedId"]))
+	if err != nil {
+		response.WriteJSON(w, response.Err(-2, err.Error()))
+		return
+	}
 	now := time.Now().UnixMilli()
 	inx := h.repo.NextIndex("tunnel")
 	localDomain := h.federationLocalDomain()
@@ -1333,6 +1352,10 @@ func (h *Handler) tunnelCreate(w http.ResponseWriter, r *http.Request) {
 	if trimmed := strings.TrimSpace(inIP); trimmed != "" {
 		tunnelInIP = sql.NullString{String: trimmed, Valid: true}
 	}
+	var tunnelSpeedID sql.NullInt64
+	if speedID != nil && *speedID > 0 {
+		tunnelSpeedID = sql.NullInt64{Int64: *speedID, Valid: true}
+	}
 	listID := asInt64(req["listId"], 0)
 	var tunnelListID sql.NullInt64
 	if listID > 0 {
@@ -1363,6 +1386,7 @@ func (h *Handler) tunnelCreate(w http.ResponseWriter, r *http.Request) {
 		TLS:           asInt(req["tls"], 0),
 		Socks:         asInt(req["socks"], 0),
 		BlockOther:    asInt(req["blockOther"], 0),
+		SpeedID:       tunnelSpeedID,
 	}
 	if err := tx.Create(&tunnel).Error; err != nil {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
@@ -1544,6 +1568,11 @@ func (h *Handler) tunnelUpdate(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UnixMilli()
 	typeVal := asInt(req["type"], 1)
 	ipPreference := asString(req["ipPreference"])
+	speedID, err := h.normalizeSpeedLimitReference(asAnyToInt64Ptr(req["speedId"]))
+	if err != nil {
+		response.WriteJSON(w, response.Err(-2, err.Error()))
+		return
+	}
 	localDomain := h.federationLocalDomain()
 
 	// Handle tunnelGroupId the same way as node groupId
@@ -1607,6 +1636,7 @@ func (h *Handler) tunnelUpdate(w http.ResponseWriter, r *http.Request) {
 		asInt(req["tls"], 0),
 		asInt(req["socks"], 0),
 		asInt(req["blockOther"], 0),
+		nullableInt(speedID),
 	); err != nil {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return
@@ -2824,6 +2854,7 @@ func (h *Handler) forwardCreate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	_, hasSpeedID := req["speedId"]
 	speedID := asAnyToInt64Ptr(req["speedId"])
 	speedID, err = h.normalizeSpeedLimitReference(speedID)
 	if err != nil {
@@ -2871,10 +2902,25 @@ func (h *Handler) forwardCreate(w http.ResponseWriter, r *http.Request) {
 	speedLimitEnabled := asBool(req["speedLimitEnabled"], false)
 	speedLimit := asInt(req["speedLimit"], 0)
 	maxConnections := asInt(req["maxConnections"], 0)
-	if maxConnections <= 0 {
+	if maxConnections <= 0 || (!hasSpeedID && speedID == nil) {
 		if user, userErr := h.repo.GetUserByID(userID); userErr == nil && user != nil {
-			maxConnections = user.MaxConnections
+			if maxConnections <= 0 {
+				maxConnections = user.MaxConnections
+			}
+			if !hasSpeedID && speedID == nil && user.SpeedLimitID.Valid {
+				speedID = &user.SpeedLimitID.Int64
+			}
 		}
+	}
+	if !hasSpeedID && speedID == nil && tunnelID > 0 {
+		if tunnel, tunnelErr := h.getTunnelRecord(tunnelID); tunnelErr == nil && tunnel != nil && tunnel.SpeedID.Valid {
+			speedID = &tunnel.SpeedID.Int64
+		}
+	}
+	speedID, err = h.normalizeSpeedLimitReference(speedID)
+	if err != nil {
+		response.WriteJSON(w, response.Err(-2, err.Error()))
+		return
 	}
 	maxConnections = normalizeUserMaxConnections(maxConnections)
 
@@ -3828,15 +3874,16 @@ func (h *Handler) speedLimitCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	speed := asInt(req["speed"], 100)
+	arenaMode := asInt(req["arenaMode"], 0)
 
 	now := time.Now().UnixMilli()
-	_, err := h.repo.CreateSpeedLimit(name, speed, now, asInt(req["status"], 1))
+	id, err := h.repo.CreateSpeedLimit(name, speed, now, asInt(req["status"], 1), arenaMode)
 	if err != nil {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return
 	}
 
-	response.WriteJSON(w, response.OKEmpty())
+	response.WriteJSON(w, response.OK(map[string]interface{}{"id": id}))
 }
 
 func (h *Handler) speedLimitUpdate(w http.ResponseWriter, r *http.Request) {
@@ -3866,10 +3913,53 @@ func (h *Handler) speedLimitUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	speed := asInt(req["speed"], 100)
+	arenaMode := asInt(req["arenaMode"], 0)
+	var before repo.SpeedLimitBindings
+	var changedForwardIDs []int64
+	hasBindings := false
+	var bindings repo.SpeedLimitBindings
+	if raw, ok := req["bindings"]; ok {
+		hasBindings = true
+		bindings = parseSpeedLimitBindings(raw)
+		_, actorRole, roleErr := userRoleFromRequest(r)
+		if roleErr != nil {
+			response.WriteJSON(w, response.Err(401, "无效的token或token已过期"))
+			return
+		}
+		if actorRole != 0 && len(bindings.ForwardIDs) > 0 {
+			response.WriteJSON(w, response.Err(403, "普通用户不能修改规则绑定"))
+			return
+		}
+		var snapErr error
+		before, snapErr = h.repo.SpeedLimitBindingSnapshot(id)
+		if snapErr != nil {
+			response.WriteJSON(w, response.Err(-2, snapErr.Error()))
+			return
+		}
+	}
 
-	if err := h.repo.UpdateSpeedLimit(id, name, speed, asInt(req["status"], 1), time.Now().UnixMilli()); err != nil {
+	if err := h.repo.UpdateSpeedLimit(id, name, speed, asInt(req["status"], 1), arenaMode, time.Now().UnixMilli()); err != nil {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return
+	}
+	if hasBindings {
+		_, actorRole, _ := userRoleFromRequest(r)
+		if err := h.repo.ReplaceSpeedLimitBindings(id, bindings, actorRole == 0); err != nil {
+			response.WriteJSON(w, response.Err(-2, err.Error()))
+			return
+		}
+		after, err := h.repo.SpeedLimitBindingSnapshot(id)
+		if err != nil {
+			response.WriteJSON(w, response.Err(-2, err.Error()))
+			return
+		}
+		changedForwardIDs = unionInt64s(before.ForwardIDs, after.ForwardIDs)
+		for _, forwardID := range changedForwardIDs {
+			forward, err := h.getForwardRecord(forwardID)
+			if err == nil && forward != nil && forward.Status == 1 {
+				_ = h.syncForwardServices(forward, "UpdateService", true)
+			}
+		}
 	}
 
 	response.WriteJSON(w, response.OKEmpty())
@@ -5937,6 +6027,29 @@ func asInt64Slice(v interface{}) []int64 {
 	return ids
 }
 
+func parseSpeedLimitBindings(raw interface{}) repo.SpeedLimitBindings {
+	m, _ := raw.(map[string]interface{})
+	return repo.SpeedLimitBindings{
+		UserIDs:    asInt64Slice(m["userIds"]),
+		TunnelIDs:  asInt64Slice(m["tunnelIds"]),
+		ForwardIDs: asInt64Slice(m["forwardIds"]),
+		NodeIDs:    asInt64Slice(m["nodeIds"]),
+	}
+}
+
+func unionInt64s(a, b []int64) []int64 {
+	seen := make(map[int64]bool, len(a)+len(b))
+	out := make([]int64, 0, len(a)+len(b))
+	for _, id := range append(a, b...) {
+		if id <= 0 || seen[id] {
+			continue
+		}
+		seen[id] = true
+		out = append(out, id)
+	}
+	return out
+}
+
 func validateLocalNodePort(node *nodeRecord, port int) error {
 	if node == nil || node.IsRemote == 1 || port <= 0 {
 		return nil
@@ -6326,7 +6439,7 @@ func (h *Handler) userRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	now := time.Now().UnixMilli()
 	expTime := time.Now().Add(72 * time.Hour).UnixMilli()
-	userID, err := h.repo.CreateUser(req.User, security.MD5(req.Password), 1, expTime, 0, 1, 0, 0, 1, now, 0, 0, 0)
+	userID, err := h.repo.CreateUser(req.User, security.MD5(req.Password), 1, expTime, 0, 1, 0, 0, 1, now, 0, 0, 0, nil)
 	if err != nil {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return

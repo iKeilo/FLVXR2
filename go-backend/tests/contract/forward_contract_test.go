@@ -100,10 +100,7 @@ func TestForwardOwnershipAndScopeContracts(t *testing.T) {
 		if out.Code != 0 {
 			t.Fatalf("expected code 0, got %d (%s)", out.Code, out.Msg)
 		}
-		arr, ok := out.Data.([]interface{})
-		if !ok {
-			t.Fatalf("expected array data, got %T", out.Data)
-		}
+		arr := mustContractItems(t, out.Data, "forward list data")
 		if len(arr) != 1 {
 			t.Fatalf("expected 1 forward, got %d", len(arr))
 		}
@@ -731,6 +728,116 @@ func TestForwardSpeedIDWriteAndClearContracts(t *testing.T) {
 	}
 	if clearedSpeed.Valid {
 		t.Fatalf("expected cleared speed_id to be NULL, got %d", clearedSpeed.Int64)
+	}
+}
+
+func TestForwardCreateInheritsUserSpeedLimitContract(t *testing.T) {
+	secret := "contract-jwt-secret"
+	router, repo := setupContractRouter(t, secret)
+
+	adminToken, err := auth.GenerateToken(1, "admin_user", 0, secret)
+	if err != nil {
+		t.Fatalf("generate admin token: %v", err)
+	}
+
+	now := time.Now().UnixMilli()
+	if err := repo.DB().Exec(`
+		INSERT INTO speed_limit(name, speed, tunnel_id, tunnel_name, created_time, updated_time, status)
+		VALUES(?, ?, NULL, NULL, ?, NULL, ?)
+	`, "user-default-speed-limit", 1024, now, 1).Error; err != nil {
+		t.Fatalf("insert user default speed limit: %v", err)
+	}
+	speedID := mustLastInsertID(t, repo, "user-default-speed-limit")
+
+	userID, err := repo.CreateUser("speed-user", "pwd", 1, now+86400000, 100, 1, 10, 0, 1, now, 0, 0, 0, speedID)
+	if err != nil {
+		t.Fatalf("create user with speed limit: %v", err)
+	}
+	users, err := repo.ListUsers()
+	if err != nil {
+		t.Fatalf("list users: %v", err)
+	}
+	found := false
+	for _, item := range users {
+		if id, ok := item["id"].(int64); !ok || id != userID {
+			continue
+		}
+		found = true
+		if got, ok := item["speedLimitId"].(int64); !ok || got != speedID {
+			t.Fatalf("expected user speedLimitId=%d, got %T %v", speedID, item["speedLimitId"], item["speedLimitId"])
+		}
+	}
+	if !found {
+		t.Fatal("created user not returned by ListUsers")
+	}
+
+	if err := repo.UpdateUserWithoutPassword(userID, "speed-user", "", 100, 10, 0, now+86400000, 1, 1, now, 0, 0, 0, nil); err != nil {
+		t.Fatalf("clear user speed limit: %v", err)
+	}
+	user, err := repo.GetUserByID(userID)
+	if err != nil {
+		t.Fatalf("get user: %v", err)
+	}
+	if user == nil || user.SpeedLimitID.Valid {
+		t.Fatalf("expected user speed limit to be cleared, got %#v", user)
+	}
+	if err := repo.UpdateUserWithoutPassword(userID, "speed-user", "", 100, 10, 0, now+86400000, 1, 1, now, 0, 0, 0, speedID); err != nil {
+		t.Fatalf("restore user speed limit: %v", err)
+	}
+
+	if err := repo.DB().Exec(`
+		INSERT INTO tunnel(name, traffic_ratio, type, protocol, flow, created_time, updated_time, status, in_ip, inx)
+		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, "user-default-speed-tunnel", 1.0, 1, "tls", 99999, now, now, 1, nil, 0).Error; err != nil {
+		t.Fatalf("insert tunnel: %v", err)
+	}
+	tunnelID := mustLastInsertID(t, repo, "user-default-speed-tunnel")
+
+	if err := repo.DB().Exec(`
+		INSERT INTO node(name, secret, server_ip, server_ip_v4, server_ip_v6, port, interface_name, version, http, tls, socks, created_time, updated_time, status, tcp_listen_addr, udp_listen_addr, inx)
+		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, "user-default-speed-node", "user-default-speed-secret", "10.0.0.30", "10.0.0.30", "", "32000-32010", "", "v1", 1, 1, 1, now, now, 1, "[::]", "[::]", 0).Error; err != nil {
+		t.Fatalf("insert node: %v", err)
+	}
+	nodeID := mustLastInsertID(t, repo, "user-default-speed-node")
+
+	if err := repo.DB().Exec(`
+		INSERT INTO chain_tunnel(tunnel_id, chain_type, node_id, port, strategy, inx, protocol)
+		VALUES(?, 1, ?, 32001, 'round', 1, 'tls')
+	`, tunnelID, nodeID).Error; err != nil {
+		t.Fatalf("insert chain_tunnel: %v", err)
+	}
+
+	server := httptest.NewServer(router)
+	defer server.Close()
+	stopNode := startMockNodeSession(t, server.URL, "user-default-speed-secret")
+	defer stopNode()
+
+	createPayload := map[string]interface{}{
+		"name":       "user-default-speed-forward",
+		"userId":     userID,
+		"tunnelId":   tunnelID,
+		"remoteAddr": "1.1.1.1:443",
+		"strategy":   "fifo",
+	}
+	createBody, err := json.Marshal(createPayload)
+	if err != nil {
+		t.Fatalf("marshal create payload: %v", err)
+	}
+	createReq := httptest.NewRequest(http.MethodPost, "/api/v1/forward/create", bytes.NewReader(createBody))
+	createReq.Header.Set("Authorization", adminToken)
+	createReq.Header.Set("Content-Type", "application/json")
+	createRes := httptest.NewRecorder()
+	router.ServeHTTP(createRes, createReq)
+	assertCode(t, createRes, 0)
+
+	forwardID := mustLastInsertID(t, repo, "user-default-speed-forward")
+	var inheritedSpeed sql.NullInt64
+	if err := repo.DB().Raw(`SELECT speed_id FROM forward WHERE id = ?`, forwardID).Row().Scan(&inheritedSpeed); err != nil {
+		t.Fatalf("query inherited forward speed_id: %v", err)
+	}
+	if !inheritedSpeed.Valid || inheritedSpeed.Int64 != speedID {
+		t.Fatalf("expected inherited speed_id=%d, got valid=%v value=%d", speedID, inheritedSpeed.Valid, inheritedSpeed.Int64)
 	}
 }
 

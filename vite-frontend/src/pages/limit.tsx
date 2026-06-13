@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, type Key } from "react";
 import toast from "react-hot-toast";
 
 import {
@@ -10,6 +10,8 @@ import { SearchBar } from "@/components/search-bar";
 import { Card, CardBody, CardHeader } from "@/shadcn-bridge/heroui/card";
 import { Button } from "@/shadcn-bridge/heroui/button";
 import { Input } from "@/shadcn-bridge/heroui/input";
+import { Select, SelectItem } from "@/shadcn-bridge/heroui/select";
+import { Switch } from "@/shadcn-bridge/heroui/switch";
 import {
   Table,
   TableHeader,
@@ -27,13 +29,23 @@ import {
 } from "@/shadcn-bridge/heroui/modal";
 import {
   createSpeedLimit,
+  getSpeedLimitDetail,
   getSpeedLimitList,
+  getSpeedLimitOptions,
   updateSpeedLimit,
   deleteSpeedLimit,
 } from "@/api";
+import type {
+  ForwardApiItem,
+  NodeApiItem,
+  SpeedLimitBindings,
+  TunnelApiItem,
+  UserApiItem,
+} from "@/api/types";
 import { PageLoadingState } from "@/components/page-state";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { getRoleId } from "@/utils/session";
 const LIMIT_VIEW_MODE_KEY = "limit_view_mode";
 
 interface SpeedLimitRule {
@@ -41,6 +53,7 @@ interface SpeedLimitRule {
   name: string;
   speed: number;
   status: number;
+  arenaMode?: number;
   createdTime: string;
   updatedTime: string;
 }
@@ -49,8 +62,17 @@ interface SpeedLimitForm {
   name: string;
   speed: number;
   status: number;
+  arenaMode: number;
+  bindings: SpeedLimitBindings;
 }
+const EMPTY_BINDINGS: SpeedLimitBindings = {
+  userIds: [],
+  tunnelIds: [],
+  forwardIds: [],
+  nodeIds: [],
+};
 export default function LimitPage() {
+  const isAdmin = getRoleId() === 0;
   const [loading, setLoading] = useState(true);
   const [rules, setRules] = useState<SpeedLimitRule[]>([]);
   const [searchKeyword, setSearchKeyword] = useLocalStorageState(
@@ -82,11 +104,20 @@ export default function LimitPage() {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [ruleToDelete, setRuleToDelete] = useState<SpeedLimitRule | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [bindingOptions, setBindingOptions] = useState<{
+    users: UserApiItem[];
+    tunnels: TunnelApiItem[];
+    forwards: ForwardApiItem[];
+    nodes: NodeApiItem[];
+  }>({ users: [], tunnels: [], forwards: [], nodes: [] });
   // 表单状态
   const [form, setForm] = useState<SpeedLimitForm>({
     name: "",
     speed: 100,
     status: 1,
+    arenaMode: 0,
+    bindings: EMPTY_BINDINGS,
   });
   // 表单验证错误
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -134,27 +165,76 @@ export default function LimitPage() {
     return Object.keys(newErrors).length === 0;
   };
   // 新增规则
-  const handleAdd = () => {
+  const handleAdd = async () => {
     setIsEdit(false);
     setForm({
       name: "",
       speed: 100,
       status: 1,
+      arenaMode: 0,
+      bindings: { ...EMPTY_BINDINGS },
     });
+    setBindingOptions({ users: [], tunnels: [], forwards: [], nodes: [] });
     setErrors({});
     setModalOpen(true);
+    setDetailLoading(true);
+    try {
+      const res = await getSpeedLimitOptions();
+
+      if (res.code === 0 && res.data) {
+        setBindingOptions(res.data);
+      }
+    } catch {
+      toast.error("加载绑定对象失败");
+    } finally {
+      setDetailLoading(false);
+    }
   };
   // 编辑规则
-  const handleEdit = (rule: SpeedLimitRule) => {
+  const handleEdit = async (rule: SpeedLimitRule) => {
     setIsEdit(true);
+    setDetailLoading(true);
+    setModalOpen(true);
     setForm({
       id: rule.id,
       name: rule.name,
       speed: rule.speed,
       status: rule.status,
+      arenaMode: rule.arenaMode === 1 ? 1 : 0,
+      bindings: { ...EMPTY_BINDINGS },
     });
     setErrors({});
-    setModalOpen(true);
+    try {
+      const res = await getSpeedLimitDetail(rule.id);
+
+      if (res.code === 0 && res.data) {
+        setForm({
+          id: res.data.id,
+          name: res.data.name,
+          speed: res.data.speed,
+          status: res.data.status,
+          arenaMode: res.data.arenaMode === 1 ? 1 : 0,
+          bindings: {
+            userIds: res.data.bindings?.userIds || [],
+            tunnelIds: res.data.bindings?.tunnelIds || [],
+            forwardIds: res.data.bindings?.forwardIds || [],
+            nodeIds: res.data.bindings?.nodeIds || [],
+          },
+        });
+        setBindingOptions({
+          users: res.data.options?.users || [],
+          tunnels: res.data.options?.tunnels || [],
+          forwards: res.data.options?.forwards || [],
+          nodes: res.data.options?.nodes || [],
+        });
+      } else {
+        toast.error(res.msg || "加载限速规则详情失败");
+      }
+    } catch {
+      toast.error("加载限速规则详情失败");
+    } finally {
+      setDetailLoading(false);
+    }
   };
   // 显示删除确认
   const handleDelete = (rule: SpeedLimitRule) => {
@@ -186,12 +266,14 @@ export default function LimitPage() {
     if (!validateForm()) return;
     setSubmitLoading(true);
     try {
-      let res: { code: number; msg: string };
+      let res: { code: number; msg: string; data?: unknown };
       const payload = {
         id: form.id,
         name: form.name,
         speed: form.speed,
         status: form.status,
+        arenaMode: form.arenaMode === 1 ? 1 : 0,
+        bindings: form.bindings,
       };
 
       if (isEdit) {
@@ -201,9 +283,30 @@ export default function LimitPage() {
           name: payload.name,
           speed: payload.speed,
           status: payload.status,
+          arenaMode: payload.arenaMode,
         };
 
         res = await createSpeedLimit(createData);
+        const createdId =
+          res.data && typeof res.data === "object"
+            ? Number((res.data as { id?: unknown }).id || 0)
+            : 0;
+        const hasBindings =
+          payload.bindings.userIds.length > 0 ||
+          payload.bindings.tunnelIds.length > 0 ||
+          payload.bindings.forwardIds.length > 0 ||
+          payload.bindings.nodeIds.length > 0;
+
+        if (res.code === 0 && createdId && hasBindings) {
+          res = await updateSpeedLimit({
+            id: createdId,
+            name: payload.name,
+            speed: payload.speed,
+            status: payload.status,
+            arenaMode: payload.arenaMode,
+            bindings: payload.bindings,
+          });
+        }
       }
       if (res.code === 0) {
         toast.success(isEdit ? "更新成功" : "创建成功");
@@ -218,6 +321,24 @@ export default function LimitPage() {
       setSubmitLoading(false);
     }
   };
+
+  const updateBinding = (key: keyof SpeedLimitBindings, values: number[]) => {
+    setForm((prev) => ({
+      ...prev,
+      bindings: {
+        ...prev.bindings,
+        [key]: values,
+      },
+    }));
+  };
+
+  const selectedBindingKeys = (values: number[]) =>
+    values.map((id) => id.toString());
+
+  const keysToNumbers = (keys: Set<Key>) =>
+    Array.from(keys)
+      .map((key) => Number(key))
+      .filter((id) => Number.isFinite(id) && id > 0);
 
   if (loading) {
     return <PageLoadingState message="正在加载..." />;
@@ -323,9 +444,16 @@ export default function LimitPage() {
                     }}
                   >
                     <TableCell className="whitespace-nowrap">
-                      <span className="font-medium text-foreground truncate">
-                        {rule.name}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-foreground truncate">
+                          {rule.name}
+                        </span>
+                        {rule.arenaMode === 1 && (
+                          <span className="inline-flex items-center rounded border border-warning-300/60 bg-warning-500/10 px-2 py-0.5 text-[11px] font-medium text-warning-600 dark:text-warning-300">
+                            竞技场
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
                       <div className="inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium bg-secondary-500/10 text-secondary-600 dark:text-secondary-400">
@@ -406,9 +534,16 @@ export default function LimitPage() {
                       <CardHeader className="pb-2 md:pb-2">
                         <div className="flex justify-between items-start w-full">
                           <div>
-                            <h3 className="font-semibold text-foreground">
-                              {rule.name}
-                            </h3>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="font-semibold text-foreground">
+                                {rule.name}
+                              </h3>
+                              {rule.arenaMode === 1 && (
+                                <span className="inline-flex items-center rounded border border-warning-300/60 bg-warning-500/10 px-2 py-0.5 text-[11px] font-medium text-warning-600 dark:text-warning-300">
+                                  竞技场
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <div
                             className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${rule.status === 1 ? "bg-success-500/10 text-success-600 dark:text-success-400" : "bg-danger-500/10 text-danger-600 dark:text-danger-400"}`}
@@ -538,6 +673,129 @@ export default function LimitPage() {
                       }))
                     }
                   />
+                  <div className="rounded-xl border border-divider bg-default-50/60 p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium text-foreground">
+                          竞技场模式
+                        </div>
+                        <p className="text-xs leading-relaxed text-default-500">
+                          仅作用于当前这条限速规则。开启后，命中同一作用域的对象共享这条规则的限速大小。
+                        </p>
+                      </div>
+                      <Switch
+                        isSelected={form.arenaMode === 1}
+                        onValueChange={(checked) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            arenaMode: checked ? 1 : 0,
+                          }))
+                        }
+                      />
+                    </div>
+                    {form.arenaMode === 1 && (
+                      <div className="mt-3 rounded-lg border border-warning-300/50 bg-warning-500/10 px-3 py-2 text-xs leading-relaxed text-warning-700 dark:text-warning-200">
+                        多层级同时绑定时按交集生效。第一版共享限速按入口节点分别维护，不会跨多个入口节点合并成全局限速池。
+                      </div>
+                    )}
+                  </div>
+                  <div className="rounded-xl border border-divider bg-default-50/60 p-4">
+                    <div className="mb-3">
+                      <div className="text-sm font-medium text-foreground">
+                        绑定对象
+                      </div>
+                      <p className="mt-1 text-xs leading-relaxed text-default-500">
+                        保存后会把当前限速规则绑定到选中的对象。多层级与竞技场组合时按作用域交集理解。
+                      </p>
+                    </div>
+                    {detailLoading ? (
+                      <div className="flex items-center gap-2 rounded-lg border border-divider bg-background/60 px-3 py-3 text-sm text-default-500">
+                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-default-300 border-t-primary" />
+                        正在加载绑定对象...
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <Select
+                          label="用户"
+                          placeholder="选择用户"
+                          selectedKeys={selectedBindingKeys(
+                            form.bindings.userIds,
+                          )}
+                          selectionMode="multiple"
+                          size="sm"
+                          variant="bordered"
+                          onSelectionChange={(keys) =>
+                            updateBinding("userIds", keysToNumbers(keys))
+                          }
+                        >
+                          {bindingOptions.users.map((user) => (
+                            <SelectItem key={user.id.toString()}>
+                              {user.name || user.user || `用户 ${user.id}`}
+                            </SelectItem>
+                          ))}
+                        </Select>
+                        <Select
+                          label="隧道"
+                          placeholder="选择隧道"
+                          selectedKeys={selectedBindingKeys(
+                            form.bindings.tunnelIds,
+                          )}
+                          selectionMode="multiple"
+                          size="sm"
+                          variant="bordered"
+                          onSelectionChange={(keys) =>
+                            updateBinding("tunnelIds", keysToNumbers(keys))
+                          }
+                        >
+                          {bindingOptions.tunnels.map((tunnel) => (
+                            <SelectItem key={tunnel.id.toString()}>
+                              {tunnel.name || `隧道 ${tunnel.id}`}
+                            </SelectItem>
+                          ))}
+                        </Select>
+                        {isAdmin && (
+                          <Select
+                            label="规则"
+                            placeholder="选择转发规则"
+                            selectedKeys={selectedBindingKeys(
+                              form.bindings.forwardIds,
+                            )}
+                            selectionMode="multiple"
+                            size="sm"
+                            variant="bordered"
+                            onSelectionChange={(keys) =>
+                              updateBinding("forwardIds", keysToNumbers(keys))
+                            }
+                          >
+                            {bindingOptions.forwards.map((forward) => (
+                              <SelectItem key={forward.id.toString()}>
+                                {forward.name || `规则 ${forward.id}`}
+                              </SelectItem>
+                            ))}
+                          </Select>
+                        )}
+                        <Select
+                          label="节点"
+                          placeholder="选择节点"
+                          selectedKeys={selectedBindingKeys(
+                            form.bindings.nodeIds,
+                          )}
+                          selectionMode="multiple"
+                          size="sm"
+                          variant="bordered"
+                          onSelectionChange={(keys) =>
+                            updateBinding("nodeIds", keysToNumbers(keys))
+                          }
+                        >
+                          {bindingOptions.nodes.map((node) => (
+                            <SelectItem key={node.id.toString()}>
+                              {node.name || `节点 ${node.id}`}
+                            </SelectItem>
+                          ))}
+                        </Select>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </ModalBody>
               <ModalFooter>

@@ -16,7 +16,7 @@ func TestUserMaxConnectionsCreateUpdateAndList(t *testing.T) {
 	defer r.Close()
 
 	now := time.Now().UnixMilli()
-	userID, err := r.CreateUser("limit-user", "pwd", 1, now+86400000, 100, 1, 10, 77, 1, now, 0, 0, 0)
+	userID, err := r.CreateUser("limit-user", "pwd", 1, now+86400000, 100, 1, 10, 77, 1, now, 0, 0, 0, nil)
 	if err != nil {
 		t.Fatalf("create user: %v", err)
 	}
@@ -46,7 +46,7 @@ func TestUserMaxConnectionsCreateUpdateAndList(t *testing.T) {
 		t.Fatalf("created user not found in list")
 	}
 
-	if err := r.UpdateUserWithoutPassword(userID, "limit-user", "remark", 100, 10, 0, now+86400000, 1, 1, now, 0, 0, 0); err != nil {
+	if err := r.UpdateUserWithoutPassword(userID, "limit-user", "remark", 100, 10, 0, now+86400000, 1, 1, now, 0, 0, 0, nil); err != nil {
 		t.Fatalf("update user: %v", err)
 	}
 	user, err = r.GetUserByID(userID)
@@ -66,7 +66,7 @@ func TestForwardRecordIncludesUserMaxConnections(t *testing.T) {
 	defer r.Close()
 
 	now := time.Now().UnixMilli()
-	userID, err := r.CreateUser("forward-limit-user", "pwd", 1, now+86400000, 100, 1, 10, 64, 1, now, 0, 0, 0)
+	userID, err := r.CreateUser("forward-limit-user", "pwd", 1, now+86400000, 100, 1, 10, 64, 1, now, 0, 0, 0, nil)
 	if err != nil {
 		t.Fatalf("create user: %v", err)
 	}

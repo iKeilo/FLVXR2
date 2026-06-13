@@ -35,9 +35,10 @@ type User struct {
 	BaseFlow                int64         `gorm:"column:base_flow;default:0"`                   // 初始流量配额 (GB)
 	TrafficFlow             int64         `gorm:"column:traffic_flow;default:0"`                // 流量快餐累计 (GB)
 	SpeedLimit              int           `gorm:"column:speed_limit;default:0"`                 // 限速 MB/s (0=不限)
-	MaxRules                int           `gorm:"column:max_rules;default:0"`                   // 最大规则数 (0=不限)
-	MaxConnections          int           `gorm:"column:max_connections;default:0"`             // 最大连接数 (0=不限)
-	MaxIPAccess             int           `gorm:"column:max_ip_access;default:0"`               // 单 IP 接入限制 (0=不限)
+	SpeedLimitID            sql.NullInt64 `gorm:"column:speed_limit_id"`
+	MaxRules                int           `gorm:"column:max_rules;default:0"`       // 最大规则数 (0=不限)
+	MaxConnections          int           `gorm:"column:max_connections;default:0"` // 最大连接数 (0=不限)
+	MaxIPAccess             int           `gorm:"column:max_ip_access;default:0"`   // 单 IP 接入限制 (0=不限)
 }
 
 func (User) TableName() string { return "user" }
@@ -131,6 +132,7 @@ type Node struct {
 	ExpiryReminderDismissed      int            `gorm:"column:expiry_reminder_dismissed;not null;default:0"`
 	ExpiryReminderDismissedUntil sql.NullInt64  `gorm:"column:expiry_reminder_dismissed_until"`
 	GroupID                      sql.NullInt64  `gorm:"column:group_id;index:idx_node_group_id"`
+	SpeedID                      sql.NullInt64  `gorm:"column:speed_id;index"`
 	ServiceName                  sql.NullString `gorm:"column:service_name;type:varchar(100)"`
 	OwnerUserID                  int64          `gorm:"column:owner_user_id;not null;default:1;index" json:"ownerUserId"`
 }
@@ -302,6 +304,7 @@ type SpeedLimit struct {
 	ID          int64          `gorm:"primaryKey;autoIncrement"`
 	Name        string         `gorm:"type:varchar(100);not null"`
 	Speed       int            `gorm:"not null"`
+	ArenaMode   int            `gorm:"column:arena_mode;not null;default:0"`
 	TunnelID    sql.NullInt64  `gorm:"column:tunnel_id"`
 	TunnelName  sql.NullString `gorm:"column:tunnel_name;type:varchar(100)"`
 	CreatedTime int64          `gorm:"column:created_time;not null"`
@@ -337,6 +340,7 @@ type Tunnel struct {
 	IPPreference  string         `gorm:"column:ip_preference;type:varchar(10);not null;default:''"`
 	ListID        sql.NullInt64  `gorm:"column:list_id;index"`         // 所属隧道分组（旧字段，保留兼容）
 	TunnelGroupID sql.NullInt64  `gorm:"column:tunnel_group_id;index"` // 所属隧道分组（新字段）
+	SpeedID       sql.NullInt64  `gorm:"column:speed_id;index"`
 	Remark        sql.NullString `gorm:"column:remark;type:text"`
 	HTTP          int            `gorm:"column:http;not null;default:0"`
 	TLS           int            `gorm:"column:tls;not null;default:0"`
@@ -747,6 +751,7 @@ type SpeedLimitBackup struct {
 	ID          int64  `json:"id"`
 	Name        string `json:"name"`
 	Speed       int64  `json:"speed"`
+	ArenaMode   int    `json:"arenaMode,omitempty"`
 	TunnelID    *int64 `json:"tunnelId,omitempty"`
 	TunnelName  string `json:"tunnelName,omitempty"`
 	CreatedTime int64  `json:"createdTime"`
@@ -844,6 +849,7 @@ type TunnelRecord struct {
 	Status       int
 	Flow         int64
 	TrafficRatio float64
+	SpeedID      sql.NullInt64
 }
 
 type UserQuotaView struct {

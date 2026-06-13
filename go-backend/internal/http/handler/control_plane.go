@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"net"
 	"net/http"
 	"net/url"
@@ -284,16 +285,20 @@ func (h *Handler) syncForwardServicesWithWarnings(forward *forwardRecord, method
 		return nil, err
 	}
 
-	// Determine limiter from forward's SpeedID first, fallback to UserTunnel's limiter
+	// Determine limiter from forward's SpeedID first, fallback to UserTunnel's limiter.
 	var limiterID *int64
+	var limiterName string
 	var speed *int
+	var arenaMode bool
 
 	if forward.SpeedID.Valid && forward.SpeedID.Int64 > 0 {
 		// Forward has its own speed limit
-		speedVal, err := h.repo.GetSpeedLimitSpeed(forward.SpeedID.Int64)
-		if err == nil && speedVal > 0 {
+		limit, err := h.repo.GetSpeedLimit(forward.SpeedID.Int64)
+		if err == nil && limit.Speed > 0 {
 			limiterID = &forward.SpeedID.Int64
+			speedVal := limit.Speed
 			speed = &speedVal
+			arenaMode = limit.ArenaMode == 1
 		}
 	}
 
@@ -301,6 +306,11 @@ func (h *Handler) syncForwardServicesWithWarnings(forward *forwardRecord, method
 		// Fall back to UserTunnel speed limit
 		limiterID = utLimiterID
 		speed = utSpeed
+		if limiterID != nil {
+			if limit, err := h.repo.GetSpeedLimit(*limiterID); err == nil && limit != nil {
+				arenaMode = limit.ArenaMode == 1
+			}
+		}
 	}
 
 	// nftables mode branch
@@ -336,8 +346,8 @@ func (h *Handler) syncForwardServicesWithWarnings(forward *forwardRecord, method
 				}
 			}
 		} else if limiterID != nil && speed != nil {
-			// 旧的限速逻辑
-			if err := h.ensureLimiterOnNode(fp.NodeID, *limiterID, *speed); err != nil {
+			limiterName = buildRuntimeLimiterName(*limiterID, fp.NodeID, arenaMode)
+			if err := h.ensureNamedLimiterOnNode(fp.NodeID, limiterName, *speed); err != nil {
 				if isNodeOfflineOrTimeoutError(err) {
 					node, _ := h.getNodeRecord(fp.NodeID)
 					nodeName := fmt.Sprintf("%d", fp.NodeID)
@@ -355,7 +365,7 @@ func (h *Handler) syncForwardServicesWithWarnings(forward *forwardRecord, method
 		if err != nil {
 			return nil, err
 		}
-		services := buildForwardServiceConfigs(serviceBase, forward, tunnel, node, fp.Port, strings.TrimSpace(fp.InIP), limiterID, tunnelTLSProtocol)
+		services := buildForwardServiceConfigs(serviceBase, forward, tunnel, node, fp.Port, strings.TrimSpace(fp.InIP), limiterID, limiterName, tunnelTLSProtocol)
 		_, err = h.sendNodeCommand(node.ID, method, services, true, false)
 		if err != nil && allowFallbackAdd && method == "UpdateService" {
 			if isNotFoundError(err) {
@@ -370,7 +380,7 @@ func (h *Handler) syncForwardServicesWithWarnings(forward *forwardRecord, method
 		}
 		if err != nil && strings.EqualFold(strings.TrimSpace(method), "UpdateService") && isCannotAssignRequestedAddressError(err) {
 			var warning string
-			warning, err = h.fallbackForwardPortToDefaultBind(forward, tunnel, node, fp, serviceBase, limiterID, tunnelTLSProtocol)
+			warning, err = h.fallbackForwardPortToDefaultBind(forward, tunnel, node, fp, serviceBase, limiterID, limiterName, tunnelTLSProtocol)
 			if err == nil && warning != "" {
 				warnings = append(warnings, warning)
 			}
@@ -403,7 +413,7 @@ func (h *Handler) syncForwardServicesWithWarnings(forward *forwardRecord, method
 	return warnings, nil
 }
 
-func (h *Handler) fallbackForwardPortToDefaultBind(forward *forwardRecord, tunnel *tunnelRecord, node *nodeRecord, fp forwardPortRecord, serviceBase string, limiterID *int64, tunnelTLSProtocol bool) (string, error) {
+func (h *Handler) fallbackForwardPortToDefaultBind(forward *forwardRecord, tunnel *tunnelRecord, node *nodeRecord, fp forwardPortRecord, serviceBase string, limiterID *int64, limiterName string, tunnelTLSProtocol bool) (string, error) {
 	if h == nil || forward == nil || tunnel == nil || node == nil {
 		return "", errors.New("invalid bind fallback context")
 	}
@@ -420,7 +430,7 @@ func (h *Handler) fallbackForwardPortToDefaultBind(forward *forwardRecord, tunne
 	}
 
 	time.Sleep(150 * time.Millisecond)
-	defaultServices := buildForwardServiceConfigs(serviceBase, forward, tunnel, node, fp.Port, "", limiterID, tunnelTLSProtocol)
+	defaultServices := buildForwardServiceConfigs(serviceBase, forward, tunnel, node, fp.Port, "", limiterID, limiterName, tunnelTLSProtocol)
 	if _, err := h.sendNodeCommand(node.ID, "AddService", defaultServices, true, false); err != nil {
 		return "", err
 	}
@@ -1790,7 +1800,7 @@ func compactErrorMessage(msg string) string {
 	return strings.Join(strings.Fields(strings.ToLower(msg)), "")
 }
 
-func buildForwardServiceConfigs(baseName string, forward *forwardRecord, tunnel *tunnelRecord, node *nodeRecord, port int, bindIP string, limiterID *int64, tunnelTLSProtocol bool) []map[string]interface{} {
+func buildForwardServiceConfigs(baseName string, forward *forwardRecord, tunnel *tunnelRecord, node *nodeRecord, port int, bindIP string, limiterID *int64, limiterName string, tunnelTLSProtocol bool) []map[string]interface{} {
 	protocols := []string{"tcp", "udp"}
 	services := make([]map[string]interface{}, 0, 2)
 	targets := splitRemoteTargets(forward.RemoteAddr)
@@ -1867,6 +1877,8 @@ func buildForwardServiceConfigs(baseName string, forward *forwardRecord, tunnel 
 		// ✅ 应用限速器（优先使用动态限速器）
 		if dynamicLimiterName != "" {
 			service["limiter"] = dynamicLimiterName
+		} else if strings.TrimSpace(limiterName) != "" {
+			service["limiter"] = strings.TrimSpace(limiterName)
 		} else if limiterID != nil && *limiterID > 0 {
 			service["limiter"] = strconv.FormatInt(*limiterID, 10)
 		}
@@ -1991,6 +2003,16 @@ func (h *Handler) ensureLimiterOnNode(nodeID int64, limiterID int64, speed int) 
 	return nil
 }
 
+func (h *Handler) ensureNamedLimiterOnNode(nodeID int64, limiterName string, speed int) error {
+	if strings.TrimSpace(limiterName) == "" {
+		return errors.New("limiter name is empty")
+	}
+	if err := h.upsertNamedLimiterOnNode(nodeID, limiterName, speed); err != nil {
+		return fmt.Errorf("限速规则下发失败：%w", err)
+	}
+	return nil
+}
+
 // ✅ 新增：确保 Forward 动态限速器存在（所有入口节点）
 func (h *Handler) ensureForwardDynamicLimiter(forward *forwardRecord, limiterName string) error {
 	ports, err := h.listForwardPorts(forward.ID)
@@ -2065,9 +2087,13 @@ func (h *Handler) deleteForwardDynamicLimiter(forward *forwardRecord) {
 }
 
 func buildLimiterAddPayload(limiterID int64, speed int) (string, map[string]interface{}) {
+	name := strconv.FormatInt(limiterID, 10)
+	return buildNamedLimiterAddPayload(name, speed)
+}
+
+func buildNamedLimiterAddPayload(name string, speed int) (string, map[string]interface{}) {
 	rate := float64(speed) / 8.0
 	limitStr := fmt.Sprintf("$ %.1fMB %.1fMB", rate, rate)
-	name := strconv.FormatInt(limiterID, 10)
 
 	return name, map[string]interface{}{
 		"name":   name,
@@ -2084,6 +2110,15 @@ func buildLimiterUpdatePayload(name string, data map[string]interface{}) map[str
 
 func (h *Handler) upsertLimiterOnNode(nodeID int64, limiterID int64, speed int) error {
 	name, addPayload := buildLimiterAddPayload(limiterID, speed)
+	return h.upsertLimiterPayloadOnNode(nodeID, name, addPayload)
+}
+
+func (h *Handler) upsertNamedLimiterOnNode(nodeID int64, limiterName string, speed int) error {
+	name, addPayload := buildNamedLimiterAddPayload(strings.TrimSpace(limiterName), speed)
+	return h.upsertLimiterPayloadOnNode(nodeID, name, addPayload)
+}
+
+func (h *Handler) upsertLimiterPayloadOnNode(nodeID int64, name string, addPayload map[string]interface{}) error {
 	if _, err := h.sendNodeCommand(nodeID, "AddLimiters", addPayload, false, false); err != nil {
 		if !isAlreadyExistsMessage(err.Error()) {
 			return err
@@ -2098,6 +2133,20 @@ func (h *Handler) upsertLimiterOnNode(nodeID int64, limiterID int64, speed int) 
 	}
 
 	return nil
+}
+
+func buildRuntimeLimiterName(limiterID int64, entryNodeID int64, arenaMode bool) string {
+	if !arenaMode || limiterID <= 0 {
+		return strconv.FormatInt(limiterID, 10)
+	}
+	scope := fmt.Sprintf("speed_limit=%d", limiterID)
+	return fmt.Sprintf("arena_speed_%d_node_%d_%s", limiterID, entryNodeID, shortStableHash(scope))
+}
+
+func shortStableHash(value string) string {
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(value))
+	return fmt.Sprintf("%08x", h.Sum32())
 }
 
 // NftablesRulePayload nftables rule payload (matches agent side)
