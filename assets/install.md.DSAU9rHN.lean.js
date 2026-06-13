@@ -1,0 +1,1 @@
+import{c as i,Q as a,j as n,m as t}from"./chunks/framework.j5cTrcw1.js";const c=JSON.parse('{"title":"安装部署指南","description":"","frontmatter":{},"headers":[],"relativePath":"install.md","filePath":"install.md"}'),l={name:"install.md"};function e(h,s,p,k,d,r){return a(),n("div",null,[...s[0]||(s[0]=[t("",69)])])}const g=i(l,[["render",e]]);export{c as __pageData,g as default};

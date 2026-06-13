@@ -1,0 +1,1 @@
+import{c as r,Q as a,j as e,m as o}from"./chunks/framework.j5cTrcw1.js";const f=JSON.parse('{"title":"FLVX 官方文档","description":"","frontmatter":{},"headers":[],"relativePath":"index.md","filePath":"index.md"}'),l={name:"index.md"};function n(s,t,i,d,h,g){return a(),e("div",null,[...t[0]||(t[0]=[o("",11)])])}const m=r(l,[["render",n]]);export{f as __pageData,m as default};
